@@ -1,0 +1,29 @@
+# Binary objects
+*.o
+*.obj
+*.so
+*.dylib
+
+# C++ compiled headers
+*.pch
+*.gch
+
+# Java
+*.class
+*.jar
+
+# Packaged files
+*.tar
+*.tar.gz
+*.zip
+
+# Crash logs
+hs_err_pid*
+
+# Built files
+build/
+bin/
+
+# Logs & Notes
+*.log
+*.org
