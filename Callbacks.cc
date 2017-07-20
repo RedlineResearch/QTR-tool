@@ -1,6 +1,7 @@
 #include "Callbacks.h"
 #include "InstrumentBytecode.h"
 #include <cassert>
+#include <cstring>
 #include <iostream>
 
 using namespace std;
@@ -16,9 +17,16 @@ void JNICALL onClassFileLoad(jvmtiEnv *jvmti,
                              jint *new_class_data_len,
                              unsigned char **new_class_data)
 {
-    if (!is_ready) {
+    if (!isReady) {
         return;
     }
+
+    if (strcmp(class_name, "ETProxy") == 0) {
+        return;
+    }
+
+    cerr << class_name << endl;
+    
     instrumentClass(jvmti, jni, (unsigned char *) class_data, class_data_len,
                     new_class_data_len, new_class_data); 
 }
@@ -26,7 +34,7 @@ void JNICALL onClassFileLoad(jvmtiEnv *jvmti,
 
 void JNICALL onMethodEntry(jvmtiEnv *jvmti, JNIEnv *jni, jthread th, jmethodID method)
 {
-    if (!is_ready) {
+    if (!isReady) {
         return;
     }
     
@@ -51,7 +59,7 @@ void JNICALL onMethodEntry(jvmtiEnv *jvmti, JNIEnv *jni, jthread th, jmethodID m
 void JNICALL onMethodExit(jvmtiEnv *jvmti, JNIEnv *jni, jthread th, jmethodID method,
                           jboolean was_popped_by_exception, jvalue return_value)
 {
-    if (!is_ready) {
+    if (!isReady) {
         return;
     }
     
@@ -75,5 +83,5 @@ void JNICALL onMethodExit(jvmtiEnv *jvmti, JNIEnv *jni, jthread th, jmethodID me
 void JNICALL onVMInit(jvmtiEnv *jvmti, JNIEnv *jni, jthread th)
 {
     cerr << "READY!" << endl; 
-    is_ready = true;
+    isReady = true;
 }

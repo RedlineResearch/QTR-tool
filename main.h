@@ -4,7 +4,7 @@
 #include <jvmti.h>
 #include <jni.h>
 
-extern bool is_ready;
+extern bool isReady;
 
 JNIEXPORT jint JNICALL Agent_OnLoad(JavaVM *jvm, char *options, void *reserved);
 void setCallbacks(jvmtiEnv *jvmti);

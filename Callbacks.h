@@ -4,7 +4,7 @@
 #include <jvmti.h>
 #include <jni.h>
 
-extern bool is_ready;
+extern bool isReady;
 void JNICALL onClassFileLoad(jvmtiEnv *jvmti,
                              JNIEnv *jni,
                              jclass class_being_redefined,

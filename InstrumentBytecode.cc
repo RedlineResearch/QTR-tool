@@ -7,9 +7,9 @@ using namespace jnif;
 void instrumentClass(jvmtiEnv *jvmti, JNIEnv *jni, u1 *class_data,
                      jint class_data_len, jint *new_class_data_len,
                      u1 **new_class_data)
-{   
+{
     ClassFile cf(class_data, class_data_len);
-
+    
     ConstIndex proxyClass = cf.addClass("ETProxy");
 
     // public static void onEntry(String className, String methodName);

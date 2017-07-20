@@ -6,7 +6,7 @@
 
 using namespace std;
 
-bool is_ready = false;
+bool isReady = false;
 
 JNIEXPORT jint JNICALL Agent_OnLoad(JavaVM *jvm, char *options, void *reserved)
 {

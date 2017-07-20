@@ -30,15 +30,3 @@ performance of Elephant Tracks by 7-10 times.
    * Ensure `JAVA_HOME` is set correctly
    * Set the variables in `Makefile.inc`
    * `make`
-
-## Author
-Xuanrui Qi ([xqi01@cs.tufts.edu](mailto:xqi01@cs.tufts.edu))
-
-## Acknowledgements
-The following persons assisted with the development of ET2:
-
-  * Raoul Veroy ([rveroy@cs.tufts.edu](mailto:rveroy@cs.tufts.edu))
-  * Professor Samuel Guyer ([sguyer@cs.tufts.edu](mailto:sguyer@cs.tufts.edu))
-
-## Affiliation
-   RedLine Research Group, [Department of Computer Science, Tufts University](http://www.cs.tufts.edu)
