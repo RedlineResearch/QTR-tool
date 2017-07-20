@@ -20,7 +20,7 @@ JNI to write instrumentation methods, ET2 uses the native instrumentation librar
 
 ## Build
    * Set `JAVA_HOME` correctly
-   * Run the configure script `./config`
+   * Set the variables in `Makefile.inc`
    * `make`
 
 ## Authors

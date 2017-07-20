@@ -1,3 +1,9 @@
+# If you want to use a different JAVA_HOME only for this
+# build, e.g. a custom OpenJDK you built, then uncomment
+# the following line.
+# JAVA_HOME = 
+
+
 # Use javac at JAVA_HOME and g++ by default
 # ET2 is only tested with OpenJDK 8 and g++
 # but clang++ should work in principle
