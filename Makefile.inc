@@ -8,7 +8,7 @@
 # ET2 is only tested with OpenJDK 8 and g++
 # but clang++ should work in principle
 JAVAC = $(JAVA_HOME)/bin/javac
-CXX  = g++
+CXX   = g++
 
 # Necessary Java libraries
 INC_PATH  = -I$(JAVA_HOME)/include
