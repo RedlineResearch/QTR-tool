@@ -5,7 +5,16 @@
 #include <jni.h>
 
 extern bool is_ready;
-
+void JNICALL onClassFileLoad(jvmtiEnv *jvmti,
+                             JNIEnv *jni,
+                             jclass class_being_redefined,
+                             jobject loader,
+                             const char *class_name,
+                             jobject protection_domain,
+                             jint class_data_len,
+                             const unsigned char *class_data,
+                             jint *new_class_data_len,
+                             unsigned char **new_class_data);
 void JNICALL onMethodEntry(jvmtiEnv *jvmti, JNIEnv *jni, jthread th, jmethodID method);
 void JNICALL onMethodExit(jvmtiEnv *jvmti, JNIEnv *jni, jthread th, jmethodID method,
                           jboolean was_popped_by_exception, jvalue return_value);

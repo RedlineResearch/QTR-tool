@@ -1,8 +1,28 @@
 #include "Callbacks.h"
+#include "InstrumentBytecode.h"
 #include <cassert>
 #include <iostream>
 
 using namespace std;
+
+void JNICALL onClassFileLoad(jvmtiEnv *jvmti,
+                             JNIEnv *jni,
+                             jclass class_being_redefined,
+                             jobject loader,
+                             const char *class_name,
+                             jobject protection_domain,
+                             jint class_data_len,
+                             const unsigned char *class_data,
+                             jint *new_class_data_len,
+                             unsigned char **new_class_data)
+{
+    if (!is_ready) {
+        return;
+    }
+    instrumentClass(jvmti, jni, (unsigned char *) class_data, class_data_len,
+                    new_class_data_len, new_class_data); 
+}
+
 
 void JNICALL onMethodEntry(jvmtiEnv *jvmti, JNIEnv *jni, jthread th, jmethodID method)
 {

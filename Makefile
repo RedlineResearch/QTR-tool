@@ -1,16 +1,25 @@
-CXX = g++
-INC = -I/home/xuanrui/jdk/include
-CXXFLAGS = -g -O0 -fPIC
+CXX  = g++
+INC  = -I/home/xuanrui/jdk/include -I/home/xuanrui/jnif/src
+LD   = -L/home/xuanrui/jnif/build
+LIBS = -ljnif
+CXXFLAGS = -std=c++11 -g -O0 -fPIC
 
-et2: libet2.so
+JAVAC = /home/xuanrui/jdk/bin/javac
 
-libet2.so: main.o Callbacks.o
-	g++ -shared -o $@ $^
+et2: libet2.so ETProxy.class
+
+libet2.so: main.o Callbacks.o InstrumentBytecode.o
+	$(CXX) $(LD) -shared $^ $(LIBS) -o $@
 
 main.o: main.cc
-	$(CXX) $(INC) $(CXXFLAGS) -c  $^
+	$(CXX) $(INC) $(CXXFLAGS) -c $^
 Callbacks.o: Callbacks.cc
 	$(CXX) $(INC) $(CXXFLAGS) -c $^
+InstrumentBytecode.o: InstrumentBytecode.cc
+	$(CXX) $(INC) $(CXXFLAGS) -c $^
+
+ETProxy.class: ETProxy.java
+	$(JAVAC) $^
 
 clean:
-	rm -f libet2.so *o *~
+	rm -f libet2.so *o *class *~
