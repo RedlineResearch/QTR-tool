@@ -1,10 +1,18 @@
 #include "Callbacks.h"
 #include "InstrumentBytecode.h"
+#include "ETProxy_class.h"
+#include "InstrumentFlag_class.h"
 #include <cassert>
 #include <cstring>
 #include <iostream>
 
 using namespace std;
+
+void JNICALL loadProxyClass(jvmtiEnv *jvmti, JNIEnv *jni)
+{
+    jni->DefineClass("InstrumentFlag", NULL, (jbyte *) InstrumentFlag_class, (jsize) InstrumentFlag_class_len);
+    jni->DefineClass("ETProxy", NULL, (jbyte *) ETProxy_class, (jsize) ETProxy_class_len);
+}
 
 void JNICALL onClassFileLoad(jvmtiEnv *jvmti,
                              JNIEnv *jni,
@@ -20,12 +28,6 @@ void JNICALL onClassFileLoad(jvmtiEnv *jvmti,
     if (!isReady) {
         return;
     }
-
-    if (strcmp(class_name, "ETProxy") == 0) {
-        return;
-    }
-
-    cerr << class_name << endl;
     
     instrumentClass(jvmti, jni, (unsigned char *) class_data, class_data_len,
                     new_class_data_len, new_class_data); 

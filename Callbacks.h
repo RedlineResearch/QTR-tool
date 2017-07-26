@@ -5,6 +5,8 @@
 #include <jni.h>
 
 extern bool isReady;
+
+void JNICALL loadProxyClass(jvmtiEnv *jvmti, JNIEnv *jni);
 void JNICALL onClassFileLoad(jvmtiEnv *jvmti,
                              JNIEnv *jni,
                              jclass class_being_redefined,

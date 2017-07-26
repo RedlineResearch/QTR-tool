@@ -7,10 +7,11 @@
 using namespace std;
 
 bool isReady = false;
+MethodTable methodTable;
 
 JNIEXPORT jint JNICALL Agent_OnLoad(JavaVM *jvm, char *options, void *reserved)
 {
-    cerr << "Instrumenting..." << endl;
+    // cerr << "Instrumenting..." << endl;
     
     jvmtiEnv *jvmti;
     jvm->GetEnv((void **) &jvmti, JVMTI_VERSION_1_2);
@@ -23,7 +24,11 @@ JNIEXPORT jint JNICALL Agent_OnLoad(JavaVM *jvm, char *options, void *reserved)
 
 void setNotificationMode(jvmtiEnv *jvmti)
 {
-    jvmtiError error = jvmti->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_VM_INIT, NULL);
+
+    jvmtiError error = jvmti->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_VM_START, NULL);
+    assert(!error);
+    
+    error = jvmti->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_VM_INIT, NULL);
     assert(!error);
     
     error = jvmti->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_METHOD_ENTRY, NULL);
@@ -54,6 +59,7 @@ void setCallbacks(jvmtiEnv *jvmti)
     jvmtiEventCallbacks callbacks;
     
     (void) memset(&callbacks, 0, sizeof(callbacks));
+    callbacks.VMStart = &loadProxyClass;
     // callbacks.MethodEntry = &onMethodEntry;
     // callbacks.MethodExit = &onMethodExit;
     callbacks.VMInit = &onVMInit;

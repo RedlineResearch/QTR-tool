@@ -1,18 +1,17 @@
 public class ETProxy
 {
-    private static boolean inInstrumentMethod = false;
-
-    public static void onEntry(String className, String methodName)
+    private static final InstrumentFlag inInstrumentMethod = new InstrumentFlag();
+    
+    public static void onEntry(int methodID)
     {
-        if (inInstrumentMethod) {
+        if (inInstrumentMethod.get()) {
             return;
         } else {
-            inInstrumentMethod = true;
+            inInstrumentMethod.set(true);
         }
         
-        System.out.println("Class: " + className);
-        System.out.println("Mehod: " + methodName);
+        System.out.println("Method ID: " + methodID);
 
-        inInstrumentMethod = false;
+        inInstrumentMethod.set(false);
     }
 }
