@@ -1,3 +1,6 @@
+# Headers extracted from class files
+*_class.h
+
 # Binary objects
 *.o
 *.obj
