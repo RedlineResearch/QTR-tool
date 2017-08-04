@@ -8,6 +8,7 @@ using namespace std;
 
 bool isReady = false;
 MethodTable methodTable;
+ClassTable classTable, fieldTable;
 
 JNIEXPORT jint JNICALL Agent_OnLoad(JavaVM *jvm, char *options, void *reserved)
 {
@@ -19,12 +20,12 @@ JNIEXPORT jint JNICALL Agent_OnLoad(JavaVM *jvm, char *options, void *reserved)
     setCapabilities(jvmti);
     setNotificationMode(jvmti);
     setCallbacks(jvmti);
+    
     return JNI_OK;
 }
 
 void setNotificationMode(jvmtiEnv *jvmti)
 {
-
     jvmtiError error = jvmti->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_VM_START, NULL);
     assert(!error);
     
@@ -38,6 +39,9 @@ void setNotificationMode(jvmtiEnv *jvmti)
     assert(!error);
 
     error = jvmti->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_CLASS_FILE_LOAD_HOOK, NULL);
+    assert(!error);
+
+    error = jvmti->SetEventNotificationMode(JVMTI_ENABLE, JVMTI_EVENT_VM_DEATH, NULL);
     assert(!error);
 }
 
@@ -59,11 +63,13 @@ void setCallbacks(jvmtiEnv *jvmti)
     jvmtiEventCallbacks callbacks;
     
     (void) memset(&callbacks, 0, sizeof(callbacks));
+
     callbacks.VMStart = &loadProxyClass;
     // callbacks.MethodEntry = &onMethodEntry;
     // callbacks.MethodExit = &onMethodExit;
     callbacks.VMInit = &onVMInit;
     callbacks.ClassFileLoadHook = &onClassFileLoad;
+    callbacks.VMDeath = &flushBuffers;
     
     jvmtiError error = jvmti->SetEventCallbacks(&callbacks, (jint) sizeof(callbacks));
     assert(!error);

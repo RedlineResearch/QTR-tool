@@ -1,10 +1,16 @@
 #ifndef ET2_CALLBACKS_H_
 #define ET2_CALLBACKS_H_
 
+#include "ClassTable.h"
 #include <jvmti.h>
 #include <jni.h>
+#include <map>
+
+typedef std::map<long, std::pair<const std::string, const std::string> > MethodTable;
 
 extern bool isReady;
+extern MethodTable methodTable;
+extern ClassTable classTable, fieldTable;
 
 void JNICALL loadProxyClass(jvmtiEnv *jvmti, JNIEnv *jni);
 void JNICALL onClassFileLoad(jvmtiEnv *jvmti,
@@ -21,5 +27,6 @@ void JNICALL onMethodEntry(jvmtiEnv *jvmti, JNIEnv *jni, jthread th, jmethodID m
 void JNICALL onMethodExit(jvmtiEnv *jvmti, JNIEnv *jni, jthread th, jmethodID method,
                           jboolean was_popped_by_exception, jvalue return_value);
 void JNICALL onVMInit(jvmtiEnv *jvmti, JNIEnv *jni, jthread th);
+void JNICALL flushBuffers(jvmtiEnv *jvmti, JNIEnv *jni);
 
 #endif

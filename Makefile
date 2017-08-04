@@ -8,7 +8,7 @@ CXXFLAGS = -std=c++11 -g -O0 -fPIC
 
 et2: libet2.so
 
-libet2.so: main.o Callbacks.o InstrumentBytecode.o
+libet2.so: main.o Callbacks.o InstrumentBytecode.o ClassTable.o
 	$(CXX) $(LD_PATH) -shared $^ $(LIBS) -o $@
 
 main.o: main.cc
@@ -16,6 +16,8 @@ main.o: main.cc
 Callbacks.o: Callbacks.cc ETProxy_class.h InstrumentFlag_class.h
 	$(CXX) $(INC_PATH) $(CXXFLAGS) -c $^
 InstrumentBytecode.o: InstrumentBytecode.cc
+	$(CXX) $(INC_PATH) $(CXXFLAGS) -c $^
+ClassTable.o: ClassTable.cc
 	$(CXX) $(INC_PATH) $(CXXFLAGS) -c $^
 
 ETProxy.class: ETProxy.java

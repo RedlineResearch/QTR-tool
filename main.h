@@ -1,6 +1,7 @@
 #ifndef ET2_MAIN_H
 #define ET2_MAIN_H
 
+#include "ClassTable.h"
 #include <jvmti.h>
 #include <jni.h>
 #include <map>
@@ -8,8 +9,10 @@
 
 typedef std::map<long, std::pair<const std::string, const std::string> > MethodTable;
 
-extern bool isReady;
 extern MethodTable methodTable;
+extern ClassTable classTable;
+extern ClassTable fieldTable;
+extern bool isReady;
 
 JNIEXPORT jint JNICALL Agent_OnLoad(JavaVM *jvm, char *options, void *reserved);
 void setCallbacks(jvmtiEnv *jvmti);
