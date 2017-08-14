@@ -1,5 +1,6 @@
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.Arrays;
+import java.io.PrintWriter;
 
 public class ETProxy
 {
@@ -10,10 +11,13 @@ public class ETProxy
     private static final InstrumentFlag inInstrumentMethod = new InstrumentFlag();
 
     private static long[] timestampBuffer = new long[1000];
-    
+
+    // TRACING EVENTS
     // Method entry = 1, method exit = 2, object allocation = 3
     // object array allocation = 4, primitive array allocation = 5,
     // 2D array allocation = 6, put field = 7
+    // WITNESSES
+    // get field = 8
     // We should have used enums, but it breaks things
     private static int[] eventTypeBuffer = new int[1000];
     
@@ -272,6 +276,34 @@ public class ETProxy
         
         inInstrumentMethod.set(false);
     }
+
+    public static void witnessGetField(Object aliveObject, int classID)
+    {
+        long timestamp = System.nanoTime();
+        
+        if (inInstrumentMethod.get()) {
+            return;
+        } else {
+            inInstrumentMethod.set(true);
+        }
+
+        if (ptr.get() < 1000) {
+            // wait on ptr to prevent overflow
+            int currPtr = ptr.getAndIncrement();
+            firstBuffer[currPtr] = System.identityHashCode(aliveObject);
+            eventTypeBuffer[currPtr] = 8;
+            secondBuffer[currPtr] = classID;
+            timestampBuffer[currPtr] = timestamp;
+        } else {
+            synchronized(ptr) {
+                if (ptr.get() >= 1000) {
+                    flushBuffer();
+                }
+            }
+        }
+        
+        inInstrumentMethod.set(false);
+    }
     
     public static void flushBuffer()
     {
@@ -300,9 +332,14 @@ public class ETProxy
                                    fourthBuffer[i] + ", " + timestampBuffer[i]);
                 break;
             case 7: // assign to object field
-                // 6, targetObjectHash, fieldID, srcObjectHash, timestamp
+                // 7, targetObjectHash, fieldID, srcObjectHash, timestamp
                 System.out.println(eventTypeBuffer[i] + ", " + firstBuffer[i] + ", " + secondBuffer[i] + ", " +
                                    thirdBuffer[i] + ", " + timestampBuffer[i]);
+                break;
+            case 8: // witness with get field
+                // 8, aliveObjectHash, classID, timestamp
+                System.out.println(eventTypeBuffer[i] + ", " + firstBuffer[i] + ", " + secondBuffer[i] + ", " +
+                                   timestampBuffer[i]);
                 break;
             }
         }

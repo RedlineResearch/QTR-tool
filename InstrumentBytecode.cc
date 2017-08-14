@@ -26,7 +26,7 @@ public:
 
 	String getCommonSuperClass(const String& className1, const String& className2) {
 
-        // cerr << "Finding common super class: " << className1 << " and " << className2 << endl;
+        cerr << "Finding common super class: " << className1 << " and " << className2 << endl;
         
 		if (!isReady) {
 			return "java/lang/Object";
@@ -140,6 +140,7 @@ static void instrumentObjectArrayAlloc(ClassFile &cf, Method *method, ConstIndex
 static void instrumentPrimitiveArrayAlloc(ClassFile &cf, Method *method, ConstIndex &instrMethod);
 static void instrumentMultiArrayAlloc(ClassFile &cf, Method *method, ConstIndex &instrMethod);
 static void instrumentPutField(ClassFile &cf, Method *method, ConstIndex &instrMethod);
+static void witnessGetField(ClassFile &cf, Method *method, ConstIndex &instrMethod);
 
 enum PrimitiveType {
     BYTE = 8,
@@ -190,6 +191,9 @@ void instrumentClass(jvmtiEnv *jvmti, JNIEnv *jni, jobject loader,
     // public static void onPutField(Object tgtObject, Object srcObject, int fieldID);
     ConstIndex onPutFieldMethod = cf.addMethodRef(proxyClass, "onPutField","(Ljava/lang/Object;Ljava/lang/Object;I)V");
 
+    // public static void witnessGetField(Object aliveObject, int classID);
+    ConstIndex witnessGetFieldMethod = cf.addMethodRef(proxyClass, "witnessGetField", "(Ljava/lang/Object;I)V");
+    
     for (Method *method : cf.methods) {
         // Record the method
         methodTable.insert(make_pair(methodIDCounter, make_pair(string(cf.getThisClassName()),
@@ -206,6 +210,7 @@ void instrumentClass(jvmtiEnv *jvmti, JNIEnv *jni, jobject loader,
             instrumentPrimitiveArrayAlloc(cf, method, onAllocPrimArrayMethod);
             instrumentMultiArrayAlloc(cf, method, onAlloc2DArrayMethod);
             instrumentPutField(cf, method, onPutFieldMethod);
+            witnessGetField(cf, method, witnessGetFieldMethod);
         }
     }
 
@@ -412,6 +417,31 @@ static void instrumentMultiArrayAlloc(ClassFile &cf, Method *method, ConstIndex 
                      << "array type of " << cf.getClassName(allocatedClassIndex)
                      << ". Not instrumented" << endl;
             }
+        }
+    }
+}
+
+static void witnessGetField(ClassFile &cf, Method *method, ConstIndex &instrMethod)
+{
+    InstList &instList = method->instList();
+
+    for (Inst *inst : instList) {
+        if (inst->opcode == OPCODE_getfield) {
+            ConstIndex fieldRefIndex = inst->field()->fieldRefIndex;
+            string className, fieldName, fieldDesc;
+            cf.getFieldRef(fieldRefIndex, &className, &fieldName, &fieldDesc);
+            
+            // Stack: ... | objectRef
+            instList.addZero(OPCODE_dup, inst);
+            // Stack: ... | objectRef | objectRef
+
+            int aliveClassID = classTable.mapOrFind(className);
+            ConstIndex aliveClassIDIndex = cf.addInteger(aliveClassID);
+            
+            instList.addLdc(OPCODE_ldc_w, aliveClassIDIndex, inst);
+            // Stack: ... | objectRef | objectRef | aliveClassID
+
+            instList.addInvoke(OPCODE_invokestatic, instrMethod, inst);
         }
     }
 }
