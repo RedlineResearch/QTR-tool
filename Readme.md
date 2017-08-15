@@ -19,6 +19,9 @@ The short-term performance goal is a 1/3 performance boost compared to the curre
 implementation of Elephant Tracks. In the long term, we aspire to increase the 
 performance of Elephant Tracks by 7-10 times.
 
+## Using ET2
+`java -agentlib:et2 [Class]`, all other Java options (including `-jar`) work as usual.
+
 ## Requirements
    * gcc
    * JNIF, available from [here](https://bitbucket.org/acuarica/jnif).
@@ -30,3 +33,7 @@ performance of Elephant Tracks by 7-10 times.
    * Ensure `JAVA_HOME` is set correctly
    * Set the variables in `Makefile.inc`
    * `make`
+
+## Testing
+   * `make test`
+   * `java -agentlib:et2 Test`

@@ -4,7 +4,15 @@ INC_PATH += -I$(JNIF_INC_PATH)
 LD_PATH  += -L$(JNIF_LIB_PATH)
 
 LIBS = -ljnif
-CXXFLAGS = -std=c++11 -g -O0 -fPIC
+
+MODE = debug
+CXXFLAGS = -std=c++11 -fPIC
+
+ifeq ($(MODE), debug)
+	CXXFLAGS += -g -O0
+else
+	CXXFLAGS += -O3
+endif
 
 et2: libet2.so
 

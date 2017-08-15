@@ -31,8 +31,7 @@ void JNICALL onClassFileLoad(jvmtiEnv *jvmti,
                              jint *new_class_data_len,
                              unsigned char **new_class_data)
 {
-    if (!isReady || strcmp(class_name, "java/util/jar/JarFile") == 0) {
-        cerr << "Not instrumenting: " << class_name << endl;
+    if (!isReady) {
         return;
     }
     

@@ -26,7 +26,7 @@ public:
 
 	String getCommonSuperClass(const String& className1, const String& className2) {
 
-        cerr << "Finding common super class: " << className1 << " and " << className2 << endl;
+        // cerr << "Finding common super class: " << className1 << " and " << className2 << endl;
         
 		if (!isReady) {
 			return "java/lang/Object";
@@ -161,7 +161,7 @@ void instrumentClass(jvmtiEnv *jvmti, JNIEnv *jni, jobject loader,
     
     ClassFile cf(class_data, class_data_len);
 
-    cerr << "Loading: " << cf.getThisClassName() << endl;
+    // cerr << "Loading: " << cf.getThisClassName() << endl;
 
     classHierarchy.addClass(cf);
     classTable.mapOrFind(string(cf.getThisClassName()));
@@ -225,7 +225,7 @@ void instrumentClass(jvmtiEnv *jvmti, JNIEnv *jni, jobject loader,
     cf.write(*new_class_data, *new_class_data_len);
 }
 
-static void instrumentPutField(ClassFile &cf, Method *method, ConstIndex &instrMethod)
+inline static void instrumentPutField(ClassFile &cf, Method *method, ConstIndex &instrMethod)
 {
     InstList &instList = method->instList();
 
@@ -257,7 +257,7 @@ static void instrumentPutField(ClassFile &cf, Method *method, ConstIndex &instrM
     }
 }
 
-static void instrumentMethodEntry(ClassFile &cf, Method *method, ConstIndex &methodIDIndex,
+inline static void instrumentMethodEntry(ClassFile &cf, Method *method, ConstIndex &methodIDIndex,
                                   ConstIndex &instrMethod)
 {
     InstList &instList = method->instList();
@@ -271,7 +271,7 @@ static void instrumentMethodEntry(ClassFile &cf, Method *method, ConstIndex &met
     // Stack preserved
 }
 
-static void instrumentMethodExit(ClassFile &cf, Method *method, ConstIndex &methodIDIndex,
+inline static void instrumentMethodExit(ClassFile &cf, Method *method, ConstIndex &methodIDIndex,
                                  ConstIndex &instrMethod)
 {
     InstList &instList = method->instList();
@@ -314,7 +314,7 @@ static void instrumentObjectAlloc(ClassFile &cf, Method *method, ConstIndex &ins
     }
 }
 
-static void instrumentObjectArrayAlloc(ClassFile &cf, Method *method, ConstIndex &instrMethod)
+inline static void instrumentObjectArrayAlloc(ClassFile &cf, Method *method, ConstIndex &instrMethod)
 {
     InstList &instList = method->instList();
     
@@ -348,7 +348,7 @@ static void instrumentObjectArrayAlloc(ClassFile &cf, Method *method, ConstIndex
     }   
 }
 
-static void instrumentPrimitiveArrayAlloc(ClassFile &cf, Method *method, ConstIndex &instrMethod)
+inline static void instrumentPrimitiveArrayAlloc(ClassFile &cf, Method *method, ConstIndex &instrMethod)
 {
     InstList &instList = method->instList();
     
@@ -380,7 +380,7 @@ static void instrumentPrimitiveArrayAlloc(ClassFile &cf, Method *method, ConstIn
     }   
 }
 
-static void instrumentMultiArrayAlloc(ClassFile &cf, Method *method, ConstIndex &instrMethod)
+inline static void instrumentMultiArrayAlloc(ClassFile &cf, Method *method, ConstIndex &instrMethod)
 {
     InstList &instList = method->instList();
     
@@ -421,7 +421,7 @@ static void instrumentMultiArrayAlloc(ClassFile &cf, Method *method, ConstIndex 
     }
 }
 
-static void witnessGetField(ClassFile &cf, Method *method, ConstIndex &instrMethod)
+inline static void witnessGetField(ClassFile &cf, Method *method, ConstIndex &instrMethod)
 {
     InstList &instList = method->instList();
 

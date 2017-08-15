@@ -4,10 +4,10 @@
 #include "ClassTable.h"
 #include <jvmti.h>
 #include <jni.h>
-#include <map>
+#include <unordered_map>
 #include <utility>
 
-typedef std::map<long, std::pair<const std::string, const std::string> > MethodTable;
+typedef std::unordered_map<long, std::pair<const std::string, const std::string> > MethodTable;
 
 extern MethodTable methodTable;
 extern ClassTable classTable;
