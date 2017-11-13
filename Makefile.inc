@@ -13,5 +13,5 @@ CXX   = g++
 # Necessary Java libraries
 INC_PATH  = -I$(JAVA_HOME)/include
 
-JNIF_INC_PATH = /home/xuanrui/jnif/src
-JNIF_LIB_PATH = /home/xuanrui/jnif/build
+JNIF_INC_PATH = /home/xuanrui/jnif/src-libjnif
+JNIF_LIB_PATH = /home/xuanrui/jnif
