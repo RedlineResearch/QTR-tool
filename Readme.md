@@ -1,4 +1,4 @@
-# Elephant Tracks 2
+# Elephant Tracks 2 (JVM Frontend)
 
 A rewritten version of the garbage collection tracing tool for Java programs, 
 Elephant Tracks, developed by the RedLine Research Group @ Tufts University 
@@ -37,3 +37,9 @@ performance of Elephant Tracks by 7-10 times.
 ## Testing
    * `make test`
    * `java -agentlib:et2 Test`
+
+## Current Status
+ET2/JVM runs correctly and without thrown exceptions on the Oracle and IBM J9 JDKs, but 
+throws a `ClassCircularityError ` on OpenJDK. This exception is not yet known to cause 
+any runtime errors, but it is probably a better idea to use Oracle JDK instead of OpenJDK 
+(since both run the HotSpot JVM anyway).
