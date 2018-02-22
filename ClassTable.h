@@ -2,6 +2,8 @@
 #define ET2_CLASSTABLE_H_
 
 #include <unordered_map>
+#include <iostream>
+#include <fstream>
 
 class ClassTable {
 public:
@@ -9,7 +11,7 @@ public:
     void mapClass(std::string className);
     int findClassID(std::string className);
     int mapOrFind(std::string className);
-    void dumpTable();
+    void dumpTable(std::ofstream &dumpFile);
 private:
     std::unordered_map<std::string, int> table;
     int counter;

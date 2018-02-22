@@ -1,6 +1,5 @@
 #include "ClassTable.h"
 #include <utility>
-#include <iostream>
 
 using namespace std;
 
@@ -30,9 +29,9 @@ int ClassTable::mapOrFind(string className)
     return table[className];
 }
 
-void ClassTable::dumpTable()
+void ClassTable::dumpTable(ofstream &dumpFile)
 {
     for (auto it = table.begin(); it != table.end(); ++it) {
-        cout << it->second << ", " << it->first << endl;
+        dumpFile << it->second << ", " << it->first << endl;
     }
 }

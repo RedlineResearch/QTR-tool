@@ -135,7 +135,8 @@ private:
 jclass ClassPath::proxyClass = NULL;
 jmethodID ClassPath::getResourceId = NULL;
 
-static void instrumentMethodEntry(ClassFile &cf, Method &method, ConstPool::Index &methodIDIndex, ConstPool::Index &instrMethod);
+static void instrumentMethodEntry(ClassFile &cf, Method &method, ConstPool::Index &methodIDIndex, ConstPool::Index &instrMethod,
+                                  ConstPool::Index &witnessMethod);
 static void instrumentMethodExit(ClassFile &cf, Method &method, ConstPool::Index &methodIDIndex, ConstPool::Index &instrMethod);
 static void instrumentObjectAlloc(ClassFile &cf, Method &method, ConstPool::Index &instrMethod);
 static void instrumentObjectArrayAlloc(ClassFile &cf, Method &method, ConstPool::Index &instrMethod);
@@ -143,17 +144,6 @@ static void instrumentPrimitiveArrayAlloc(ClassFile &cf, Method &method, ConstPo
 static void instrumentMultiArrayAlloc(ClassFile &cf, Method &method, ConstPool::Index &instrMethod);
 static void instrumentPutField(ClassFile &cf, Method &method, ConstPool::Index &instrMethod);
 static void witnessGetField(ClassFile &cf, Method &method, ConstPool::Index &instrMethod);
-
-enum PrimitiveType {
-    BYTE = 8,
-    CHAR = 5,
-    DOUBLE = 7,
-    FLOAT = 6,
-    INT = 10,
-    LONG = 11,
-    SHORT = 9,
-    BOOLEAN = 4
-};
 
 void instrumentClass(jvmtiEnv *jvmti, JNIEnv *jni, jobject loader,
                      u1 *class_data, jint class_data_len,
@@ -171,11 +161,14 @@ void instrumentClass(jvmtiEnv *jvmti, JNIEnv *jni, jobject loader,
     ConstPool::Index instrumentFlagClass = cf.addClass("InstrumentFlag");
     ConstPool::Index proxyClass = cf.addClass("ETProxy");
     
-    // public static void onEntry(int methodID);
-    ConstPool::Index onEntryMethod = cf.addMethodRef(proxyClass, "onEntry", "(I)V");
+    // public static void onEntry(int methodID, Object receiver);
+    ConstPool::Index onEntryMethod = cf.addMethodRef(proxyClass, "onEntry", "(ILjava/lang/Object;)V");
 
     // public static void onExit(int methodID);
     ConstPool::Index onExitMethod = cf.addMethodRef(proxyClass, "onExit", "(I)V");
+
+    // public static native void onMain();
+    // ConstPool::Index onMainMethod = cf.addMethodRef(proxyClass, "_onMain", "()V");
 
     // public static void onObjectAlloc(int allocdClassID, Object allocdObject);
     ConstPool::Index onAllocMethod = cf.addMethodRef(proxyClass, "onObjectAlloc", "(ILjava/lang/Object;)V");
@@ -184,7 +177,7 @@ void instrumentClass(jvmtiEnv *jvmti, JNIEnv *jni, jobject loader,
     ConstPool::Index onAllocObjArrayMethod = cf.addMethodRef(proxyClass, "onObjectArrayAlloc", "(II[Ljava/lang/Object;)V");
 
     // exploiting the fact that arrays are objects
-    // public static void on(Type)ArrayAlloc(int atype, int size, Object allocdArray);
+    // public static void onArrayAlloc(int atype, int size, Object allocdArray);
     ConstPool::Index onAllocPrimArrayMethod = cf.addMethodRef(proxyClass, "onPrimitiveArrayAlloc", "(IILjava/lang/Object;)V");
 
     // public static void on2DArrayAlloc(int size1, int size2, Object allocdArray, int arrayClassID)
@@ -192,9 +185,9 @@ void instrumentClass(jvmtiEnv *jvmti, JNIEnv *jni, jobject loader,
     
     // public static void onPutField(Object tgtObject, Object srcObject, int fieldID);
     ConstPool::Index onPutFieldMethod = cf.addMethodRef(proxyClass, "onPutField","(Ljava/lang/Object;Ljava/lang/Object;I)V");
-
-    // public static void witnessGetField(Object aliveObject, int classID);
-    ConstPool::Index witnessGetFieldMethod = cf.addMethodRef(proxyClass, "witnessGetField", "(Ljava/lang/Object;I)V");
+    
+    // public static void witnessObjectAlive(Object aliveObject, int classID);
+    ConstPool::Index witnessObjectAliveMethod = cf.addMethodRef(proxyClass, "witnessObjectAlive", "(Ljava/lang/Object;I)V");
     
     for (Method &method : cf.methods) {
         // Record the method
@@ -205,14 +198,14 @@ void instrumentClass(jvmtiEnv *jvmti, JNIEnv *jni, jobject loader,
 
         if (method.hasCode()) {
             ConstPool::Index methodIDIndex = cf.addInteger(methodID);
-            instrumentMethodEntry(cf, method, methodIDIndex, onEntryMethod);
+            instrumentMethodEntry(cf, method, methodIDIndex, onEntryMethod, witnessObjectAliveMethod);
             instrumentMethodExit(cf, method, methodIDIndex, onExitMethod);
             instrumentObjectAlloc(cf, method, onAllocMethod);
             instrumentObjectArrayAlloc(cf, method, onAllocObjArrayMethod);
             instrumentPrimitiveArrayAlloc(cf, method, onAllocPrimArrayMethod);
             instrumentMultiArrayAlloc(cf, method, onAlloc2DArrayMethod);
             instrumentPutField(cf, method, onPutFieldMethod);
-            witnessGetField(cf, method, witnessGetFieldMethod);
+            witnessGetField(cf, method, witnessObjectAliveMethod);
         }
     }
 
@@ -260,21 +253,59 @@ inline static void instrumentPutField(ClassFile &cf, Method &method, ConstPool::
 }
 
 inline static void instrumentMethodEntry(ClassFile &cf, Method &method, ConstPool::Index &methodIDIndex,
-                                  ConstPool::Index &instrMethod)
+                                         ConstPool::Index &instrMethod, ConstPool::Index &witnessMethod)
 {
     InstList &instList = method.instList();
             
-    Inst *p = *instList.begin();
-    // Stack: ...
-    instList.addLdc(Opcode::ldc_w, methodIDIndex, p);
-    // Stack: ... | methodIDIndex
-    instList.addInvoke(Opcode::invokestatic, instrMethod, p);
-    // Stack: ...
-    // Stack preserved
+    Inst *p = *instList.begin(); 
+
+    // doesn't quite work yet, because...circular reasoning
+    // if (method.isMain()) {
+    //     instList.addInvoke(Opcode::invokestatic, onMainMethod, p);
+    // }
+    
+    if (method.isStatic()) {
+        // Stack: ...
+        instList.addLdc(Opcode::ldc_w, methodIDIndex, p);
+        // Stack: ... | methodIDIndex
+        instList.addZero(Opcode::aconst_null, p);
+        // Stack: ... | methodIDIndex | null
+        instList.addInvoke(Opcode::invokestatic, instrMethod, p);
+        // Stack: ...
+        // Stack preserved
+    } else if (method.isInit()) {
+        // don't yet know what to do with constructors yet
+    } else {
+        // Stack: ...
+        instList.addLdc(Opcode::ldc_w, methodIDIndex, p);
+        // Stack: ... | methodIDIndex
+        instList.addZero(Opcode::aload_0, p);
+        // Stack: ... | methodIDIndex | thisObject
+        instList.addInvoke(Opcode::invokestatic, instrMethod, p);
+        // Stack: ...
+        // Stack preserved
+    }
+
+    /* Can't instrument certain built-in classes 
+       also, one can't instrument in an initializer 
+       because an uninitialized thing isn't an object */
+    if (string(cf.getThisClassName()).find("java") != 0
+        && string(cf.getThisClassName()).find("sun") != 0
+        && string(method.getName()) != "<init>") {
+        // Stack: ...
+        instList.addZero(Opcode::aload_0, p);
+        // Stack: ... | thisObject
+        // cerr << "Debug: " << cf.getThisClassName() << endl;
+        int classID = classTable.mapOrFind(string(cf.getThisClassName()));
+        ConstPool::Index classIDIndex = cf.addInteger(classID);
+        instList.addLdc(Opcode::ldc_w, classIDIndex, p);
+        // Stack: ... | thisObject | thisClassID
+        instList.addInvoke(Opcode::invokestatic, witnessMethod, p);
+    }
 }
 
 inline static void instrumentMethodExit(ClassFile &cf, Method &method, ConstPool::Index &methodIDIndex,
-                                 ConstPool::Index &instrMethod)
+                                        ConstPool::Index &instrMethod)
 {
     InstList &instList = method.instList();
 
@@ -316,7 +347,7 @@ static void instrumentObjectAlloc(ClassFile &cf, Method &method, ConstPool::Inde
     }
 }
 
-inline static void instrumentObjectArrayAlloc(ClassFile &cf, Method &method,ConstPool::Index &instrMethod)
+inline static void instrumentObjectArrayAlloc(ClassFile &cf, Method &method, ConstPool::Index &instrMethod)
 {
     InstList &instList = method.instList();
     

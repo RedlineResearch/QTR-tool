@@ -5,13 +5,13 @@ LD_PATH  += -L$(JNIF_LIB_PATH)
 
 LIBS = -ljnif
 
-MODE = debug
+MODE = production
 CXXFLAGS = -std=c++11 -fPIC
 
 ifeq ($(MODE), debug)
 	CXXFLAGS += -g -O0
 else
-	CXXFLAGS += -O3
+	CXXFLAGS += -O2
 endif
 
 et2: libet2.so
@@ -43,4 +43,4 @@ Test.class: Test.java
 	$(JAVAC) $^
 
 clean:
-	rm -f libet2.so *o *class *class.h *gch *~ *log
+	rm -f libet2.so *o *class *class.h *gch *~ *log *list

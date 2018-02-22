@@ -27,7 +27,9 @@ hs_err_pid*
 build/
 bin/
 
-# Logs & Notes
+# Logs, notes, trace files
 *.log
 *.org
 *.notes
+*.list
+trace*

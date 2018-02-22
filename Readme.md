@@ -24,8 +24,8 @@ performance of Elephant Tracks by 7-10 times.
 
 ## Requirements
    * gcc
-   * JNIF, available from [here](https://bitbucket.org/acuarica/jnif).
-   * OpenJDK 8 with HotSpot. Not tested with other JVMs or other versions of OpenJDK.
+   * JNIF, available from [here](https://gitlab.com/acuarica/jnif).
+   * Oracle JDK 8 or IBM J9 JDK.
    * Linux. Only tested with RHEL and Ubuntu; not tested with other distributions or 
      operating systems.
 

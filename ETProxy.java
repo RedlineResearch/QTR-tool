@@ -11,6 +11,7 @@ public class ETProxy
     private static final InstrumentFlag inInstrumentMethod = new InstrumentFlag();
 
     private static long[] timestampBuffer = new long[1000];
+    private static long[] threadIDBuffer = new long[1000];
 
     // TRACING EVENTS
     // Method entry = 1, method exit = 2, object allocation = 3
@@ -27,6 +28,7 @@ public class ETProxy
     private static int[] fourthBuffer = new int[1000];
     private static AtomicInteger ptr = new AtomicInteger();
 
+    // Adapted from JNIF test code
     private static byte[] getResourceEx(String className, ClassLoader loader) {
 		java.io.InputStream is;
 
@@ -75,8 +77,10 @@ public class ETProxy
 
 		return res;
 	}
+
+    // public static native void _onMain();
     
-    public static void onEntry(int methodID)
+    public static void onEntry(int methodID, Object receiver)
     {
         long timestamp = System.nanoTime();
         
@@ -90,8 +94,10 @@ public class ETProxy
             // wait on ptr to prevent overflow
             int currPtr = ptr.getAndIncrement();
             firstBuffer[currPtr] = methodID;
+            secondBuffer[currPtr] = System.identityHashCode(receiver);
             eventTypeBuffer[currPtr] = 1;
             timestampBuffer[currPtr] = timestamp;
+            threadIDBuffer[currPtr] = System.identityHashCode(Thread.currentThread());
         } else {
             synchronized(ptr) {
                 if (ptr.get() >= 1000) {
@@ -120,6 +126,7 @@ public class ETProxy
             firstBuffer[currPtr] = methodID;
             eventTypeBuffer[currPtr] = 2;
             timestampBuffer[currPtr] = timestamp;
+            threadIDBuffer[currPtr] = System.identityHashCode(Thread.currentThread());
         } else {
             synchronized(ptr) {
                 if (ptr.get() >= 1000) {
@@ -149,6 +156,7 @@ public class ETProxy
             eventTypeBuffer[currPtr] = 3;
             secondBuffer[currPtr] = allocdClassID;
             timestampBuffer[currPtr] = timestamp;
+            threadIDBuffer[currPtr] = System.identityHashCode(Thread.currentThread());
         } else {
             synchronized(ptr) {
                 if (ptr.get() >= 1000) {
@@ -178,6 +186,7 @@ public class ETProxy
             secondBuffer[currPtr] = fieldID;
             timestampBuffer[currPtr] = timestamp;
             thirdBuffer[currPtr] = System.identityHashCode(srcObject);
+            threadIDBuffer[currPtr] = System.identityHashCode(Thread.currentThread());
         } else {
             synchronized(ptr) {
                 if (ptr.get() >= 1000) {
@@ -207,6 +216,7 @@ public class ETProxy
             secondBuffer[currPtr] = atype;
             thirdBuffer[currPtr] = size;
             timestampBuffer[currPtr] = timestamp;
+            threadIDBuffer[currPtr] = System.identityHashCode(Thread.currentThread());
         } else {
             synchronized(ptr) {
                 if (ptr.get() >= 1000) {
@@ -236,6 +246,7 @@ public class ETProxy
             secondBuffer[currPtr] = allocdClassID;
             thirdBuffer[currPtr] = size;
             timestampBuffer[currPtr] = timestamp;
+            threadIDBuffer[currPtr] = System.identityHashCode(Thread.currentThread());
         } else {
             synchronized(ptr) {
                 if (ptr.get() >= 1000) {
@@ -266,6 +277,7 @@ public class ETProxy
             thirdBuffer[currPtr] = size1;
             fourthBuffer[currPtr] = size2;
             timestampBuffer[currPtr] = timestamp;
+            threadIDBuffer[currPtr] = System.identityHashCode(Thread.currentThread());
         } else {
             synchronized(ptr) {
                 if (ptr.get() >= 1000) {
@@ -277,7 +289,7 @@ public class ETProxy
         inInstrumentMethod.set(false);
     }
 
-    public static void witnessGetField(Object aliveObject, int classID)
+    public static void witnessObjectAlive(Object aliveObject, int classID)
     {
         long timestamp = System.nanoTime();
         
@@ -294,6 +306,7 @@ public class ETProxy
             eventTypeBuffer[currPtr] = 8;
             secondBuffer[currPtr] = classID;
             timestampBuffer[currPtr] = timestamp;
+            threadIDBuffer[currPtr] = System.identityHashCode(Thread.currentThread());
         } else {
             synchronized(ptr) {
                 if (ptr.get() >= 1000) {
@@ -310,36 +323,40 @@ public class ETProxy
         for (int i = 0; i < 1000; i++) {
             switch(eventTypeBuffer[i]) {
             case 1: // method entry
+                // M <method-id> <receiver-object-id> <thread-id>
+                System.out.println("M " + firstBuffer[i] + " " + secondBuffer[i] + " " + threadIDBuffer[i]);
+                break;
             case 2: // method exit
                 // 1/2, methodID, timestamp
-                System.out.println(eventTypeBuffer[i] + ", " + firstBuffer[i] + ", " + timestampBuffer[i]);
+                System.out.println("E " + firstBuffer[i] + " " + threadIDBuffer[i]);
                 break;
             case 3: // object allocation
-                // 3, objectHash, classID, timestamp
-                System.out.println(eventTypeBuffer[i] + ", " + firstBuffer[i] + ", "  +
-                                   secondBuffer[i] + ", " + timestampBuffer[i]);
+                // A <object-id> <size> <type-id> <site-id> <length (0)> <thread-id>
+                System.out.println("A " + firstBuffer[i] + " " + 0 + " " +
+                                   secondBuffer[i] + " " + 0 + "  " + 0 + threadIDBuffer[i]);
                 break;
             case 4: // object array allocation
             case 5: // primitive array allocation
                 // 4/5, arrayHash, classID/atype, size, timestamp
-                System.out.println(eventTypeBuffer[i] + ", " + firstBuffer[i] + ", " +
-                                   secondBuffer[i] + ", " + thirdBuffer[i] + ", " + timestampBuffer[i]);
+                System.out.println("AA " + firstBuffer[i] + " " +
+                                   secondBuffer[i] + " " + thirdBuffer[i] + " " + threadIDBuffer[i]);
                 break;
             case 6: // 2D array allocation
                 // 6, arrayHash, arrayClassID, size1, size2, timestamp
-                System.out.println(eventTypeBuffer[i] + ", " + firstBuffer[i] + ", " +
-                                   secondBuffer[i] + ", " + thirdBuffer[i] + ", " +
-                                   fourthBuffer[i] + ", " + timestampBuffer[i]);
+                System.out.println("AA2 " + firstBuffer[i] + " " +
+                                   secondBuffer[i] + " " + thirdBuffer[i] + " " +
+                                   fourthBuffer[i] + " " + threadIDBuffer[i]);
                 break;
-            case 7: // assign to object field
+            case 7: // object update
                 // 7, targetObjectHash, fieldID, srcObjectHash, timestamp
-                System.out.println(eventTypeBuffer[i] + ", " + firstBuffer[i] + ", " + secondBuffer[i] + ", " +
-                                   thirdBuffer[i] + ", " + timestampBuffer[i]);
+                // U <old-tgt-obj-id> <obj-id> <new-tgt-obj-id> <field-id> <thread-id>
+                System.out.println("U " + firstBuffer[i] + " " + secondBuffer[i] + " " +
+                                   thirdBuffer[i] + " " + threadIDBuffer[i]);
                 break;
             case 8: // witness with get field
                 // 8, aliveObjectHash, classID, timestamp
-                System.out.println(eventTypeBuffer[i] + ", " + firstBuffer[i] + ", " + secondBuffer[i] + ", " +
-                                   timestampBuffer[i]);
+                System.out.println("W" + " " + firstBuffer[i] + " " + secondBuffer[i] + " " +
+                                   threadIDBuffer[i]);
                 break;
             }
         }
