@@ -1,6 +1,7 @@
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.Arrays;
 import java.io.PrintWriter;
+import java.lang.reflect.*;
 
 public class ETProxy
 {
@@ -15,7 +16,7 @@ public class ETProxy
 
     // TRACING EVENTS
     // Method entry = 1, method exit = 2, object allocation = 3
-    // object array allocation = 4, primitive array allocation = 5,
+    // object array allocation = 4
     // 2D array allocation = 6, put field = 7
     // WITNESSES
     // get field = 8
@@ -28,6 +29,53 @@ public class ETProxy
     private static int[] fourthBuffer = new int[1000];
     private static AtomicInteger ptr = new AtomicInteger();
 
+    private static PrintWriter pw;
+
+    static {
+        try {
+            pw = new PrintWriter("trace");
+        } catch (Exception e) {
+            System.err.println("FNF");
+        }
+    }
+
+    // static {
+    //     try {
+    //         System.loadLibrary("objectsize");
+    //         System.err.println("object size library loaded");
+    //     } catch (Exception e) {
+    //         System.err.println(e.getMessage());
+    //         System.err.println("Error: can't load libobjectsize.so");
+    //     }
+    // }
+    
+    // I hope no one ever creates a 2 gigabyte object
+    private static native int getObjectSize(Object obj);
+
+    // shh.. pretend I didn't do anything bad
+    // private static Unsafe unsafe = getUnsafe();
+
+    // private static Unsafe getUnsafe() {
+    //     try {
+    //         Field f = Unsafe.class.getDeclaredField("theUnsafe");
+    //         f.setAccessible(true);
+    //         return (Unsafe) f.get(null);
+    //     } catch (Exception e) {
+    //         return null;
+    //     }
+    // }
+
+    // See: https://highlyscalable.wordpress.com/2012/02/02/direct-memory-access-in-java/
+    // private static long getObjectSize(Object object) {
+    //     System.err.println(object);
+    //     return unsafe.getAddress(_normalize(unsafe.getInt(object, 4L)) + 12L);
+    // }
+ 
+    // private static long _normalize(int value) {
+    //     if(value >= 0) return value;
+    //     return (~0L >>> 32) & value;
+    // }
+    
     // Adapted from JNIF test code
     private static byte[] getResourceEx(String className, ClassLoader loader) {
 		java.io.InputStream is;
@@ -94,7 +142,7 @@ public class ETProxy
             // wait on ptr to prevent overflow
             int currPtr = ptr.getAndIncrement();
             firstBuffer[currPtr] = methodID;
-            secondBuffer[currPtr] = System.identityHashCode(receiver);
+            secondBuffer[currPtr] = (receiver == null) ? 0 : System.identityHashCode(receiver);
             eventTypeBuffer[currPtr] = 1;
             timestampBuffer[currPtr] = timestamp;
             threadIDBuffer[currPtr] = System.identityHashCode(Thread.currentThread());
@@ -139,8 +187,9 @@ public class ETProxy
         inInstrumentMethod.set(false);
     }
     
-    public static void onObjectAlloc(int allocdClassID, Object allocdObject)
+    public static void onObjectAlloc(int allocdClassID, Object allocdObject, int allocSiteID)
     {
+        
         long timestamp = System.nanoTime();
         
         if (inInstrumentMethod.get()) {
@@ -155,6 +204,11 @@ public class ETProxy
             firstBuffer[currPtr] = System.identityHashCode(allocdObject);
             eventTypeBuffer[currPtr] = 3;
             secondBuffer[currPtr] = allocdClassID;
+            thirdBuffer[currPtr] = allocSiteID;
+            // I hope no one ever wants a 2 gigabyte (shallow size!) object
+            // some problem here...
+            // System.err.print("Class ID: " + allocdClassID);
+            fourthBuffer[currPtr] = (int) getObjectSize(allocdObject);
             timestampBuffer[currPtr] = timestamp;
             threadIDBuffer[currPtr] = System.identityHashCode(Thread.currentThread());
         } else {
@@ -198,38 +252,38 @@ public class ETProxy
         inInstrumentMethod.set(false);
     }
 
-    public static void onPrimitiveArrayAlloc(int atype, int size, Object allocdArray)
-    {
-        long timestamp = System.nanoTime();
+    // public static void onPrimitiveArrayAlloc(int atype, int size, Object allocdArray)
+    // {
+    //     long timestamp = System.nanoTime();
         
-        if (inInstrumentMethod.get()) {
-            return;
-        } else {
-            inInstrumentMethod.set(true);
-        }
+    //     if (inInstrumentMethod.get()) {
+    //         return;
+    //     } else {
+    //         inInstrumentMethod.set(true);
+    //     }
 
-        if (ptr.get() < 1000) {
-            // wait on ptr to prevent overflow
-            int currPtr = ptr.getAndIncrement();
-            firstBuffer[currPtr] = System.identityHashCode(allocdArray);
-            eventTypeBuffer[currPtr] = 5;
-            secondBuffer[currPtr] = atype;
-            thirdBuffer[currPtr] = size;
-            timestampBuffer[currPtr] = timestamp;
-            threadIDBuffer[currPtr] = System.identityHashCode(Thread.currentThread());
-        } else {
-            synchronized(ptr) {
-                if (ptr.get() >= 1000) {
-                    flushBuffer();
-                }
-            }
-        }
+    //     if (ptr.get() < 1000) {
+    //         // wait on ptr to prevent overflow
+    //         int currPtr = ptr.getAndIncrement();
+    //         firstBuffer[currPtr] = System.identityHashCode(allocdArray);
+    //         eventTypeBuffer[currPtr] = 5;
+    //         secondBuffer[currPtr] = atype;
+    //         thirdBuffer[currPtr] = size;
+    //         timestampBuffer[currPtr] = timestamp;
+    //         threadIDBuffer[currPtr] = System.identityHashCode(Thread.currentThread());
+    //     } else {
+    //         synchronized(ptr) {
+    //             if (ptr.get() >= 1000) {
+    //                 flushBuffer();
+    //             }
+    //         }
+    //     }
         
-        inInstrumentMethod.set(false);
-    }
+    //     inInstrumentMethod.set(false);
+    // }
 
-    public static void onObjectArrayAlloc(int allocdClassID, int size, Object[] allocdArray)
-    {
+    public static void onArrayAlloc(int allocdClassID, int size, Object allocdArray, int allocSiteID)
+    {     
         long timestamp = System.nanoTime();
         
         if (inInstrumentMethod.get()) {
@@ -245,6 +299,7 @@ public class ETProxy
             eventTypeBuffer[currPtr] = 4;
             secondBuffer[currPtr] = allocdClassID;
             thirdBuffer[currPtr] = size;
+            fourthBuffer[currPtr] = allocSiteID;
             timestampBuffer[currPtr] = timestamp;
             threadIDBuffer[currPtr] = System.identityHashCode(Thread.currentThread());
         } else {
@@ -258,7 +313,7 @@ public class ETProxy
         inInstrumentMethod.set(false);
     }
 
-    public static void on2DArrayAlloc(int size1, int size2, Object allocdArray, int arrayClassID)
+    public static void onMultiArrayAlloc(int dims, int allocdClassID, Object[] allocdArray, int allocSiteID)
     {
         long timestamp = System.nanoTime();
         
@@ -273,11 +328,21 @@ public class ETProxy
             int currPtr = ptr.getAndIncrement();
             firstBuffer[currPtr] = System.identityHashCode(allocdArray);
             eventTypeBuffer[currPtr] = 6;
-            secondBuffer[currPtr] = arrayClassID;
-            thirdBuffer[currPtr] = size1;
-            fourthBuffer[currPtr] = size2;
+            secondBuffer[currPtr] = allocdClassID;
+            thirdBuffer[currPtr] = allocdArray.length;
+            fourthBuffer[currPtr] = allocSiteID;
             timestampBuffer[currPtr] = timestamp;
             threadIDBuffer[currPtr] = System.identityHashCode(Thread.currentThread());
+
+            if (dims > 2) {
+                for (int i = 0; i < allocdArray.length; ++i) {
+                    onMultiArrayAlloc(dims - 1, allocdClassID, (Object[]) allocdArray[i], allocSiteID);
+                }
+            } else { // dims == 2
+                for (int i = 0; i < allocdArray.length; ++i) {
+                    onArrayAlloc(allocdClassID, 0, allocdArray[i], allocSiteID);
+                }
+            }
         } else {
             synchronized(ptr) {
                 if (ptr.get() >= 1000) {
@@ -324,38 +389,44 @@ public class ETProxy
             switch(eventTypeBuffer[i]) {
             case 1: // method entry
                 // M <method-id> <receiver-object-id> <thread-id>
-                System.out.println("M " + firstBuffer[i] + " " + secondBuffer[i] + " " + threadIDBuffer[i]);
+                pw.println("M " + firstBuffer[i] + " " + secondBuffer[i] + " " + threadIDBuffer[i]);
                 break;
             case 2: // method exit
-                // 1/2, methodID, timestamp
-                System.out.println("E " + firstBuffer[i] + " " + threadIDBuffer[i]);
+                // E <method-id> <thread-id>
+                pw.println("E " + firstBuffer[i] + " " + threadIDBuffer[i]);
                 break;
             case 3: // object allocation
-                // A <object-id> <size> <type-id> <site-id> <length (0)> <thread-id>
-                System.out.println("A " + firstBuffer[i] + " " + 0 + " " +
-                                   secondBuffer[i] + " " + 0 + "  " + 0 + threadIDBuffer[i]);
+                // N <object-id> <size> <type-id> <site-id> <length (0)> <thread-id>
+                // 1st buffer = object ID (hash)
+                // 2nd buffer = class ID
+                // 3rd buffer = allocation site (method ID)
+                pw.println("N " + firstBuffer[i] + " " + fourthBuffer[i] + " " +
+                                   secondBuffer[i] + " " + thirdBuffer[i] + " " + 0 + " " + threadIDBuffer[i]);
                 break;
             case 4: // object array allocation
             case 5: // primitive array allocation
-                // 4/5, arrayHash, classID/atype, size, timestamp
-                System.out.println("AA " + firstBuffer[i] + " " +
-                                   secondBuffer[i] + " " + thirdBuffer[i] + " " + threadIDBuffer[i]);
+                    // 5 now removed so nothing should come out of it
+                // A <object-id> <size> <type-id> <site-id> <length> <thread-id>
+                pw.println("A " + firstBuffer[i] + " " + 0 + " " +
+                                   secondBuffer[i] + " " + fourthBuffer[i] + " " +
+                                   thirdBuffer[i] + " " + threadIDBuffer[i]);
                 break;
             case 6: // 2D array allocation
                 // 6, arrayHash, arrayClassID, size1, size2, timestamp
-                System.out.println("AA2 " + firstBuffer[i] + " " +
-                                   secondBuffer[i] + " " + thirdBuffer[i] + " " +
-                                   fourthBuffer[i] + " " + threadIDBuffer[i]);
+                // A <object-id> <size> <type-id> <site-id> <length> <thread-id>
+                pw.println("A " + firstBuffer[i] + " " + 0 + " " +
+                                   secondBuffer[i] + " " + fourthBuffer[i] + " " +
+                                   thirdBuffer[i] + " " + threadIDBuffer[i]);
                 break;
             case 7: // object update
                 // 7, targetObjectHash, fieldID, srcObjectHash, timestamp
                 // U <old-tgt-obj-id> <obj-id> <new-tgt-obj-id> <field-id> <thread-id>
-                System.out.println("U " + firstBuffer[i] + " " + secondBuffer[i] + " " +
+                pw.println("U " + firstBuffer[i] + " " + secondBuffer[i] + " " +
                                    thirdBuffer[i] + " " + threadIDBuffer[i]);
                 break;
             case 8: // witness with get field
                 // 8, aliveObjectHash, classID, timestamp
-                System.out.println("W" + " " + firstBuffer[i] + " " + secondBuffer[i] + " " +
+                pw.println("W" + " " + firstBuffer[i] + " " + secondBuffer[i] + " " +
                                    threadIDBuffer[i]);
                 break;
             }

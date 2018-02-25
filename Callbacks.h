@@ -12,7 +12,7 @@ extern bool isReady;
 extern MethodTable methodTable;
 extern ClassTable classTable, fieldTable;
 
-void JNICALL loadProxyClass(jvmtiEnv *jvmti, JNIEnv *jni);
+void JNICALL onVMStart(jvmtiEnv *jvmti, JNIEnv *jni);
 void JNICALL onClassFileLoad(jvmtiEnv *jvmti,
                              JNIEnv *jni,
                              jclass class_being_redefined,

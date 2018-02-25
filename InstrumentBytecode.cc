@@ -23,14 +23,18 @@ public:
 class ClassPath: public IClassPath {
 public:
 	ClassPath(JNIEnv* jni, jobject loader) :
-        jni(jni), loader(loader) {
-	}
+        thisJni(jni), loader(loader)
+    {
+        if (loader != nullptr) {
+            inLivePhase = true;
+        }
+    }
 
     string getCommonSuperClass(const string& className1, const string& className2) {
 
         // cerr << "Finding common super class: " << className1 << " and " << className2 << endl;
         
-		if (!isReady) {
+		if (!inLivePhase) {
 			return "java/lang/Object";
 		}
 
@@ -72,18 +76,22 @@ public:
 		return false;
 	}
 
-	static void initProxyClass(JNIEnv* jni) {
+	static void initProxyClass(JNIEnv* theJni) {
 		if (proxyClass == NULL) {
-			proxyClass = jni->FindClass("ETProxy");
+			proxyClass = theJni->FindClass("ETProxy");
 
+            if (!proxyClass) {
+                cerr << "ETProxy not found" << endl;
+            }
+            
             assert(proxyClass);
 
-			getResourceId = jni->GetStaticMethodID(proxyClass, "getResource",
+			getResourceId = theJni->GetStaticMethodID(proxyClass, "getResource",
                                                    "(Ljava/lang/String;Ljava/lang/ClassLoader;)[B");
 
             assert(getResourceId);
             
-			proxyClass = (jclass) jni->NewGlobalRef(proxyClass);
+			proxyClass = (jclass) theJni->NewGlobalRef(proxyClass);
 
             assert(proxyClass);
 		}
@@ -99,41 +107,47 @@ private:
 
 	void loadClassAsResource(const string& className) {
 
-		ClassPath::initProxyClass(jni);
+        // cerr << "in class: " << className << endl;
+        
+		ClassPath::initProxyClass(thisJni);
 
-		jstring targetName = jni->NewStringUTF(className.c_str());
+		jstring targetName = thisJni->NewStringUTF(className.c_str());
 
-		jobject res = jni->CallStaticObjectMethod(proxyClass, getResourceId,
+		jobject res = thisJni->CallStaticObjectMethod(proxyClass, getResourceId,
                                                   targetName, loader);
 
 		if (res == NULL) {
 			throw ClassNotLoadedException(className);
 		}
 
-		jsize len = jni->GetArrayLength((jarray) res);
+		jsize len = thisJni->GetArrayLength((jarray) res);
 
-		u1* bytes = (u1*) jni->GetByteArrayElements((jbyteArray) res, NULL);
+		u1* bytes = (u1*) thisJni->GetByteArrayElements((jbyteArray) res, NULL);
 
         parser::ClassFileParser cf(bytes, len);
 
-		jni->ReleaseByteArrayElements((jbyteArray) res, (jbyte*) bytes,
+		thisJni->ReleaseByteArrayElements((jbyteArray) res, (jbyte*) bytes,
                                       JNI_ABORT);
-		jni->DeleteLocalRef(res);
-		jni->DeleteLocalRef(targetName);
+		thisJni->DeleteLocalRef(res);
+		thisJni->DeleteLocalRef(targetName);
 
 		classHierarchy.addClass(cf);
 	}
 
 	//const char* className;
-	JNIEnv* jni;
+	JNIEnv* thisJni;
 	jobject loader;
 
 	static jclass proxyClass;
 	static jmethodID getResourceId;
+
+    bool inLivePhase = false;
 };
 
 jclass ClassPath::proxyClass = NULL;
 jmethodID ClassPath::getResourceId = NULL;
+
+int lastNewSiteID = 0;
 
 static void instrumentMethodEntry(ClassFile &cf, Method &method, ConstPool::Index &methodIDIndex, ConstPool::Index &instrMethod,
                                   ConstPool::Index &witnessMethod);
@@ -145,13 +159,17 @@ static void instrumentMultiArrayAlloc(ClassFile &cf, Method &method, ConstPool::
 static void instrumentPutField(ClassFile &cf, Method &method, ConstPool::Index &instrMethod);
 static void witnessGetField(ClassFile &cf, Method &method, ConstPool::Index &instrMethod);
 
-void instrumentClass(jvmtiEnv *jvmti, JNIEnv *jni, jobject loader,
+void instrumentClass(jvmtiEnv *jvmti, JNIEnv *currJni, jobject loader,
                      u1 *class_data, jint class_data_len,
                      jint *new_class_data_len, u1 **new_class_data)
 {
     static int methodIDCounter = 1;
     
     parser::ClassFileParser cf(class_data, class_data_len);
+
+    // if (string(cf.getThisClassName()).find("sun") == 0) {
+    //     return;
+    // }
 
     // cerr << "Loading: " << cf.getThisClassName() << endl;
 
@@ -170,18 +188,16 @@ void instrumentClass(jvmtiEnv *jvmti, JNIEnv *jni, jobject loader,
     // public static native void onMain();
     // ConstPool::Index onMainMethod = cf.addMethodRef(proxyClass, "_onMain", "()V");
 
-    // public static void onObjectAlloc(int allocdClassID, Object allocdObject);
-    ConstPool::Index onAllocMethod = cf.addMethodRef(proxyClass, "onObjectAlloc", "(ILjava/lang/Object;)V");
+    // public static void onObjectAlloc(int allocdClassID, Object allocdObject, int allocSiteID);
+    ConstPool::Index onAllocMethod = cf.addMethodRef(proxyClass, "onObjectAlloc", "(ILjava/lang/Object;I)V");
 
-    // public static void onObjectArrayAlloc(int allocdClassID, int size, Object[] allocdArray);
-    ConstPool::Index onAllocObjArrayMethod = cf.addMethodRef(proxyClass, "onObjectArrayAlloc", "(II[Ljava/lang/Object;)V");
+    // pitfall: allocdArray is not always Object[]!
+    // public static void onObjectArrayAlloc(int allocdClassID, int size, Object allocdArray, int allocSiteID);
+    ConstPool::Index onAllocArrayMethod = cf.addMethodRef(proxyClass, "onArrayAlloc", "(IILjava/lang/Object;I)V");
 
-    // exploiting the fact that arrays are objects
-    // public static void onArrayAlloc(int atype, int size, Object allocdArray);
-    ConstPool::Index onAllocPrimArrayMethod = cf.addMethodRef(proxyClass, "onPrimitiveArrayAlloc", "(IILjava/lang/Object;)V");
-
-    // public static void on2DArrayAlloc(int size1, int size2, Object allocdArray, int arrayClassID)
-    ConstPool::Index onAlloc2DArrayMethod = cf.addMethodRef(proxyClass, "on2DArrayAlloc", "(IILjava/lang/Object;I)V");
+    // ... but allocdArray is always Object[] here
+    // public static void onMultiArrayAlloc(int dims, int allocdClassID, Object[] allocdArray, int allocSiteID);
+    ConstPool::Index onAllocMultiArrayMethod = cf.addMethodRef(proxyClass, "onMultiArrayAlloc", "(IILjava/lang/Object;I)V");
     
     // public static void onPutField(Object tgtObject, Object srcObject, int fieldID);
     ConstPool::Index onPutFieldMethod = cf.addMethodRef(proxyClass, "onPutField","(Ljava/lang/Object;Ljava/lang/Object;I)V");
@@ -201,15 +217,17 @@ void instrumentClass(jvmtiEnv *jvmti, JNIEnv *jni, jobject loader,
             instrumentMethodEntry(cf, method, methodIDIndex, onEntryMethod, witnessObjectAliveMethod);
             instrumentMethodExit(cf, method, methodIDIndex, onExitMethod);
             instrumentObjectAlloc(cf, method, onAllocMethod);
-            instrumentObjectArrayAlloc(cf, method, onAllocObjArrayMethod);
-            instrumentPrimitiveArrayAlloc(cf, method, onAllocPrimArrayMethod);
-            instrumentMultiArrayAlloc(cf, method, onAlloc2DArrayMethod);
+            instrumentObjectArrayAlloc(cf, method, onAllocArrayMethod);
+            instrumentPrimitiveArrayAlloc(cf, method, onAllocArrayMethod);
+            instrumentMultiArrayAlloc(cf, method, onAllocMultiArrayMethod);
             instrumentPutField(cf, method, onPutFieldMethod);
             witnessGetField(cf, method, witnessObjectAliveMethod);
         }
     }
 
-    ClassPath cp(jni, loader);
+    // assert(currJni);
+    // assert(loader);
+    ClassPath cp(currJni, loader);
     // TestClassPath cp;
     
     cf.computeFrames(&cp);
@@ -273,8 +291,6 @@ inline static void instrumentMethodEntry(ClassFile &cf, Method &method, ConstPoo
         instList.addInvoke(Opcode::invokestatic, instrMethod, p);
         // Stack: ...
         // Stack preserved
-    } else if (method.isInit()) {
-        // don't yet know what to do with constructors yet
     } else {
         // Stack: ...
         instList.addLdc(Opcode::ldc_w, methodIDIndex, p);
@@ -319,10 +335,13 @@ inline static void instrumentMethodExit(ClassFile &cf, Method &method, ConstPool
 
 static void instrumentObjectAlloc(ClassFile &cf, Method &method, ConstPool::Index &instrMethod)
 {
+    
     InstList &instList = method.instList();
     
     for (Inst *inst : instList) {
         if (inst->opcode == Opcode::NEW) {
+            // cerr << "object alloc" << endl;
+            
             // Stack: ...
             Inst *p = inst->next;
             // Stack: ... | objRef
@@ -340,6 +359,10 @@ static void instrumentObjectAlloc(ClassFile &cf, Method &method, ConstPool::Inde
             instList.addZero(Opcode::swap, p);
             // Stack: ... | objRef | classID | objRef
             
+            ConstPool::Index allocSiteIndex = cf.addInteger(++lastNewSiteID);
+            instList.addLdc(Opcode::ldc_w, allocSiteIndex, p);
+            // Stack: ... | objRef | classID | objRef | allocSiteID
+            
             instList.addInvoke(Opcode::invokestatic, instrMethod, p);
             // Stack: ... | objRef
             // Stack preserved
@@ -349,16 +372,25 @@ static void instrumentObjectAlloc(ClassFile &cf, Method &method, ConstPool::Inde
 
 inline static void instrumentObjectArrayAlloc(ClassFile &cf, Method &method, ConstPool::Index &instrMethod)
 {
+    
+    
     InstList &instList = method.instList();
     
     for (Inst *inst : instList) {
         if (inst->opcode == Opcode::anewarray) {
+            // cerr << "object array alloc" << endl;
+            
             // Stack: ... | size
 
             ConstPool::Index allocatedClassIndex = inst->type()->classIndex;
+
+            // cerr << "allocd class: " << string(cf.getClassName(allocatedClassIndex)) << endl;
+            
             int classID = classTable.mapOrFind(string(cf.getClassName(allocatedClassIndex)));            
             ConstPool::Index classIDIndex = cf.addInteger(classID);
 
+            // cerr << "check 1" << endl;
+            
             instList.addLdc(Opcode::ldc_w, classIDIndex, inst);
             // Stack: ... | size | classID
 
@@ -370,11 +402,20 @@ inline static void instrumentObjectArrayAlloc(ClassFile &cf, Method &method, Con
             
             Inst *p = inst->next;
             // Stack: ... | classID | size | arrayRef
+
+            // cerr << "check 2" << endl;
             
             instList.addZero(Opcode::dup_x2, p);
             // Stack: ... | arrayRef | classID | size | arrayRef
+
+            ConstPool::Index allocSiteIndex = cf.addInteger(++lastNewSiteID);
+            instList.addLdc(Opcode::ldc_w, allocSiteIndex, p);
+            // Stack: ... | arrayRef | classID | size | arrayRef | allocSiteID
             
             instList.addInvoke(Opcode::invokestatic, instrMethod, p);
+
+            // cerr << "check 3" << endl;
+            
             // Stack: ... | arrayRef
             // Stack preserved
         }
@@ -382,15 +423,19 @@ inline static void instrumentObjectArrayAlloc(ClassFile &cf, Method &method, Con
 }
 
 inline static void instrumentPrimitiveArrayAlloc(ClassFile &cf, Method &method, ConstPool::Index &instrMethod)
-{
+{    
     InstList &instList = method.instList();
     
     for (Inst *inst : instList) {
         if (inst->opcode == Opcode::newarray) {
+            // cerr << "prim array alloc" << endl;
             // Stack: ... | size
 
-            u1 atype = inst->newarray()->atype;
-            instList.addBiPush(atype, inst);
+            // this actually depends on JNIF implementation specifics
+            // potentially unstable across JNIF versions
+            u1 pseudoClassID = (inst->newarray()->atype) - 3;
+            // cerr << "class id: " << (int)pseudoClassID << endl;
+            instList.addBiPush(pseudoClassID, inst);
             // Stack: ... | size | atype
 
             instList.addZero(Opcode::swap, inst);
@@ -405,6 +450,10 @@ inline static void instrumentPrimitiveArrayAlloc(ClassFile &cf, Method &method, 
             instList.addZero(Opcode::dup_x2, p);
             // Stack: ... | arrayRef | atype | size | arrayRef
 
+            ConstPool::Index allocSiteIndex = cf.addInteger(++lastNewSiteID);
+            instList.addLdc(Opcode::ldc_w, allocSiteIndex, p);
+            // Stack: ... | arrayRef | atype | size | arrayRef | allocSiteID
+            
             // Yes, arrays are objects!
             instList.addInvoke(Opcode::invokestatic, instrMethod, p);
             // Stack: ... | arrayRef
@@ -415,41 +464,55 @@ inline static void instrumentPrimitiveArrayAlloc(ClassFile &cf, Method &method, 
 
 inline static void instrumentMultiArrayAlloc(ClassFile &cf, Method &method, ConstPool::Index &instrMethod)
 {
+    
     InstList &instList = method.instList();
     
     for (Inst *inst : instList) {
         if (inst->opcode == Opcode::multianewarray) {
+            // cerr << "multi array alloc" << endl;
+            // cerr << "current class: " << cf.getThisClassName() << endl;
+            
             // Stack: ... | size1 | size2 | ... | sizeN
-
+            
             ConstPool::Index allocatedClassIndex = inst->multiarray()->classIndex;
+
+            // cerr << "alloc'd class: " << string(cf.getClassName(allocatedClassIndex)) << endl;
+            
             int classID = classTable.mapOrFind(string(cf.getClassName(allocatedClassIndex)));            
             ConstPool::Index classIDIndex = cf.addInteger(classID);
 
+            // I hope no one ever wants an array of more than 255 dimensions, really
             u1 dims = inst->multiarray()->dims;
 
-            if (dims == 2) {
-                // Stack: ... | size1 | size2
-                instList.addZero(Opcode::dup2, inst);
-                // Stack: ... | size1 | size2 | size1 | size2
+            // only care about outermost size, because multi-array is just
+            // a bunch of nested arrays
+            
+            // Stack: ... | sizeN-1 | sizeN
+            
+            Inst *p = inst->next;
+            // Stack: ... | arrayRef
+            
+            instList.addZero(Opcode::dup, p);
+            // Stack: ... | arrayRef | arrayRef
+            
+            instList.addBiPush(dims, p);
+            // Stack: ... | arrayRef | arrayRef | dims
+            
+            instList.addLdc(Opcode::ldc_w, classIDIndex, p);
+            // Stack: ... | arrayRef | arrayRef | dims | arrayClassID
+            
+            instList.addZero(Opcode::dup2_x1, p);
+            // Stack: ... | arrayRef | dims | arrayClassID | arrayRef | dims | arrayClassID
+            
+            instList.addZero(Opcode::pop2, p);
+            // Stack: ... | arrayRef | dims | arrayClassID | arrayRef
 
-                Inst *p = inst->next;
-                // Stack: ... | size1 | size2 | arrayRef
-
-                instList.addZero(Opcode::dup_x2, p);
-                // Stack: ... | arrayRef | size1 | size2 | arrayRef
-                
-                instList.addLdc(Opcode::ldc_w, classIDIndex, p);
-                // Stack: ... | arrayRef | size1 | size2 | arrayRef | arrayClassID
-
-                instList.addInvoke(Opcode::invokestatic, instrMethod, p);
-                // Stack: ... | arrayRef
-                // Stack preserved
-                
-            } else { // I don't know how to do arrays with more dimensions yet
-                cerr << "Large array of size " << dims << "allocated, "
-                     << "array type of " << cf.getClassName(allocatedClassIndex)
-                     << ". Not instrumented" << endl;
-            }
+            ConstPool::Index allocSiteIndex = cf.addInteger(++lastNewSiteID);
+            instList.addLdc(Opcode::ldc_w, allocSiteIndex, p);
+            // Stack: ... | arrayRef | dims | arrayClassID | arrayRef | allocSiteID
+            
+            instList.addInvoke(Opcode::invokestatic, instrMethod, p);
+            // Stack: ... | arrayRef
         }
     }
 }

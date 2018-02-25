@@ -9,6 +9,7 @@
 # but clang++ should work in principle
 JAVAC = javac
 CXX   = g++
+JAVAH = javah
 
 # Necessary Java libraries
 INC_PATH  = -I$(JAVA_HOME)/include -I$(JAVA_HOME)/include/linux

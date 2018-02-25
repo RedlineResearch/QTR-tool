@@ -14,9 +14,9 @@ else
 	CXXFLAGS += -O2
 endif
 
-et2: libet2.so
+et2: libet2.so libobjectsize.so
 
-libet2.so: main.o Callbacks.o InstrumentBytecode.o ClassTable.o
+libet2.so: main.o Callbacks.o InstrumentBytecode.o ClassTable.o ObjectSize.o
 	$(CXX) $(LD_PATH) -shared $^ $(LIBS) -o $@
 
 main.o: main.cc
@@ -27,6 +27,9 @@ InstrumentBytecode.o: InstrumentBytecode.cc
 	$(CXX) $(INC_PATH) $(CXXFLAGS) -c $^
 ClassTable.o: ClassTable.cc
 	$(CXX) $(INC_PATH) $(CXXFLAGS) -c $^
+ObjectSize.o: ObjectSize.cc
+	$(CXX) $(INC_PATH) $(CXXFLAGS) -c $^
+
 
 ETProxy.class: ETProxy.java
 	$(JAVAC) $^
@@ -37,10 +40,15 @@ ETProxy_class.h: ETProxy.class
 InstrumentFlag_class.h: InstrumentFlag.class
 	xxd -i $^ $@
 
-test: Test.class
+libobjectsize.so: ObjectSize.cc ObjectSize.h
+	$(CXX) $(INC_PATH) $(CXXFLAGS) -shared $^ -o $@
+
+test: Test.class BinarySearchTree.class
 
 Test.class: Test.java
-	$(JAVAC) $^
+	$(JAVAC) -g $^
+BinarySearchTree.class: tests/BinarySearchTree.java
+	$(JAVAC) -g -d . $^
 
 clean:
-	rm -f libet2.so *o *class *class.h *gch *~ *log *list
+	rm -f libet2.so *o *class *class.h *gch *~ *log *jar

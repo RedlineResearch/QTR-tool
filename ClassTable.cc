@@ -4,7 +4,18 @@
 using namespace std;
 
 ClassTable::ClassTable() :
-    counter(1) {}
+    counter(9)
+{
+    // pre-fill the table with primitive types i.e. "pseudo-classes"
+    table.insert(make_pair("bool", 1));
+    table.insert(make_pair("char", 2));
+    table.insert(make_pair("float", 3));
+    table.insert(make_pair("double", 4));
+    table.insert(make_pair("byte", 5));
+    table.insert(make_pair("short", 6));
+    table.insert(make_pair("int", 7));
+    table.insert(make_pair("long", 8));
+}
 
 void ClassTable::mapClass(string className)
 {

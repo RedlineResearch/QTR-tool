@@ -36,3 +36,4 @@ bin/
 *.notes
 *.list
 trace*
+*.trace

@@ -14,6 +14,8 @@ extern ClassTable classTable;
 extern ClassTable fieldTable;
 extern bool isReady;
 
+extern jvmtiEnv *jvmti;
+
 JNIEXPORT jint JNICALL Agent_OnLoad(JavaVM *jvm, char *options, void *reserved);
 void setCallbacks(jvmtiEnv *jvmti);
 void setCapabilities(jvmtiEnv *jvmti);

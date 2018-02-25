@@ -10,11 +10,12 @@ bool isReady = false;
 MethodTable methodTable;
 ClassTable classTable, fieldTable;
 
+jvmtiEnv *jvmti = nullptr;
+
 JNIEXPORT jint JNICALL Agent_OnLoad(JavaVM *jvm, char *options, void *reserved)
 {
     // cerr << "Instrumenting..." << endl;
     
-    jvmtiEnv *jvmti;
     jvm->GetEnv((void **) &jvmti, JVMTI_VERSION_1_2);
 
     setCapabilities(jvmti);
@@ -64,10 +65,12 @@ void setCallbacks(jvmtiEnv *jvmti)
     
     (void) memset(&callbacks, 0, sizeof(callbacks));
 
-    callbacks.VMStart = &loadProxyClass;
+    callbacks.VMStart = &onVMStart;
     // callbacks.MethodEntry = &onMethodEntry;
     // callbacks.MethodExit = &onMethodExit;
     callbacks.VMInit = &onVMInit;
+
+    // we don't start rewriting bytecode until we've hit main
     callbacks.ClassFileLoadHook = &onClassFileLoad;
     callbacks.VMDeath = &flushBuffers;
     
