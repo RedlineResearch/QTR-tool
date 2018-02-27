@@ -9,7 +9,7 @@ MODE = production
 CXXFLAGS = -std=c++11 -fPIC
 
 ifeq ($(MODE), debug)
-	CXXFLAGS += -g -O0
+	CXXFLAGS += -g -O0 -DDEBUG
 else
 	CXXFLAGS += -O2
 endif
@@ -43,12 +43,14 @@ InstrumentFlag_class.h: InstrumentFlag.class
 libobjectsize.so: ObjectSize.cc ObjectSize.h
 	$(CXX) $(INC_PATH) $(CXXFLAGS) -shared $^ -o $@
 
-test: Test.class BinarySearchTree.class
+test: Hello.class BinarySearchTree.class FunctionalCounter.class
 
-Test.class: Test.java
-	$(JAVAC) -g $^
+Hello.class: tests/Hello.java
+	$(JAVAC) -g -d . $^
 BinarySearchTree.class: tests/BinarySearchTree.java
 	$(JAVAC) -g -d . $^
+FunctionalCounter.class: tests/FunctionalCounter.scala
+	$(SCALAC) -g:source -d . $^
 
 clean:
-	rm -f libet2.so *o *class *class.h *gch *~ *log *jar
+	rm -f libet2.so *o *class *class.h *gch *~ *log

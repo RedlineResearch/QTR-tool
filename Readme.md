@@ -20,7 +20,8 @@ implementation of Elephant Tracks. In the long term, we aspire to increase the
 performance of Elephant Tracks by 7-10 times.
 
 ## Using ET2
-`java -agentlib:et2 [Class]`, all other Java options (including `-jar`) work as usual.
+`java -Xverify:none -Djava.library.path=. -agentlib:et2 [Class]`, all other Java options (including `-jar`) 
+*should* work as usual.
 
 ## Requirements
    * gcc
@@ -36,10 +37,10 @@ performance of Elephant Tracks by 7-10 times.
 
 ## Testing
    * `make test`
-   * `java -agentlib:et2 Test`
+   * `java -agentlib:et2 Hello`
+   * `java -agentlib:et2 BinarySearchTree`
 
 ## Current Status
-ET2/JVM runs correctly and without thrown exceptions on the Oracle and IBM J9 JDKs, but 
-throws a `ClassCircularityError ` on OpenJDK. This exception is not yet known to cause 
-any runtime errors, but it is probably a better idea to use Oracle JDK instead of OpenJDK 
-(since both run the HotSpot JVM anyway).
+ET2/JVM runs correctly and without thrown exceptions on Oracle Java 8 if bytecode verification is disabled, 
+but it seems to fail bytecode verification at the moment. Currently we are not sure what is wrong with 
+it and the solution at the moment is to disable bytecode verification.

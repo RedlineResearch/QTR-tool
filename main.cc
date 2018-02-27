@@ -14,7 +14,9 @@ jvmtiEnv *jvmti = nullptr;
 
 JNIEXPORT jint JNICALL Agent_OnLoad(JavaVM *jvm, char *options, void *reserved)
 {
-    // cerr << "Instrumenting..." << endl;
+    #ifdef DEBUG
+    cerr << "Agent loaded" << endl;
+    #endif
     
     jvm->GetEnv((void **) &jvmti, JVMTI_VERSION_1_2);
 
@@ -61,12 +63,16 @@ void setCapabilities(jvmtiEnv *jvmti)
 
 void setCallbacks(jvmtiEnv *jvmti)
 {
+    #ifdef DEBUG
+    cerr << "Setting callbacks" << endl;
+    #endif
+    
     jvmtiEventCallbacks callbacks;
     
     (void) memset(&callbacks, 0, sizeof(callbacks));
 
     callbacks.VMStart = &onVMStart;
-    // callbacks.MethodEntry = &onMethodEntry;
+    callbacks.MethodEntry = &onMethodEntry;
     // callbacks.MethodExit = &onMethodExit;
     callbacks.VMInit = &onVMInit;
 

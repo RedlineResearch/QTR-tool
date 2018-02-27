@@ -11,47 +11,65 @@
 
 using namespace std;
 
-// void JNICALL onMethodEntry(jvmtiEnv *jvmti, JNIEnv *jni, jthread th, jmethodID method)
-// {
-//     unsigned char *name;
-//     // not safe, but I think no one has a 201 byte class name!
-//     jvmtiError error = jvmti->Allocate(200, &name);
-//     assert(!error);
+void JNICALL onMethodEntry(jvmtiEnv *jvmti, JNIEnv *jni, jthread th, jmethodID method)
+{
+    unsigned char *name;
+    // not safe, but I think no one has a 201 byte class name!
+    jvmtiError error = jvmti->Allocate(200, &name);
+    assert(!error);
     
-//     error = jvmti->GetMethodName(method, (char**) &name, nullptr, nullptr);
-//     assert(!error);
+    error = jvmti->GetMethodName(method, (char**) &name, nullptr, nullptr);
+    assert(!error);
 
-//     // do this until we get to main
-//     if (string((char*) name) == "main") {
-//         // cerr << "yay main" << endl;
-//         jvmtiEventCallbacks callbacks;
-    
-//         (void) memset(&callbacks, 0, sizeof(callbacks));
+    // do this until we get to main
+    if (string((char*) name) == "main") {
 
-//         callbacks.VMStart = &loadProxyClass;
-//         // disable method entry callback from now on
-//         // callbacks.MethodEntry = &onMethodEntry;
-//         // callbacks.MethodExit = &onMethodExit;
-//         callbacks.VMInit = &onVMInit;
-//         callbacks.ClassFileLoadHook = &onClassFileLoad;
-//         callbacks.VMDeath = &flushBuffers;
+#ifdef DEBUG
+        cerr << "Finally we got to main" << endl;
+#endif
+        
+        try {
+            jclass etProxyClass = jni->FindClass("ETProxy");
+            jfieldID atMain = jni->GetStaticFieldID(etProxyClass, "atMain", "Z");
+            jni->SetStaticBooleanField(etProxyClass, atMain, (jboolean) true);
+        } catch (exception &e) {
+            // cerr << e.what() << endl;
+        }
+        
+        // reset callbacks
+        jvmtiEventCallbacks callbacks;
     
-//         jvmtiError error = jvmti->SetEventCallbacks(&callbacks, (jint) sizeof(callbacks));
-//         assert(!error);
-//     }
+        (void) memset(&callbacks, 0, sizeof(callbacks));
+
+        callbacks.VMStart = &onVMStart;
+        callbacks.VMInit = &onVMInit;
+
+        callbacks.ClassFileLoadHook = &onClassFileLoad;
+        callbacks.VMDeath = &flushBuffers;
     
-//     error = jvmti->Deallocate(name);
-//     assert(!error);
-// }
+        jvmtiError error = jvmti->SetEventCallbacks(&callbacks, (jint) sizeof(callbacks));
+        assert(!error);
+        
+        
+    }
+    
+    error = jvmti->Deallocate(name);
+    assert(!error);
+}
 
 void JNICALL onVMInit(jvmtiEnv *jvmti, JNIEnv *jni, jthread th)
 {
+    #ifdef DEBUG
+    cerr << "JVM initialized" << endl;
+    #endif
     isReady = true;
 }
 
 void JNICALL onVMStart(jvmtiEnv *jvmti, JNIEnv *jni)
 {
-    // cerr << "VM Starting..." << endl;
+    #ifdef DEBUG
+    cerr << "JVM started" << endl;
+    #endif
     
     jni->DefineClass("InstrumentFlag", NULL, (jbyte *) InstrumentFlag_class, (jsize) InstrumentFlag_class_len);
     jclass etProxyClass = jni->DefineClass("ETProxy", NULL, (jbyte *) ETProxy_class, (jsize) ETProxy_class_len);
@@ -61,13 +79,9 @@ void JNICALL onVMStart(jvmtiEnv *jvmti, JNIEnv *jni)
     jniMethod.name = (char *) "getObjectSize";
     jniMethod.signature = (char *) "(Ljava/lang/Object;)I";
     jniMethod.fnPtr = (void *) jniObjectSize;
-
-    // cerr << "hello?" << endl;
     
     jint suc = jni->RegisterNatives(etProxyClass, &jniMethod, 1);
     assert(suc == 0);
-
-    // cerr << "Register natives seem successful" << endl;
 }
 
 void JNICALL onClassFileLoad(jvmtiEnv *jvmti,
@@ -81,6 +95,11 @@ void JNICALL onClassFileLoad(jvmtiEnv *jvmti,
                              jint *new_class_data_len,
                              unsigned char **new_class_data)
 {
+    #ifdef DEBUG
+    cerr << "Loading class: " << string(class_name) <<  endl;
+    cerr << "id " << classTable.mapOrFind(string(class_name)) << ": " << string(class_name) << endl;
+    #endif
+    
     if (!isReady || string(class_name).find("java/util") == 0) { return; }
     
     if (string(class_name).find("sun") == 0) {
@@ -88,10 +107,16 @@ void JNICALL onClassFileLoad(jvmtiEnv *jvmti,
     }
 
     try {
+#ifdef DEBUG
+        cerr << "About to instrument: " << string(class_name) << endl;
+#endif
         instrumentClass(jvmti, jni, loader, (unsigned char *) class_data, class_data_len,
                         new_class_data_len, new_class_data);
-    } catch (jnif::Exception &e) {
-        cerr << e.message << endl;
+#ifdef DEBUG
+        cerr << "Instrumentation of " << string(class_name) << " successful" << endl;
+#endif
+    } catch (exception &e) {
+        // cerr << "Exception!: " << e.what() << endl;
         throw;
     }
 }

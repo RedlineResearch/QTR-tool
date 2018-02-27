@@ -26,14 +26,14 @@ public:
         thisJni(jni), loader(loader)
     {
         if (loader != nullptr) {
+            #ifdef DEBUG
+            cerr << "We're in live phase" << endl;
+            #endif
             inLivePhase = true;
         }
     }
 
-    string getCommonSuperClass(const string& className1, const string& className2) {
-
-        // cerr << "Finding common super class: " << className1 << " and " << className2 << endl;
-        
+    string getCommonSuperClass(const string& className1, const string& className2) {        
 		if (!inLivePhase) {
 			return "java/lang/Object";
 		}
@@ -164,14 +164,17 @@ void instrumentClass(jvmtiEnv *jvmti, JNIEnv *currJni, jobject loader,
                      jint *new_class_data_len, u1 **new_class_data)
 {
     static int methodIDCounter = 1;
+
+#ifdef DEBUG
+    cerr << "Attempting to parse class file" << endl;
+#endif
     
     parser::ClassFileParser cf(class_data, class_data_len);
 
-    // if (string(cf.getThisClassName()).find("sun") == 0) {
-    //     return;
-    // }
-
-    // cerr << "Loading: " << cf.getThisClassName() << endl;
+    #ifdef DEBUG
+    cerr << "Parsing " << cf.getThisClassName() << " was successful" <<  endl;
+    #endif
+    
 
     classHierarchy.addClass(cf);
     classTable.mapOrFind(string(cf.getThisClassName()));
@@ -188,8 +191,8 @@ void instrumentClass(jvmtiEnv *jvmti, JNIEnv *currJni, jobject loader,
     // public static native void onMain();
     // ConstPool::Index onMainMethod = cf.addMethodRef(proxyClass, "_onMain", "()V");
 
-    // public static void onObjectAlloc(int allocdClassID, Object allocdObject, int allocSiteID);
-    ConstPool::Index onAllocMethod = cf.addMethodRef(proxyClass, "onObjectAlloc", "(ILjava/lang/Object;I)V");
+    // public static void onObjectAlloc(Object allocdObject, int allocdClassID, int allocSiteID);
+    ConstPool::Index onAllocMethod = cf.addMethodRef(proxyClass, "onObjectAlloc", "(Ljava/lang/Object;II)V");
 
     // pitfall: allocdArray is not always Object[]!
     // public static void onObjectArrayAlloc(int allocdClassID, int size, Object allocdArray, int allocSiteID);
@@ -204,6 +207,10 @@ void instrumentClass(jvmtiEnv *jvmti, JNIEnv *currJni, jobject loader,
     
     // public static void witnessObjectAlive(Object aliveObject, int classID);
     ConstPool::Index witnessObjectAliveMethod = cf.addMethodRef(proxyClass, "witnessObjectAlive", "(Ljava/lang/Object;I)V");
+
+    #ifdef DEBUG
+    cerr << "Adding method ref was successful" << endl;
+    #endif
     
     for (Method &method : cf.methods) {
         // Record the method
@@ -225,17 +232,40 @@ void instrumentClass(jvmtiEnv *jvmti, JNIEnv *currJni, jobject loader,
         }
     }
 
+    #ifdef DEBUG
+    cerr << "Added instrumentation calls" << endl;
+    #endif
+    
     // assert(currJni);
     // assert(loader);
-    ClassPath cp(currJni, loader);
-    // TestClassPath cp;
     
-    cf.computeFrames(&cp);
+    ClassPath cp(currJni, loader);
+
+#ifdef DEBUG
+    cerr << "Created ClassPath object" << endl;
+#endif
+
+    try {
+        cf.computeFrames(&cp);
+#ifdef DEBUG
+        cerr << "Computing frames was successful" << endl;
+#endif
+    } catch (Exception &e) {
+        cerr << "JNIF Exception!: " << e.message << endl;
+    } catch (exception &e) {
+        cerr << "Exception!: " << e.what() << endl;
+    }
+
     *new_class_data_len = (jint) cf.computeSize();
+
     jvmtiError error = jvmti->Allocate((jlong) *new_class_data_len, new_class_data);
     assert(!error);
     
     cf.write(*new_class_data, *new_class_data_len);
+
+#ifdef DEBUG
+    cerr << "Wrote new bytecode back" << endl;
+#endif
 }
 
 inline static void instrumentPutField(ClassFile &cf, Method &method, ConstPool::Index &instrMethod)
@@ -282,7 +312,7 @@ inline static void instrumentMethodEntry(ClassFile &cf, Method &method, ConstPoo
     //     instList.addInvoke(Opcode::invokestatic, onMainMethod, p);
     // }
     
-    if (method.isStatic()) {
+    if (method.isStatic() || method.isInit()) {
         // Stack: ...
         instList.addLdc(Opcode::ldc_w, methodIDIndex, p);
         // Stack: ... | methodIDIndex
@@ -305,9 +335,11 @@ inline static void instrumentMethodEntry(ClassFile &cf, Method &method, ConstPoo
     /* Can't instrument certain built-in classes 
        also, one can't instrument in an initializer 
        because an uninitialized thing isn't an object */
-    if (string(cf.getThisClassName()).find("java") != 0
-        && string(cf.getThisClassName()).find("sun") != 0
-        && string(method.getName()) != "<init>") {
+    if (!method.isStatic()
+        // && string(cf.getThisClassName()).find("java") != 0
+        // && string(cf.getThisClassName()).find("sun") != 0
+        && !method.isInit()
+        && string(method.getName()) != "<clinit>") {
         // Stack: ...
         instList.addZero(Opcode::aload_0, p);
         // Stack: ... | thisObject
@@ -335,6 +367,33 @@ inline static void instrumentMethodExit(ClassFile &cf, Method &method, ConstPool
 
 static void instrumentObjectAlloc(ClassFile &cf, Method &method, ConstPool::Index &instrMethod)
 {
+
+    /* Very tricky due to a few reasons
+     * #1: an uninitialized object is NOT a java.lang.Object so can't do anything with it
+     * #2: an object isn't initialized the moment <init> is called
+     */
+
+    // if (method.isInit()) {
+    //     InstList &instList = method.instList();
+    //     Inst *p = *instList.begin();
+        
+    //     instList.addZero(Opcode::aload_0, p);
+    //     // Stack: ... | thisObject
+    //     // cerr << "Debug: " << cf.getThisClassName() << endl;
+        
+    //     int classID = classTable.mapOrFind(string(cf.getThisClassName()));
+    //     ConstPool::Index classIDIndex = cf.addInteger(classID);
+    //     instList.addLdc(Opcode::ldc_w, classIDIndex, p);
+    //     // Stack: ... | thisObject | classIDIndex
+        
+    //     ConstPool::Index allocSiteIndex = cf.addInteger(++lastNewSiteID);
+    //     instList.addLdc(Opcode::ldc_w, allocSiteIndex, p);
+    //     // Stack: ... | thisObject | classIDIndex | allocSiteID
+        
+    //     instList.addInvoke(Opcode::invokestatic, instrMethod, p);
+    //     // Stack: ...
+    //     // Stack preserved
+    // }
     
     InstList &instList = method.instList();
     
@@ -348,20 +407,47 @@ static void instrumentObjectAlloc(ClassFile &cf, Method &method, ConstPool::Inde
             
             instList.addZero(Opcode::dup, p);
             // Stack: ... | objRef | objRef
+
+            u4 localVar = (method.codeAttr())->maxLocals;
+
+            // cerr << "method: " << method.getName() << "; max locals: " << localVar << endl;
+            
+            instList.addVar(Opcode::astore, localVar, p);
+            // Stack: ... | objRef
+            // new local var: objRef
+            
+            (method.codeAttr())->maxLocals++;
+
+            ConstPool::Index allocSiteIndex = cf.addInteger(++lastNewSiteID);
             
             ConstPool::Index allocatedClassIndex = inst->type()->classIndex;
             int classID = classTable.mapOrFind(string(cf.getClassName(allocatedClassIndex)));            
             ConstPool::Index classIDIndex = cf.addInteger(classID);
             
-            instList.addLdc(Opcode::ldc_w, classIDIndex, p);
-            // Stack: ... | objRef | objRef | classID
+            for (;;) {
+                if (p->opcode != Opcode::invokespecial) {
+                    p = p->next;
+                } else {
+                    InvokeInst *pinv = p->invoke();
+                    ConstPool::Index invokedMethodIndex = pinv->methodRefIndex;
+                    string clsName, methodName, methodDesc;
+                    cf.getMethodRef(invokedMethodIndex, &clsName, &methodName, &methodDesc);
+                    p = p->next;
+                    if (methodName == "<init>") {
+                        
+                        break;
+                    }
+                }
+            }
 
-            instList.addZero(Opcode::swap, p);
-            // Stack: ... | objRef | classID | objRef
             
-            ConstPool::Index allocSiteIndex = cf.addInteger(++lastNewSiteID);
+
+            instList.addVar(Opcode::aload, localVar, p);
+            // Stack: ... | objRef
+            
+            instList.addLdc(Opcode::ldc_w, classIDIndex, p);
             instList.addLdc(Opcode::ldc_w, allocSiteIndex, p);
-            // Stack: ... | objRef | classID | objRef | allocSiteID
+            // Stack: ... | objRef | classID | allocSiteID
             
             instList.addInvoke(Opcode::invokestatic, instrMethod, p);
             // Stack: ... | objRef
@@ -419,7 +505,7 @@ inline static void instrumentObjectArrayAlloc(ClassFile &cf, Method &method, Con
             // Stack: ... | arrayRef
             // Stack preserved
         }
-    }   
+    }  
 }
 
 inline static void instrumentPrimitiveArrayAlloc(ClassFile &cf, Method &method, ConstPool::Index &instrMethod)
