@@ -43,14 +43,16 @@ InstrumentFlag_class.h: InstrumentFlag.class
 libobjectsize.so: ObjectSize.cc ObjectSize.h
 	$(CXX) $(INC_PATH) $(CXXFLAGS) -shared $^ -o $@
 
-test: Hello.class BinarySearchTree.class FunctionalCounter.class
+test: BinarySearchTree.class FunctionalCounter.class FunctionalRBT.class BF.class
 
-Hello.class: tests/Hello.java
-	$(JAVAC) -g -d . $^
 BinarySearchTree.class: tests/BinarySearchTree.java
 	$(JAVAC) -g -d . $^
 FunctionalCounter.class: tests/FunctionalCounter.scala
 	$(SCALAC) -g:source -d . $^
+FunctionalRBT.class: tests/FunctionalRBT.scala
+	$(SCALAC) -g:source -d . $^
+BF.class: tests/BF.java
+	$(JAVAC) -g -d . $^
 
 clean:
 	rm -f libet2.so *o *class *class.h *gch *~ *log

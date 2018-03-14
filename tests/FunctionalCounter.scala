@@ -8,12 +8,9 @@ object FunctionalCounter {
   }
 
   def main(args: Array[String]): Unit = {
-    val counter = generateCounter(5)
-    println(counter())
-    println(counter())
-    println(counter())
-    println(counter())
-    println(counter())
-    println(counter())
+    val counter = generateCounter(0)
+    0 to 1000 foreach {
+      _ => println(counter())
+    }
   }
 }
