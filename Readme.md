@@ -41,6 +41,6 @@ performance of Elephant Tracks by 7-10 times.
    * `java -agentlib:et2 BinarySearchTree`
 
 ## Current Status
-ET2/JVM runs correctly and without thrown exceptions on Oracle Java 8 if bytecode verification is disabled, 
+ET2/JVM runs correctly (sometimes) and without thrown exceptions on Oracle Java 8 if bytecode verification is disabled, 
 but it seems to fail bytecode verification at the moment. Currently we are not sure what is wrong with 
 it and the solution at the moment is to disable bytecode verification.
