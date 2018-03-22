@@ -69,7 +69,7 @@ object FunctionalRBT {
   def main(args: Array[String]): Unit = {
     import scala.language.implicitConversions
     import scala.language.postfixOps
-    val nums = 1 to 1000000 toList
+    val nums = 1 to 10000 toList
     val rbt = nums.foldLeft(E.asInstanceOf[Tree[Int]]) { (t, x) => insert(x, t) }
     println("Height of tree: " + height(rbt))
     inOrder(rbt)

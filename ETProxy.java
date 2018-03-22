@@ -245,7 +245,7 @@ public class ETProxy
                 thirdBuffer[currPtr] = allocSiteID;
                 // I hope no one ever wants a 2 gigabyte (shallow size!) object
                 // some problem here...
-                // System.err.print("Class ID: " + allocdClassID);
+                // System.err.println("Class ID: " + allocdClassID);
                 fourthBuffer[currPtr] = (int) getObjectSize(allocdObject);
                 timestampBuffer[currPtr] = timestamp;
                 threadIDBuffer[currPtr] = System.identityHashCode(Thread.currentThread());

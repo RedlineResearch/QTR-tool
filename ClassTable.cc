@@ -1,5 +1,6 @@
 #include "ClassTable.h"
 #include <utility>
+#include <iostream>
 
 using namespace std;
 
@@ -20,6 +21,7 @@ ClassTable::ClassTable() :
 void ClassTable::mapClass(string className)
 {
     table.insert(make_pair(className, counter));
+    // cerr << className << ": " << counter << endl;   
     counter++;
 }
 
@@ -37,6 +39,7 @@ int ClassTable::mapOrFind(string className)
     if (table.find(className) == table.end()) {
         mapClass(className);
     }
+    
     return table[className];
 }
 

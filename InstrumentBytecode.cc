@@ -163,6 +163,7 @@ void instrumentClass(jvmtiEnv *jvmti, JNIEnv *currJni, jobject loader,
                      u1 *class_data, jint class_data_len,
                      jint *new_class_data_len, u1 **new_class_data)
 {
+    
     static int methodIDCounter = 1;
 
 #ifdef DEBUG
@@ -207,7 +208,7 @@ void instrumentClass(jvmtiEnv *jvmti, JNIEnv *currJni, jobject loader,
     
     // public static void witnessObjectAlive(Object aliveObject, int classID);
     ConstPool::Index witnessObjectAliveMethod = cf.addMethodRef(proxyClass, "witnessObjectAlive", "(Ljava/lang/Object;I)V");
-
+    
     #ifdef DEBUG
     cerr << "Adding method ref was successful" << endl;
     #endif
@@ -231,7 +232,7 @@ void instrumentClass(jvmtiEnv *jvmti, JNIEnv *currJni, jobject loader,
             witnessGetField(cf, method, witnessObjectAliveMethod);
         }
     }
-
+    
     #ifdef DEBUG
     cerr << "Added instrumentation calls" << endl;
     #endif
@@ -240,7 +241,7 @@ void instrumentClass(jvmtiEnv *jvmti, JNIEnv *currJni, jobject loader,
     // assert(loader);
     
     ClassPath cp(currJni, loader);
-
+    
 #ifdef DEBUG
     cerr << "Created ClassPath object" << endl;
 #endif
@@ -257,12 +258,14 @@ void instrumentClass(jvmtiEnv *jvmti, JNIEnv *currJni, jobject loader,
     }
 
     *new_class_data_len = (jint) cf.computeSize();
-
+    
     jvmtiError error = jvmti->Allocate((jlong) *new_class_data_len, new_class_data);
     assert(!error);
-    
-    cf.write(*new_class_data, *new_class_data_len);
-
+    try {
+        cf.write(*new_class_data, *new_class_data_len);
+    } catch (Exception &e) {
+        cerr << "JNIF Exception!: " << e.message << endl;
+    }
 #ifdef DEBUG
     cerr << "Wrote new bytecode back" << endl;
 #endif
@@ -434,7 +437,6 @@ static void instrumentObjectAlloc(ClassFile &cf, Method &method, ConstPool::Inde
                     cf.getMethodRef(invokedMethodIndex, &clsName, &methodName, &methodDesc);
                     p = p->next;
                     if (methodName == "<init>") {
-                        
                         break;
                     }
                 }

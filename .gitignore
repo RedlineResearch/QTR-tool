@@ -1,3 +1,6 @@
+.swp
+scratch/
+
 # Prerequisites
 *.d
 
@@ -37,3 +40,4 @@ bin/
 *.list
 trace*
 *.trace
+*.j
