@@ -20,8 +20,13 @@ implementation of Elephant Tracks. In the long term, we aspire to increase the
 performance of Elephant Tracks by 7-10 times.
 
 ## Using ET2
-`java -Xverify:none -Djava.library.path=. -agentlib:et2 [Class]`, all other Java options (including `-jar`) 
+`java -agentlib:et2 [Class]`, all other Java options (including `-jar`) 
 *should* work as usual.
+
+## Required JNIF Modification
+One must modify the JNIF file `src-libjnif/parser.cpp` and go into the `AttrsParser::parse` 
+method to prevent the parsing of LineNumberTable, LocalVariableTable and LocalVariableTypeTable, or 
+use our fork of JNIF.
 
 ## Requirements
    * gcc
@@ -42,5 +47,5 @@ performance of Elephant Tracks by 7-10 times.
 
 ## Current Status
 ET2/JVM runs correctly (sometimes) and without thrown exceptions on Oracle Java 8 if bytecode verification is disabled, 
-but it seems to fail bytecode verification at the moment. Currently we are not sure what is wrong with 
-it and the solution at the moment is to disable bytecode verification.
+but it seems to sometimes fail bytecode verification at the moment. Currently we are not exactly sure what is 
+wrong with it.
