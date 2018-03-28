@@ -30,7 +30,7 @@ use our fork of JNIF.
 
 ## Requirements
    * gcc
-   * JNIF, available from [here](https://gitlab.com/acuarica/jnif).
+   * JNIF, available from [here](https://github.com/ElephantTracksProject/jnif).
    * Oracle JDK 8 or IBM J9 JDK.
    * Linux. Only tested with RHEL and Ubuntu; not tested with other distributions or 
      operating systems.
@@ -49,3 +49,6 @@ use our fork of JNIF.
 ET2/JVM runs correctly (sometimes) and without thrown exceptions on Oracle Java 8 if bytecode verification is disabled, 
 but it seems to sometimes fail bytecode verification at the moment. Currently we are not exactly sure what is 
 wrong with it.
+
+## Licensing
+See the "LICENSE" file.
