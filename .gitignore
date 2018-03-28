@@ -1,5 +1,6 @@
 .swp
 scratch/
+tests/
 
 # Prerequisites
 *.d
