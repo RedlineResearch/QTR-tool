@@ -101,6 +101,11 @@ void JNICALL onClassFileLoad(jvmtiEnv *jvmti,
     #endif
     
     if (!isReady || string(class_name).find("java/util") == 0) { return; }
+
+    if (class_name == nullptr) {
+        // maybe should throw exception instead; don't yet know what exactly to do
+        return; 
+    }
     
     if (string(class_name).find("sun") == 0) {
         return;
