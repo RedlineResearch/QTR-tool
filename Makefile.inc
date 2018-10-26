@@ -2,6 +2,7 @@
 # build, e.g. a custom OpenJDK you built, then fill in
 # the following line. Otherwise comment it.
 # JAVA_HOME = /home/xuanrui/jdk
+JAVA_HOME = /etc/alternatives/java_sdk_1.8.0
 
 
 # Use javac at JAVA_HOME and g++ by default
@@ -18,5 +19,5 @@ endif
 # Necessary Java libraries
 INC_PATH  = -I$(JAVA_HOME)/include -I$(JAVA_HOME)/include/linux
 
-JNIF_INC_PATH = /home/xuanrui/jnif/src-libjnif
-JNIF_LIB_PATH = /home/xuanrui/jnif/build
+JNIF_INC_PATH = /data/rveroy/pulsrc/jnif-fork/src-libjnif
+JNIF_LIB_PATH = /data/rveroy/pulsrc/jnif-fork/build
