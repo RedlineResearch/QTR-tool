@@ -8,28 +8,28 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# TODO: Check first if JAVA_HOME has been set through the command line.
+# Check first if JAVA_HOME has been set through the command line.
 #       Then only assign if not.
-SET(JAVA_HOME /etc/alternatives/java_sdk_1.8.0/)
+if(NOT DEFINED JAVA_HOME)
+    # This is defined on my server. Not sure if this is a Linux convention.
+    SET(JAVA_HOME /etc/alternatives/java_sdk_1.8.0/)
+ENDIF()
 FIND_PACKAGE(Java 1.8)
-# TODO: MESSAGE(STATUS ${Java_FOUND})
 FIND_PACKAGE(JNI)
-# TODO: sample code
-FOREACH(DIR ${JNI_INCLUDE_DIRS})
-    MESSAGE(STATUS ${DIR})
-ENDFOREACH()
+
+if(NOT DEFINED LIBJNIF)
+    MESSAGE(FATAL_ERROR "Please supply the libjnif path via -D/path/to/libjnif")
+ENDIF()
+
 # Bring the headers.
-# INCLUDE_DIRECTORIES(${JNI_INCLUDE_DIRS} "/data/rveroy/pulsrc/jnif-fork/src-libjnif)
 INCLUDE_DIRECTORIES(
     ${JNI_INCLUDE_DIRS}
-    /data/rveroy/pulsrc/jnif-fork/src-libjnif
+    ${LIBJNIF}
 )
 
 # ENABLE_TESTING()
 # FIND_PACKAGE( GTest Required )
 
-# INCLUDE_DIRECTORIES($(et2-java_SOURCE_DIR))
-# 
 ADD_LIBRARY(et2 STATIC
     main.cc
     Callbacks.cc
@@ -37,13 +37,3 @@ ADD_LIBRARY(et2 STATIC
     ClassTable.cc
     ObjectSize.cc
 )
-# 
-# ADD_LIBRARY(objectsize STATIC
-#     ObjectSize.cc
-# )
-# 
-# SET_TARGET_PROPERTIES(et2 PROPERTIES VERSION ${PROJECT_VERSION})
-# SET_TARGET_PROPERTIES(et2 PROPERTIES SOVERSION 1)
-# 
-# SET_TARGET_PROPERTIES(et2 PROPERTIES PUBLIC_HEADER include/mylib.h)
-# 
