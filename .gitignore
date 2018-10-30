@@ -1,4 +1,4 @@
-.swp
+.*swp
 scratch/
 tests/
 
@@ -42,3 +42,7 @@ bin/
 trace*
 *.trace
 *.j
+
+# cmake BUILD directory within source tree, if so desired.
+# NOTE: A good alternative is to put the BUILD directory out of source.
+BUILD
