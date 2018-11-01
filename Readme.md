@@ -39,12 +39,12 @@ use our fork of JNIF.
 ## Building with cmake
    * `cmake` is many things, but most importantly it's a Makefile generator.
    * Steps to building with `cmake`:
-   ** Create a `BUILD` directory anywhere.
-   *** `mkdir /path/to/BUILD`
-   ** Run `cmake` on `CMakeLists.txt`
-   *** `cmake /path/to/et2-java/ -DLIBJNIF=/path/to/jnif/src-libjnif -D-DJAVA_HOME=/path/to/java`
-   ** This generates a `Makefile` in `/path/to/BUILD`
-   *** `cd /path/to/BUILD && make`
+       * Create a `BUILD` directory anywhere.
+           * `mkdir /path/to/BUILD`
+       * Run `cmake` on `CMakeLists.txt`
+           * `cmake /path/to/et2-java/ -DLIBJNIF=/path/to/jnif/src-libjnif -D-DJAVA_HOME=/path/to/java`
+       * This generates a `Makefile` in `/path/to/BUILD`
+           * `cd /path/to/BUILD && make`
    
 
 ## Building with the Makefile in source (DEPRECATED)
