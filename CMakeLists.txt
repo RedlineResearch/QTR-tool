@@ -25,10 +25,31 @@ ENDIF()
 INCLUDE_DIRECTORIES(
     ${JNI_INCLUDE_DIRS}
     ${LIBJNIF}
+    ${CMAKE_BINARY_DIR}
+    ${CMAKE_CURRENT_BINARY_DIR}
 )
 
-# ENABLE_TESTING()
-# FIND_PACKAGE( GTest Required )
+
+FIND_PROGRAM(XXD xxd)
+IF(NOT XXD)
+    MESSAGE(FATAL_ERROR "xxd not found.")
+ENDIF()
+
+add_custom_target(
+    InstrumentFlag_class.h
+    COMMAND ${Java_JAVAC_EXECUTABLE} -d ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/InstrumentFlag.java
+    COMMAND cd ${CMAKE_BINARY_DIR} && ${XXD} -i InstrumentFlag.class ${CMAKE_BINARY_DIR}/InstrumentFlag_class.h 
+    DEPENDS ${CMAKE_SOURCE_DIR}/InstrumentFlag.java
+    COMMENT "Generating InstrumentFlag_class.h"
+)
+
+add_custom_target(
+    ETProxy_class.h
+    COMMAND ${Java_JAVAC_EXECUTABLE} -classpath ${CMAKE_SOURCE_DIR} -d ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/ETProxy.java
+    COMMAND cd ${CMAKE_BINARY_DIR} && ${XXD} -i ETProxy.class ${CMAKE_BINARY_DIR}/ETProxy_class.h 
+    DEPENDS ${CMAKE_SOURCE_DIR}/ETProxy.java
+    COMMENT "Generating ETProxy_class.h"
+)
 
 ADD_LIBRARY(et2 STATIC
     main.cc
@@ -37,3 +58,10 @@ ADD_LIBRARY(et2 STATIC
     ClassTable.cc
     ObjectSize.cc
 )
+
+ADD_DEPENDENCIES(
+    et2
+    InstrumentFlag_class.h
+    ETProxy_class.h
+)
+
