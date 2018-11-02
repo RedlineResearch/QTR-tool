@@ -34,11 +34,24 @@ use our fork of JNIF.
    * Oracle JDK 8 or IBM J9 JDK.
    * Linux. Only tested with RHEL and Ubuntu; not tested with other distributions or 
      operating systems.
+   * cmake 3.9 or greater
 
-## Building
+## Building with cmake
+   * `cmake` is many things, but most importantly it's a Makefile generator.
+   * Steps to building with `cmake`:
+       * Create a `BUILD` directory anywhere.
+           * `mkdir /path/to/BUILD`
+       * Run `cmake` on `CMakeLists.txt`
+           * `cmake /path/to/et2-java/ -DLIBJNIF=/path/to/jnif/src-libjnif -D-DJAVA_HOME=/path/to/java`
+       * This generates a `Makefile` in `/path/to/BUILD`
+           * `cd /path/to/BUILD && make`
+   
+
+## Building with the Makefile in source (DEPRECATED)
    * Ensure `JAVA_HOME` is set correctly
    * Set the variables in `Makefile.inc`
    * `make`
+   * Note: this is deprecated. Please see how to build with cmake.
 
 ## Testing
    * `make test`
