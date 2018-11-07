@@ -42,9 +42,9 @@ use our fork of JNIF.
        * Create a `BUILD` directory anywhere.
            * `mkdir /path/to/BUILD`
        * Run `cmake` on `CMakeLists.txt`
-           * `cmake /path/to/et2-java/ \
-                  -DLIBJNIF=/path/to/jnif/src-libjnif \
-                  -DJAVA_HOME=/path/to/java \
+           * `cmake /path/to/et2-java/ 
+                  -DLIBJNIF=/path/to/jnif/src-libjnif 
+                  -DJAVA_HOME=/path/to/java 
                   -DBOOST_ROOT=/path/to/boost_1.66`
        * This generates a `Makefile` in `/path/to/BUILD`
            * `cd /path/to/BUILD && make`
