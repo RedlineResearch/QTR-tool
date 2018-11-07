@@ -17,8 +17,24 @@ ENDIF()
 FIND_PACKAGE(Java 1.8)
 FIND_PACKAGE(JNI)
 
+# Where is the libjnif?
 if(NOT DEFINED LIBJNIF)
-    MESSAGE(FATAL_ERROR "Please supply the libjnif path via -D/path/to/libjnif")
+    MESSAGE(FATAL_ERROR "Please supply the libjnif path via -DLIBJNIF=/path/to/libjnif")
+ENDIF()
+
+# Where is the Boost library?
+if(NOT DEFINED BOOST_ROOT)
+    MESSAGE(FATAL_ERROR "Please supply the boost root path via -DBOOST_ROOT=/path/to/boost")
+ENDIF()
+
+# Find C++ Boost library:
+FIND_PACKAGE(Boost)
+IF (NOT ${Boost_FOUND})
+    MESSAGE(FATAL_ERROR "Can't find Boost library.")
+ENDIF()
+IF ((${Boost_MINOR_VERSION} LESS 66) AND (${Boost_MAJOR_VERSION} EQUAL 1))
+    MESSAGE(WARNING "Found Boost version ${Boost_MAJOR_VERSION}.${Boost_MINOR_VERSION}. ET2 was tested with
+    1.60. Continuing anyway.")
 ENDIF()
 
 # Bring the headers.
@@ -31,6 +47,7 @@ INCLUDE_DIRECTORIES(
 
 LINK_DIRECTORIES(${LIBJNIF}/build)
 
+# Find the xxd binary:
 FIND_PROGRAM(XXD xxd)
 IF(NOT XXD)
     MESSAGE(FATAL_ERROR "xxd not found.")
