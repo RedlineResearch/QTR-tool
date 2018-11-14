@@ -1,18 +1,19 @@
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.Arrays;
 import java.io.PrintWriter;
-import java.util.concurrent.locks.*;
+import java.util.concurrent.locks.ReentrantLock;
 
-public class ETProxy
-{
+public class ETProxy {
     
     private static boolean atMain = false;
 
     // Thread local boolean w/ default value false
     private static final InstrumentFlag inInstrumentMethod = new InstrumentFlag();
 
-    private static long[] timestampBuffer = new long[1000];
-    private static long[] threadIDBuffer = new long[1000];
+    private static final int BUFMAX = 1000;
+
+    private static long[] timestampBuffer = new long[BUFMAX];
+    private static long[] threadIDBuffer = new long[BUFMAX];
 
     // TRACING EVENTS
     // Method entry = 1, method exit = 2, object allocation = 3
@@ -20,14 +21,14 @@ public class ETProxy
     // 2D array allocation = 6, put field = 7
     // WITNESSES
     // get field = 8
-    // We should have used enums, but it breaks things
-    private static int[] eventTypeBuffer = new int[1000];
+
+    private static int[] eventTypeBuffer = new int[BUFMAX];
     
-    private static int[] firstBuffer = new int[1000];
-    private static int[] secondBuffer = new int[1000];
-    private static int[] thirdBuffer = new int[1000];
-    private static int[] fourthBuffer = new int[1000];
-    private static int[] fifthBuffer = new int[1000];
+    private static int[] firstBuffer = new int[BUFMAX];
+    private static int[] secondBuffer = new int[BUFMAX];
+    private static int[] thirdBuffer = new int[BUFMAX];
+    private static int[] fourthBuffer = new int[BUFMAX];
+    private static int[] fifthBuffer = new int[BUFMAX];
     private static AtomicInteger ptr = new AtomicInteger();
     private static ReentrantLock mx = new ReentrantLock();
     private static PrintWriter pw;
@@ -79,54 +80,55 @@ public class ETProxy
     
     // Adapted from JNIF test code
     private static byte[] getResourceEx(String className, ClassLoader loader) {
-		java.io.InputStream is;
+        java.io.InputStream is;
 
-		try {
-			is = loader.getResourceAsStream(className + ".class");
-		} catch (Throwable e) {
-			// System.err.println("Error: getResource for " + className);
-			// System.err.println("Error: loader: " + loader);
-			// e.printStackTrace();
-			return null;
-		}
+        try {
+            is = loader.getResourceAsStream(className + ".class");
+        } catch (Throwable e) {
+            // System.err.println("Error: getResource for " + className);
+            // System.err.println("Error: loader: " + loader);
+            // e.printStackTrace();
+            return null;
+        }
 
-		java.io.ByteArrayOutputStream os = new java.io.ByteArrayOutputStream();
-		try {
-			byte[] buffer = new byte[0xFFFF];
+        java.io.ByteArrayOutputStream os = new java.io.ByteArrayOutputStream();
+        try {
+            byte[] buffer = new byte[0xFFFF];
 
-			for (int len; (len = is.read(buffer)) != -1;) {
-				os.write(buffer, 0, len);
-			}
+            for (int len; (len = is.read(buffer)) != -1;) {
+                os.write(buffer, 0, len);
+            }
 
-			os.flush();
+            os.flush();
 
-			return os.toByteArray();
-		} catch (Throwable e) {
-			// System.err.println("Error: getResource for " + className);
-			// System.err.println("Error: loader: " + loader);
-			// System.err.println("Error: is: " + is);
-			// e.printStackTrace();
-			return null;
-		}
-	}
+            return os.toByteArray();
+        } catch (Throwable e) {
+            // System.err.println("Error: getResource for " + className);
+            // System.err.println("Error: loader: " + loader);
+            // System.err.println("Error: is: " + is);
+            // e.printStackTrace();
+            return null;
+        }
+    }
 
     public static byte[] getResource(String className, ClassLoader loader) {
-		byte[] res = null;
+        byte[] res = null;
 
         // System.err.println(className + " requested");
         
-		if (loader != null) {
-			res = getResourceEx(className, loader);
-		}
+        if (loader != null) {
+            res = getResourceEx(className, loader);
+        }
 
-		if (res == null) {
-			ClassLoader cl = ClassLoader.getSystemClassLoader();
-			res = getResourceEx(className, cl);
-		}
+        if (res == null) {
+            ClassLoader cl = ClassLoader.getSystemClassLoader();
+            res = getResourceEx(className, cl);
+        }
 
-		return res;
-	}
+        return res;
+    }
 
+    // TODO: What was this for?
     // public static native void _onMain();
     
     public static void onEntry(int methodID, Object receiver)
@@ -145,7 +147,7 @@ public class ETProxy
 
         mx.lock();
         try {
-            if (ptr.get() < 1000) {
+            if (ptr.get() < BUFMAX) {
                 // wait on ptr to prevent overflow
                 int currPtr;
                 synchronized(ptr) {
@@ -158,7 +160,7 @@ public class ETProxy
                 threadIDBuffer[currPtr] = System.identityHashCode(Thread.currentThread());
             } else {
                 synchronized(ptr) {
-                    if (ptr.get() >= 1000) {
+                    if (ptr.get() >= BUFMAX) {
                         flushBuffer();
                     }
                 }
@@ -189,7 +191,7 @@ public class ETProxy
 
         mx.lock();
         try {
-            if (ptr.get() < 1000) {
+            if (ptr.get() < BUFMAX) {
                 // wait on ptr to prevent overflow
                 int currPtr;
                 synchronized(ptr) {
@@ -202,7 +204,7 @@ public class ETProxy
                 threadIDBuffer[currPtr] = System.identityHashCode(Thread.currentThread());
             } else {
                 synchronized(ptr) {
-                    if (ptr.get() >= 1000) {
+                    if (ptr.get() >= BUFMAX) {
                         flushBuffer();
                     }
                 }
@@ -233,7 +235,7 @@ public class ETProxy
         mx.lock();
 
         try {
-            if (ptr.get() < 1000) {
+            if (ptr.get() < BUFMAX) {
                 // wait on ptr to prevent overflow
                 int currPtr;
                 synchronized(ptr) {
@@ -251,7 +253,7 @@ public class ETProxy
                 threadIDBuffer[currPtr] = System.identityHashCode(Thread.currentThread());
             } else {
                 synchronized(ptr) {
-                    if (ptr.get() >= 1000) {
+                    if (ptr.get() >= BUFMAX) {
                         flushBuffer();
                     }
                 }
@@ -281,7 +283,7 @@ public class ETProxy
         mx.lock();
 
         try {
-            if (ptr.get() < 1000) {
+            if (ptr.get() < BUFMAX) {
                 // wait on ptr to prevent overflow
                 int currPtr;
                 synchronized(ptr) {
@@ -295,7 +297,7 @@ public class ETProxy
                 threadIDBuffer[currPtr] = System.identityHashCode(Thread.currentThread());
             } else {
                 synchronized(ptr) {
-                    if (ptr.get() >= 1000) {
+                    if (ptr.get() >= BUFMAX) {
                         flushBuffer();
                     }
                 }
@@ -307,6 +309,8 @@ public class ETProxy
         inInstrumentMethod.set(false);
     }
 
+    // TODO: Why is this commented out?
+    //
     // public static void onPrimitiveArrayAlloc(int atype, int size, Object allocdArray)
     // {
     //     long timestamp = System.nanoTime();
@@ -317,7 +321,7 @@ public class ETProxy
     //         inInstrumentMethod.set(true);
     //     }
 
-    //     if (ptr.get() < 1000) {
+    //     if (ptr.get() < BUFMAX) {
     //         // wait on ptr to prevent overflow
     //         int currPtr = ptr.getAndIncrement();
     //         firstBuffer[currPtr] = System.identityHashCode(allocdArray);
@@ -328,7 +332,7 @@ public class ETProxy
     //         threadIDBuffer[currPtr] = System.identityHashCode(Thread.currentThread());
     //     } else {
     //         synchronized(ptr) {
-    //             if (ptr.get() >= 1000) {
+    //             if (ptr.get() >= BUFMAX) {
     //                 flushBuffer();
     //             }
     //         }
@@ -337,7 +341,10 @@ public class ETProxy
     //     inInstrumentMethod.set(false);
     // }
 
-    public static void onArrayAlloc(int allocdClassID, int size, Object allocdArray, int allocSiteID)
+    public static void onArrayAlloc( int allocdClassID,
+                                     int size,
+                                     Object allocdArray,
+                                     int allocSiteID )
     {
 
         if (!atMain) {
@@ -355,7 +362,7 @@ public class ETProxy
         mx.lock();
 
         try {
-            if (ptr.get() < 1000) {
+            if (ptr.get() < BUFMAX) {
                 // wait on ptr to prevent overflow
                 int currPtr;
                 synchronized(ptr) {
@@ -371,7 +378,7 @@ public class ETProxy
                 threadIDBuffer[currPtr] = System.identityHashCode(Thread.currentThread());
             } else {
                 synchronized(ptr) {
-                    if (ptr.get() >= 1000) {
+                    if (ptr.get() >= BUFMAX) {
                         flushBuffer();
                     }
                 }
@@ -383,9 +390,11 @@ public class ETProxy
         inInstrumentMethod.set(false);
     }
 
-    public static void onMultiArrayAlloc(int dims, int allocdClassID, Object[] allocdArray, int allocSiteID)
+    public static void onMultiArrayAlloc( int dims,
+                                          int allocdClassID,
+                                          Object[] allocdArray,
+                                          int allocSiteID )
     {
-
         if (!atMain) {
             return;
         }
@@ -401,7 +410,7 @@ public class ETProxy
         mx.lock();
 
         try {
-            if (ptr.get() < 1000) {
+            if (ptr.get() < BUFMAX) {
                 // wait on ptr to prevent overflow
                 int currPtr;
                 synchronized(ptr) {
@@ -427,7 +436,7 @@ public class ETProxy
                 }
             } else {
                 synchronized(ptr) {
-                    if (ptr.get() >= 1000) {
+                    if (ptr.get() >= BUFMAX) {
                         flushBuffer();
                     }
                 }
@@ -439,9 +448,9 @@ public class ETProxy
         inInstrumentMethod.set(false);
     }
 
-    public static void witnessObjectAlive(Object aliveObject, int classID)
+    public static void witnessObjectAlive( Object aliveObject,
+                                           int classID )
     {
-
         if (!atMain) {
             return;
         }
@@ -457,7 +466,7 @@ public class ETProxy
         mx.lock();
 
         try {
-            if (ptr.get() < 1000) {
+            if (ptr.get() < BUFMAX) {
                 // wait on ptr to prevent overflow
                 int currPtr;
                 synchronized(ptr) {
@@ -477,7 +486,7 @@ public class ETProxy
                 threadIDBuffer[currPtr] = System.identityHashCode(Thread.currentThread());
             } else {
                 synchronized(ptr) {
-                    if (ptr.get() >= 1000) {
+                    if (ptr.get() >= BUFMAX) {
                         flushBuffer();
                     }
                 }
@@ -493,49 +502,74 @@ public class ETProxy
     {
         mx.lock();
         try {
-            for (int i = 0; i < 1000; i++) {
+            for (int i = 0; i < BUFMAX; i++) {
                 switch(eventTypeBuffer[i]) {
                 case 1: // method entry
                     // M <method-id> <receiver-object-id> <thread-id>
-                    pw.println("M " + firstBuffer[i] + " " + secondBuffer[i] + " " + threadIDBuffer[i]);
+                    pw.println( "M " +
+                                firstBuffer[i] + " " +
+                                secondBuffer[i] + " " +
+                                threadIDBuffer[i] );
                     break;
                 case 2: // method exit
                     // E <method-id> <thread-id>
-                    pw.println("E " + firstBuffer[i] + " " + threadIDBuffer[i]);
+                    pw.println( "E " +
+                                firstBuffer[i] + " " +
+                                threadIDBuffer[i] );
                     break;
                 case 3: // object allocation
                     // N <object-id> <size> <type-id> <site-id> <length (0)> <thread-id>
                     // 1st buffer = object ID (hash)
                     // 2nd buffer = class ID
                     // 3rd buffer = allocation site (method ID)
-                    pw.println("N " + firstBuffer[i] + " " + fourthBuffer[i] + " " +
-                               secondBuffer[i] + " " + thirdBuffer[i] + " " + 0 + " " + threadIDBuffer[i]);
+                    pw.println( "N " +
+                                firstBuffer[i] + " " +
+                                fourthBuffer[i] + " " +
+                                secondBuffer[i] + " " +
+                                thirdBuffer[i] + " "
+                                + 0 + " "
+                                + threadIDBuffer[i] );
                     break;
                 case 4: // object array allocation
                 case 5: // primitive array allocation
                     // 5 now removed so nothing should come out of it
                     // A <object-id> <size> <type-id> <site-id> <length> <thread-id>
-                    pw.println("A " + firstBuffer[i] + " " + fifthBuffer[i] + " " +
-                               secondBuffer[i] + " " + fourthBuffer[i] + " " +
-                               thirdBuffer[i] + " " + threadIDBuffer[i]);
+                    pw.println( "A " +
+                                firstBuffer[i] + " " +
+                                fifthBuffer[i] + " " +
+                                secondBuffer[i] + " " +
+                                fourthBuffer[i] + " " +
+                                thirdBuffer[i] + " " +
+                                threadIDBuffer[i] );
                     break;
                 case 6: // 2D array allocation
+                    // TODO: Conflicting documention: 2018-1112
                     // 6, arrayHash, arrayClassID, size1, size2, timestamp
                     // A <object-id> <size> <type-id> <site-id> <length> <thread-id>
-                    pw.println("A " + firstBuffer[i] + " " + fifthBuffer[i] + " " +
-                               secondBuffer[i] + " " + fourthBuffer[i] + " " +
-                               thirdBuffer[i] + " " + threadIDBuffer[i]);
+                    pw.println( "A " +
+                                firstBuffer[i] + " " +
+                                fifthBuffer[i] + " " +
+                                secondBuffer[i] + " " +
+                                fourthBuffer[i] + " " +
+                                thirdBuffer[i] + " " +
+                                threadIDBuffer[i] );
                     break;
                 case 7: // object update
+                    // TODO: Conflicting documention: 2018-1112
                     // 7, targetObjectHash, fieldID, srcObjectHash, timestamp
                     // U <old-tgt-obj-id> <obj-id> <new-tgt-obj-id> <field-id> <thread-id>
-                    pw.println("U " + firstBuffer[i] + " " + secondBuffer[i] + " " +
-                               thirdBuffer[i] + " " + threadIDBuffer[i]);
+                    pw.println( "U " +
+                                firstBuffer[i] + " " +
+                                secondBuffer[i] + " " +
+                                thirdBuffer[i] + " " +
+                                threadIDBuffer[i] );
                     break;
                 case 8: // witness with get field
                     // 8, aliveObjectHash, classID, timestamp
-                    pw.println("W" + " " + firstBuffer[i] + " " + secondBuffer[i] + " " +
-                               threadIDBuffer[i]);
+                    pw.println( "W" + " " +
+                                firstBuffer[i] + " " +
+                                secondBuffer[i] + " " +
+                                threadIDBuffer[i] );
                     break;
                 }
             }
