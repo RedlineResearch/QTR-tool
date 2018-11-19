@@ -65,9 +65,6 @@ def test_hello_world( capsys,
                 found = True
                 break
         assert found
-    out, err = capsys.readouterr()
-    sys.stdout.write(out)
-    sys.stderr.write(err)
 
 def test_methods( capsys,
                   java_path,
