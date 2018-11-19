@@ -34,12 +34,11 @@ def run_java( java_path,
         raise FileNotFoundError("java %s not found." % java_path)
     cmd = [ java_path,
             "-cp", tmp_path_name,
-            "-agentlib:et2",
+            "-agentpath:" + os.path.join(tmp_path_name, et2_filename),
             java_class ]
-    print(str(cmd))
     fp = subprocess.Popen( cmd,
                            stdout = subprocess.PIPE,
-                           stderr = subprocess.PIPE,
+                           stderr = subprocess.STDOUT,
                            cwd = tmp_path_name,
                            env = my_env ).stdout
     return fp
@@ -55,16 +54,20 @@ def test_hello_world( capsys,
     # Or compile it here.
     # Check to see that HelloWorld runs
     # HelloWorld.java is in `java/`
+    found = False
     with run_java( java_path = java_path,
                    agent_path = agent_path,
                    tmp_path = tmp_path,
                    java_class = "HelloWorld" ) as fp:
         for x in fp:
-            print(x)
+            xstr = x.decode('utf-8')
+            if xstr.find("Hello world.") != -1:
+                found = True
+                break
+        assert found
     out, err = capsys.readouterr()
     sys.stdout.write(out)
     sys.stderr.write(err)
-    assert out.find("Hello world.")
 
 def test_methods( capsys,
                   java_path,
@@ -78,7 +81,7 @@ def test_methods( capsys,
                    tmp_path = tmp_path,
                    java_class = "Methods" ) as fp:
         for x in fp:
-            print(x)
+            sys.stdout.write(x.decode('utf-8'))
     out, err = capsys.readouterr()
     sys.stdout.write(out)
     sys.stderr.write(err)
