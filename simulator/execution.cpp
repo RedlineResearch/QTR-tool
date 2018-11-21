@@ -2,7 +2,7 @@
 //  Representation of runtime execution
 //  stacks, threads, time
 
-#include "execution.h"
+#include "execution.hpp"
 
 unsigned int CCNode::m_ccnode_nextid = 1;
 

@@ -1,9 +1,9 @@
 using namespace std;
 
 #include "classinfo.hpp"
-#include "tokenizer.h"
-#include "execution.h"
-#include "heap.h"
+#include "execution.hpp"
+#include "heap.hpp"
+#include "tokenizer.hpp"
 
 #include <iostream>
 #include <fstream>

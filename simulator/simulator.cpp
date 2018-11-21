@@ -1,3 +1,15 @@
+using namespace std;
+
+#include "allocrecord.hpp"
+#include "classinfo.hpp"
+#include "execution.hpp"
+#include "heap.hpp"
+// #include "lastmap.h"
+#include "refstate.hpp"
+#include "summary.hpp"
+#include "tokenizer.hpp"
+#include "version.hpp"
+
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -8,18 +20,8 @@
 #include <deque>
 #include <string>
 #include <utility>
+
 // TODO #include <stxxl/map>
-
-using namespace std;
-
-#include "tokenizer.h"
-#include "classinfo.h"
-#include "execution.h"
-#include "heap.h"
-#include "refstate.h"
-#include "summary.hpp"
-// #include "lastmap.h"
-#include "version.hpp"
 
 
 // ----------------------------------------------------------------------
@@ -315,8 +317,7 @@ void apply_merlin( std::deque< Object * > &new_garbage )
 
 // ----------------------------------------------------------------------
 //   Read and process trace events
-unsigned int read_trace_file( FILE *f, // source trace file
-                              ofstream &eifile ) // eifile is the edge_info_file
+unsigned int read_trace_file_part1( FILE *f ) // source trace file
 {
     Tokenizer tokenizer(f);
 
@@ -330,9 +331,10 @@ unsigned int read_trace_file( FILE *f, // source trace file
     Object *target;
     Method *method;
     unsigned int total_objects = 0;
-
-    // TODO: Do we need this? 2018-1111
-    // Remember all the dead objects
+    AllocRecord rec;
+#if 0
+    // Save the trace in memory:
+    std::deque< 
     // MERLIN: 
     // std::deque< Object * > new_garbage;
     Method *main_method = ClassInfo::get_main_method();
@@ -340,9 +342,6 @@ unsigned int read_trace_file( FILE *f, // source trace file
 
     unsigned int latest_death_time = 0;
 
-    // DEBUG: TODO - Do we still need this? 2018-1111
-    unsigned int debug_stack_edges = 0;
-    // END DEBUG
     // -- Allocation time
     unsigned int AllocationTime = 0;
     while ( ! tokenizer.isDone()) {
@@ -350,13 +349,6 @@ unsigned int read_trace_file( FILE *f, // source trace file
         if (tokenizer.isDone()) {
             break;
         }
-
-#ifndef DEBUG_SPECJBB
-        if (Exec.NowUp() % 1050000 == 1) {
-            // cout << "  Method time: " << Exec.Now() << "   Alloc time: " << AllocationTime << endl;
-            cout << "  Update time: " << Exec.NowUp() << " | Method time: TODO | Alloc time: " << AllocationTime << endl;
-        }
-#endif // DEBUG_SPECJBB
 
         switch (tokenizer.getChar(0)) {
             case 'A':
@@ -754,7 +746,442 @@ unsigned int read_trace_file( FILE *f, // source trace file
                 break;
         }
     }
-    cout << "DEBUG_STACK_EDGES: " << debug_stack_edges << endl;
+    return total_objects;
+#endif
+    return 0;
+}
+
+// ----------------------------------------------------------------------
+//   Read and process trace events
+unsigned int read_trace_file( FILE *f, // source trace file
+                              ofstream &eifile ) // eifile is the edge_info_file
+{
+    Tokenizer tokenizer(f);
+
+    unsigned int method_id;
+    unsigned int object_id;
+    unsigned int target_id;
+    unsigned int field_id;
+    unsigned int thread_id;
+    unsigned int exception_id;
+    Object *obj;
+    Object *target;
+    Method *method;
+    unsigned int total_objects = 0;
+
+    // TODO: Do we need this? 2018-1111
+    // Remember all the dead objects
+    // MERLIN: 
+    // std::deque< Object * > new_garbage;
+    Method *main_method = ClassInfo::get_main_method();
+    unsigned int main_id = main_method->getId();
+
+    unsigned int latest_death_time = 0;
+
+    // -- Allocation time
+    unsigned int AllocationTime = 0;
+    while ( ! tokenizer.isDone()) {
+        tokenizer.getLine();
+        if (tokenizer.isDone()) {
+            break;
+        }
+
+        switch (tokenizer.getChar(0)) {
+            case 'A':
+            case 'N':
+            // TODO: No more P, V, and I events. 2018-1111
+            // case 'P':
+            // case 'V':
+            // case 'I':
+                {
+                    // A/N <id> <size> <type> <site> <length?> <threadid>
+                    //   0   1    2      3      4      5           6
+                    assert(tokenizer.numTokens() == 6);
+                    unsigned int thrdid = tokenizer.getInt(6);
+                    Thread *thread = Exec.getThread(thrdid);
+                    unsigned int length = tokenizer.getInt(5);
+                    AllocSite *as = ClassInfo::TheAllocSites[tokenizer.getInt(4)];
+                    string njlib_sitename;
+                    if (thread) {
+                        MethodDeque javalib_context = thread->top_javalib_methods();
+                        assert(javalib_context.size() > 0);
+                        Method *meth = javalib_context.back();
+                        njlib_sitename = ( meth ? meth->getName() : "NONAME" );
+                    } else {
+                        assert(false);
+                    } // if (thread) ... else
+                    obj = Heap.allocate( tokenizer.getInt(1), // id
+                                         tokenizer.getInt(2), // size
+                                         tokenizer.getChar(0), // kind of alloc
+                                         tokenizer.getString(3), // type
+                                         as, // AllocSite pointer
+                                         njlib_sitename, // NonJava-library alloc sitename
+                                         length, // length
+                                         thread, // thread Id
+                                         Exec.NowUp() ); // Current time
+#ifdef _SIZE_DEBUG
+                    cout << "OS: " << sizeof(obj) << endl;
+#endif // _SIZE_DEBUG
+                    AllocationTime = Heap.getAllocTime();
+                    Exec.SetAllocTime( AllocationTime );
+                    if (as) {
+                        Exec.UpdateObj2AllocContext( obj,
+                                                     as->getMethod()->getName() );
+                    } else {
+                        Exec.UpdateObj2AllocContext( obj,
+                                                     "NOSITE" );
+                    }
+                    if (cckind == ExecMode::Full) {
+                        // Get full stacktrace
+                        DequeId_t strace = thread->stacktrace_using_id();
+                        obj->setAllocContextList( strace );
+                    }
+                    total_objects++;
+                }
+                break;
+
+            case 'U':
+                {
+                    // U <old-target> <object> <new-target> <field> <thread>
+                    // 0      1          2         3           4        5
+                    // -- Look up objects and perform update
+                    unsigned int objId = tokenizer.getInt(2);
+                    unsigned int tgtId = tokenizer.getInt(3);
+                    unsigned int oldTgtId = tokenizer.getInt(1);
+                    unsigned int threadId = tokenizer.getInt(5);
+                    unsigned int field = tokenizer.getInt(4);
+                    Thread *thread = Exec.getThread(threadId);
+                    Method *topMethod = NULL;
+                    Method *topMethod_using_action = NULL;
+                    if (thread) {
+                        topMethod = thread->TopMethod();
+                        MethodDeque tjmeth = thread->top_javalib_methods();
+                        topMethod_using_action = tjmeth.back();
+                    }
+
+                    Object *oldObj = Heap.getObject(oldTgtId);
+                    LastEvent lastevent = LastEvent::UPDATE_UNKNOWN;
+                    Exec.IncUpdateTime();
+                    obj = Heap.getObject(objId);
+                    // NOTE that we don't need to check for non-NULL source object 'obj'
+                    // here. NULL means that it's a global/static reference.
+                    target = ((tgtId > 0) ? Heap.getObject(tgtId) : NULL);
+                    if (obj) {
+                        update_reference_summaries( obj, field, target );
+                    }
+                    // TODO last_map.setLast( threadId, LastEvent::UPDATE, obj );
+                    // Set lastEvent and heap/stack flags for new target
+                    if (target) {
+                        if ( obj && 
+                             obj != target
+                             /* && !(obj->wasRoot())
+                              * NOTE: This was the original code which in resulted
+                              * in LESS Died By STACK after HEAP. Making this change
+                              * to see if the results match the intuition of the code
+                              * being analyzed. - RLV 2017 Feb 16
+                              * */
+                           ) {
+                            target->setPointedAtByHeap();
+                        }
+                        target->setLastTimestamp( Exec.NowUp() );
+                        // TODO: target->setActualLastTimestamp( Exec.NowUp() );
+                        // TODO: Maybe LastUpdateFromStatic isn't the most descriptive
+                        // So since target has an incoming edge, LastUpdateFromStatic
+                        //    should be FALSE.
+                        target->unsetLastUpdateFromStatic();
+                    }
+                    // Set lastEvent and heap/stack flags for old target
+                    if (oldObj) {
+                        // Set the last time stamp for Merlin Algorithm purposes
+                        oldObj->setLastTimestamp( Exec.NowUp() );
+                        oldObj->setActualLastTimestamp( Exec.NowUp() );
+                        // Keep track of other properties
+                        if (tgtId != 0) {
+                            oldObj->unsetLastUpdateNull();
+                        } else {
+                            oldObj->setLastUpdateNull();
+                        }
+                        if (target) {
+                            if (oldTgtId != tgtId) {
+                                lastevent = LastEvent::UPDATE_AWAY_TO_VALID;
+                                oldObj->setLastEvent( lastevent  );
+                            }
+                        } else {
+                            // There's no need to check for oldTgtId == tgtId here.
+                            lastevent = LastEvent::UPDATE_AWAY_TO_NULL;
+                            oldObj->setLastEvent( lastevent );
+                        }
+                        if (field == 0) {
+                            oldObj->setLastUpdateFromStatic();
+                        } else {
+                            oldObj->unsetLastUpdateFromStatic();
+                        }
+                        // Last action site
+                        oldObj->setLastActionSite(topMethod_using_action);
+                        string last_action_name = topMethod_using_action->getName();
+                        oldObj->set_nonJavaLib_last_action_context( last_action_name );
+                    }
+                    if (oldTgtId == tgtId) {
+                        // It sometimes happens that the newtarget is the same as
+                        // the old target. So we won't create any more new edges.
+                        // DEBUG: cout << "UPDATE same new == old: " << target << endl;
+                    } else {
+                        if (obj) {
+                            Edge *new_edge = NULL;
+                            // Can't call updateField if obj is NULL
+                            if (target) {
+                                // Increment and decrement refcounts
+                                unsigned int field_id = tokenizer.getInt(4);
+                                new_edge = Heap.make_edge( obj, field_id,
+                                                           target, Exec.NowUp() );
+#ifdef _SIZE_DEBUG
+                                cout << "ES: " << sizeof(new_edge) << endl;
+#endif // _SIZE_DEBUG
+                            }
+                            obj->updateField( new_edge,
+                                              field_id,
+                                              Exec.NowUp(),
+                                              topMethod, // for death site info
+                                              Reason::HEAP, // reason
+                                              NULL, // death root 0 because may not be a root
+                                              lastevent, // last event to determine cause
+                                              EdgeState::DEAD_BY_UPDATE, // edge is dead because of update
+                                              eifile ); // output edge info file
+                            //
+                            // NOTE: topMethod COULD be NULL here.
+                            // DEBUG ONLY IF NEEDED
+                            // Example:
+                            // if ( (objId == tgtId) && (objId == 166454) ) {
+                            // if ( (objId == 166454) ) {
+                            //     tokenizer.debugCurrent();
+                            // }
+                        }
+                    }
+                }
+                break;
+
+            case 'D':
+                {
+                    // D <object> <thread-id>
+                    // 0    1         2
+                    unsigned int objId = tokenizer.getInt(1);
+                    obj = Heap.getObject(objId);
+                    if (obj) {
+                        unsigned int now_uptime = Exec.NowUp();
+                        // Merlin algorithm portion. TODO: This is getting unwieldy. Think about
+                        // refactoring.
+                        // Keep track of the latest death time
+                        // TODO: Debug? Well it's a decent sanity check so we may leave it in.
+                        assert( latest_death_time <= now_uptime );
+                        // MERLIN: // Ok, so now we can see if the death time has 
+                        // if (now_uptime > latest_death_time) {
+                        //     // Do the Merlin algorithm
+                        //     apply_merlin( new_garbage );
+                        //     // TODO: What are the parameters?
+                        //     //          - new_garbage for sure
+                        //     //          - anything else?
+                        //     // For now this simply updates the object death times
+                        // }
+                        // Update latest death time
+                        latest_death_time = now_uptime;
+
+                        // // The rest of the bookkeeping
+                        // MERLIN: 
+                        // new_garbage.push_back(obj);
+                        obj->setDeathTime( now_uptime );
+                        unsigned int threadId = tokenizer.getInt(2);
+                        LastEvent lastevent = obj->getLastEvent();
+                        // Set the died by flags
+                        if ( (lastevent == LastEvent::UPDATE_AWAY_TO_NULL) ||
+                             (lastevent == LastEvent::UPDATE_AWAY_TO_VALID) ||
+                             (lastevent == LastEvent::UPDATE_UNKNOWN) ) {
+                            if (obj->wasLastUpdateFromStatic()) {
+                                obj->setDiedByGlobalFlag();
+                            }
+                            // Design decision: all died by globals are
+                            // also died by heap.
+                            obj->setDiedByHeapFlag();
+                        } else if ( (lastevent == LastEvent::ROOT) ||
+                                    (lastevent == LastEvent::OBJECT_DEATH_AFTER_ROOT_DECRC) ||
+                                    (lastevent == LastEvent::OBJECT_DEATH_AFTER_UPDATE_DECRC) ) {
+                            obj->setDiedByStackFlag();
+                        }
+                        //else {
+                        //     cerr << "Unhandled event: " << lastevent2str(lastevent) << endl;
+                        // }
+                        Heap.makeDead( obj,
+                                       now_uptime,
+                                       eifile );
+                        // Get the current method
+                        Method *topMethod = NULL;
+                        MethodDeque top_2_methods;
+                        MethodDeque javalib_context;
+                        // TODO: ContextPair cpair;
+                        CPairType cptype;
+                        Thread *thread;
+                        if (threadId > 0) {
+                            thread = Exec.getThread(threadId);
+                            // Update counters in ExecState for map of
+                            //   Object * to simple context pair
+                        } else {
+                            // No thread info. Get from ExecState
+                            thread = Exec.get_last_thread();
+                        }
+                        if (thread) {
+                            // TODO: cptype = thread->getContextPairType();
+                            unsigned int count = 0;
+                            topMethod = thread->TopMethod();
+                            top_2_methods = thread->top_N_methods(2);
+                            // TODO TODO HERE TODO
+                            // Exec.IncDeathContext( top_2_methods );
+                            // TODO TODO HERE TODO
+                            javalib_context = thread->top_javalib_methods();
+                            if (cckind == ExecMode::Full) {
+                                // Get full stacktrace
+                                DequeId_t strace = thread->stacktrace_using_id();
+                                obj->setDeathContextList( strace );
+                            }
+                            // Set the death site
+                            Exec.UpdateObj2DeathContext( obj,
+                                                         javalib_context );
+#ifdef DEBUG_SPECJBB
+                            // if the object is of type [I
+                            // SPECJBB if (obj->getType() == "[I") {
+                            if (obj->getType() == "Lspec/benchmarks/_205_raytrace/Point;") {
+                                MethodDeque cstack = thread->full_method_stack();
+                                cout << "---------------------------------------------------------------------" << endl;
+                                cout << "DEBUG: objectId[ " << obj->getId() << " ]:" << endl
+                                     << "    ";
+                                for ( auto iter = cstack.begin();
+                                      iter != cstack.end();
+                                      iter++ ) {
+                                   cout << (*iter)->getName() << " <- ";
+                                }
+                                cout << endl;
+                            }
+                            //
+#endif // DEBUG_SPECJBB
+                            // Death reason setting
+                            Reason myreason;
+                            if (thread->isLocalVariable(obj)) {
+                                myreason = Reason::STACK;
+                            } else {
+                                myreason = Reason::HEAP;
+                            }
+                            // Recursively make the edges dead and assign the proper death cause
+                            for ( EdgeMap::iterator p = obj->getEdgeMapBegin();
+                                  p != obj->getEdgeMapEnd();
+                                  ++p ) {
+                                Edge* target_edge = p->second;
+                                if (target_edge) {
+                                    unsigned int fieldId = target_edge->getSourceField();
+                                    obj->updateField( NULL,
+                                                      fieldId,
+                                                      Exec.NowUp(),
+                                                      topMethod,
+                                                      myreason,
+                                                      obj,
+                                                      lastevent,
+                                                      EdgeState::DEAD_BY_OBJECT_DEATH_NOT_SAVED,
+                                                      eifile ); // output edge info file
+                                    // NOTE: STACK is used because the object that died,
+                                    // died by STACK.
+                                }
+                            }
+                        } // if (thread)
+                        unsigned int rc = obj->getRefCount();
+                        deathrc_map[objId] = rc;
+                        not_candidate_map[objId] = (rc == 0);
+                    } else {
+                        assert(false);
+                    } // if (obj) ... else
+                }
+                break;
+
+            case 'M':
+                {
+                    // M <methodid> <receiver> <threadid>
+                    // 0      1         2           3
+                    // current_cc = current_cc->DemandCallee(method_id, object_id, thread_id);
+                    // TEMP TODO ignore method events
+                    method_id = tokenizer.getInt(1);
+                    method = ClassInfo::TheMethods[method_id];
+                    thread_id = tokenizer.getInt(3);
+                    // Check to see if this is the main function
+                    if (method == main_method) {
+                        Exec.set_main_func_uptime( Exec.NowUp() );
+                        Exec.set_main_func_alloctime( Exec.NowAlloc() );
+                    }
+                    Exec.Call(method, thread_id);
+                }
+                break;
+
+            case 'E':
+            case 'X':
+                {
+                    // E <methodid> <receiver> [<exceptionobj>] <threadid>
+                    // 0      1         2             3             3/4
+                    method_id = tokenizer.getInt(1);
+                    method = ClassInfo::TheMethods[method_id];
+                    thread_id = (tokenizer.numTokens() == 4) ? tokenizer.getInt(3)
+                                                             : tokenizer.getInt(4);
+                    Exec.Return(method, thread_id);
+                }
+                break;
+
+            case 'T':
+                // T <methodid> <receiver> <exceptionobj>
+                // 0      1          2           3
+                break;
+
+            case 'H':
+                // H <methodid> <receiver> <exceptionobj>
+                break;
+
+            case 'R':
+                // R <objid> <threadid>
+                // 0    1        2
+                {
+                    unsigned int objId = tokenizer.getInt(1);
+                    Object *object = Heap.getObject(objId);
+                    unsigned int threadId = tokenizer.getInt(2);
+                    // cout << "objId: " << objId << "     threadId: " << threadId << endl;
+                    if (object) {
+                        object->setRootFlag(Exec.NowUp());
+                        object->setLastEvent( LastEvent::ROOT );
+                        object->setLastTimestamp( Exec.NowUp() );
+                        object->setActualLastTimestamp( Exec.NowUp() );
+                        Thread *thread = Exec.getThread(threadId);
+                        Method *topMethod_using_action = NULL;
+                        if (thread) {
+                            MethodDeque tjmeth = thread->top_javalib_methods();
+                            topMethod_using_action = tjmeth.back();
+                        }
+                        if (thread) {
+                            thread->objectRoot(object);
+                        }
+                        if (topMethod_using_action) {
+                            // Last action site
+                            object->setLastActionSite(topMethod_using_action);
+                            string last_action_name = topMethod_using_action->getName();
+                            object->set_nonJavaLib_last_action_context( last_action_name );
+                        } else {
+                            // Last action site
+                            object->setLastActionSite(NULL);
+                            string last_action_name("VMCONTEXT");
+                            object->set_nonJavaLib_last_action_context( last_action_name );
+                        }
+                    }
+                    root_set.insert(objId);
+                    // TODO last_map.setLast( threadId, LastEvent::ROOT, object );
+                }
+                break;
+
+            default:
+                // cout << "ERROR: Unknown entry " << tokenizer.curChar() << endl;
+                break;
+        }
+    }
     return total_objects;
 }
 

@@ -1,4 +1,4 @@
-#include "heap.h"
+#include "heap.hpp"
 
 // -- Global flags
 bool HeapState::do_refcounting = true;

@@ -6,7 +6,7 @@
 //  stacks, threads, time
 
 #include "classinfo.hpp"
-#include "heap.h"
+#include "heap.hpp"
 
 #include <iostream>
 #include <map>

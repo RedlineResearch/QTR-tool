@@ -1,5 +1,5 @@
 #include "classinfo.hpp"
-#include "tokenizer.h"
+#include "tokenizer.hpp"
 
 #include <stdlib.h>
 

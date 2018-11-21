@@ -5,7 +5,7 @@
 //   Representation of objects on the heap
 //
 #include "classinfo.hpp"
-// TODO #include "refstate.h"
+// TODO #include "refstate.hpp"
 
 #include <algorithm>
 #include <iostream>
