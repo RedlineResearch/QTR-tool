@@ -4,12 +4,12 @@
 // ----------------------------------------------------------------------
 //  Representation of object's in-reference state
 
-#include <iostream>
-
 // TODO: Not sure if we need the classes in classinfo
 //       * Maybe Method?
 //       - RLV - 2016-0114
-// #include "classinfo.h"
+// #include "classinfo.hpp"
+
+#include <iostream>
 
 // using namespace std;
 

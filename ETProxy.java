@@ -504,73 +504,73 @@ public class ETProxy {
         try {
             for (int i = 0; i < BUFMAX; i++) {
                 switch(eventTypeBuffer[i]) {
-                case 1: // method entry
-                    // M <method-id> <receiver-object-id> <thread-id>
-                    pw.println( "M " +
-                                firstBuffer[i] + " " +
-                                secondBuffer[i] + " " +
-                                threadIDBuffer[i] );
-                    break;
-                case 2: // method exit
-                    // E <method-id> <thread-id>
-                    pw.println( "E " +
-                                firstBuffer[i] + " " +
-                                threadIDBuffer[i] );
-                    break;
-                case 3: // object allocation
-                    // N <object-id> <size> <type-id> <site-id> <length (0)> <thread-id>
-                    // 1st buffer = object ID (hash)
-                    // 2nd buffer = class ID
-                    // 3rd buffer = allocation site (method ID)
-                    pw.println( "N " +
-                                firstBuffer[i] + " " +
-                                fourthBuffer[i] + " " +
-                                secondBuffer[i] + " " +
-                                thirdBuffer[i] + " "
-                                + 0 + " "
-                                + threadIDBuffer[i] );
-                    break;
-                case 4: // object array allocation
-                case 5: // primitive array allocation
-                    // 5 now removed so nothing should come out of it
-                    // A <object-id> <size> <type-id> <site-id> <length> <thread-id>
-                    pw.println( "A " +
-                                firstBuffer[i] + " " +
-                                fifthBuffer[i] + " " +
-                                secondBuffer[i] + " " +
-                                fourthBuffer[i] + " " +
-                                thirdBuffer[i] + " " +
-                                threadIDBuffer[i] );
-                    break;
-                case 6: // 2D array allocation
-                    // TODO: Conflicting documention: 2018-1112
-                    // 6, arrayHash, arrayClassID, size1, size2, timestamp
-                    // A <object-id> <size> <type-id> <site-id> <length> <thread-id>
-                    pw.println( "A " +
-                                firstBuffer[i] + " " +
-                                fifthBuffer[i] + " " +
-                                secondBuffer[i] + " " +
-                                fourthBuffer[i] + " " +
-                                thirdBuffer[i] + " " +
-                                threadIDBuffer[i] );
-                    break;
-                case 7: // object update
-                    // TODO: Conflicting documention: 2018-1112
-                    // 7, targetObjectHash, fieldID, srcObjectHash, timestamp
-                    // U <old-tgt-obj-id> <obj-id> <new-tgt-obj-id> <field-id> <thread-id>
-                    pw.println( "U " +
-                                firstBuffer[i] + " " +
-                                secondBuffer[i] + " " +
-                                thirdBuffer[i] + " " +
-                                threadIDBuffer[i] );
-                    break;
-                case 8: // witness with get field
-                    // 8, aliveObjectHash, classID, timestamp
-                    pw.println( "W" + " " +
-                                firstBuffer[i] + " " +
-                                secondBuffer[i] + " " +
-                                threadIDBuffer[i] );
-                    break;
+                    case 1: // method entry
+                        // M <method-id> <receiver-object-id> <thread-id>
+                        pw.println( "M " +
+                                    firstBuffer[i] + " " +
+                                    secondBuffer[i] + " " +
+                                    threadIDBuffer[i] );
+                        break;
+                    case 2: // method exit
+                        // E <method-id> <thread-id>
+                        pw.println( "E " +
+                                    firstBuffer[i] + " " +
+                                    threadIDBuffer[i] );
+                        break;
+                    case 3: // object allocation
+                        // N <object-id> <size> <type-id> <site-id> <length (0)> <thread-id>
+                        // 1st buffer = object ID (hash)
+                        // 2nd buffer = class ID
+                        // 3rd buffer = allocation site (method ID)
+                        pw.println( "N " +
+                                    firstBuffer[i] + " " +
+                                    fourthBuffer[i] + " " +
+                                    secondBuffer[i] + " " +
+                                    thirdBuffer[i] + " "
+                                    + 0 + " "
+                                    + threadIDBuffer[i] );
+                        break;
+                    case 4: // object array allocation
+                    case 5: // primitive array allocation
+                        // 5 now removed so nothing should come out of it
+                        // A <object-id> <size> <type-id> <site-id> <length> <thread-id>
+                        pw.println( "A " +
+                                    firstBuffer[i] + " " +
+                                    fifthBuffer[i] + " " +
+                                    secondBuffer[i] + " " +
+                                    fourthBuffer[i] + " " +
+                                    thirdBuffer[i] + " " +
+                                    threadIDBuffer[i] );
+                        break;
+                    case 6: // 2D array allocation
+                        // TODO: Conflicting documention: 2018-1112
+                        // 6, arrayHash, arrayClassID, size1, size2, timestamp
+                        // A <object-id> <size> <type-id> <site-id> <length> <thread-id>
+                        pw.println( "A " +
+                                    firstBuffer[i] + " " +
+                                    fifthBuffer[i] + " " +
+                                    secondBuffer[i] + " " +
+                                    fourthBuffer[i] + " " +
+                                    thirdBuffer[i] + " " +
+                                    threadIDBuffer[i] );
+                        break;
+                    case 7: // object update
+                        // TODO: Conflicting documention: 2018-1112
+                        // 7, targetObjectHash, fieldID, srcObjectHash, timestamp
+                        // U <old-tgt-obj-id> <obj-id> <new-tgt-obj-id> <field-id> <thread-id>
+                        pw.println( "U " +
+                                    firstBuffer[i] + " " +
+                                    secondBuffer[i] + " " +
+                                    thirdBuffer[i] + " " +
+                                    threadIDBuffer[i] );
+                        break;
+                    case 8: // witness with get field
+                        // 8, aliveObjectHash, classID, timestamp
+                        pw.println( "W" + " " +
+                                    firstBuffer[i] + " " +
+                                    secondBuffer[i] + " " +
+                                    threadIDBuffer[i] );
+                        break;
                 }
             }
             ptr.set(0);

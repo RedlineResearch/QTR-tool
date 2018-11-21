@@ -1,5 +1,6 @@
-#include "classinfo.h"
+#include "classinfo.hpp"
 #include "tokenizer.h"
+
 #include <stdlib.h>
 
 // -- Contents of the names file

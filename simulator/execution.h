@@ -5,13 +5,13 @@
 //  Representation of runtime execution
 //  stacks, threads, time
 
+#include "classinfo.hpp"
+#include "heap.h"
+
 #include <iostream>
 #include <map>
 #include <deque>
 #include <utility>
-
-#include "classinfo.h"
-#include "heap.h"
 
 using namespace std;
 

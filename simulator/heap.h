@@ -4,6 +4,9 @@
 // ----------------------------------------------------------------------
 //   Representation of objects on the heap
 //
+#include "classinfo.hpp"
+// TODO #include "refstate.h"
+
 #include <algorithm>
 #include <iostream>
 #include <map>
@@ -12,9 +15,6 @@
 #include <assert.h>
 #include <boost/logic/tribool.hpp>
 #include <boost/bimap.hpp>
-
-#include "classinfo.h"
-// TODO #include "refstate.h"
 
 class Object;
 class Thread;

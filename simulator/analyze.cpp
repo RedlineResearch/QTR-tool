@@ -1,3 +1,10 @@
+using namespace std;
+
+#include "classinfo.hpp"
+#include "tokenizer.h"
+#include "execution.h"
+#include "heap.h"
+
 #include <iostream>
 #include <fstream>
 #include <sstream>
@@ -6,12 +13,6 @@
 #include <set>
 #include <vector>
 
-using namespace std;
-
-#include "tokenizer.h"
-#include "classinfo.h"
-#include "execution.h"
-#include "heap.h"
 
 extern HeapState Heap;
 extern ExecState Exec;
