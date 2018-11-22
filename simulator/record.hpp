@@ -1,5 +1,5 @@
-#ifndef RECORD_H
-#define RECORD_H
+#ifndef RECORD_HPP
+#define RECORD_HPP
 
 // ----------------------------------------------------------------------
 //   Record
@@ -9,10 +9,7 @@
 
 using namespace std;
 
-// -- Size of temporary char arrays (yes, I know, this could cause buffer overflow)
-#define LINESIZE 2048
-#define TOKENSIZE 50
-
+// Base class
 class Record
 {
     private:
@@ -28,4 +25,26 @@ class Record
 
 };
 
-#endif // RECORD_H
+// Derived record classes
+class AllocRecord : public Record
+{
+    public:
+        AllocRecord() {}
+
+};
+
+class ArrayRecord : public Record
+{
+    public:
+        ArrayRecord() {}
+
+};
+
+class MethodRecord : public Record
+{
+    public:
+        MethodRecord() {}
+
+};
+
+#endif // RECORD_HPP

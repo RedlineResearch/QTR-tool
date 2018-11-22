@@ -1,10 +1,10 @@
 using namespace std;
 
-#include "allocrecord.hpp"
 #include "classinfo.hpp"
 #include "execution.hpp"
 #include "heap.hpp"
 // #include "lastmap.h"
+#include "record.hpp"
 #include "refstate.hpp"
 #include "summary.hpp"
 #include "tokenizer.hpp"
@@ -331,7 +331,9 @@ unsigned int read_trace_file_part1( FILE *f ) // source trace file
     Object *target;
     Method *method;
     unsigned int total_objects = 0;
-    AllocRecord rec;
+    AllocRecord alloc_rec;
+    ArrayRecord array_rec;
+    MethodRecord method_rec;
 #if 0
     // Save the trace in memory:
     std::deque< 
