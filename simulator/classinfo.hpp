@@ -17,6 +17,14 @@
 
 using namespace std;
 
+// Type definitions
+typedef unsigned int FieldId_t;
+typedef unsigned int MethodId_t;
+typedef unsigned int SiteId_t;
+typedef unsigned int ThreadId_t;
+typedef unsigned int TypeId_t;
+typedef unsigned int ObjectId_t;
+
 class Class;
 class Method;
 class Field;

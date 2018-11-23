@@ -19,11 +19,6 @@ ENDIF()
 
 INCLUDE_DIRECTORIES(${etanalyzer-cpp_SOURCE_DIR} ${Boost_INCLUDE_DIRS})
 
-# TODO ADD_SUBDIRECTORY(EASTL)
-# TODO INCLUDE_DIRECTORIES(EASTL/include)
-# TODO INCLUDE_DIRECTORIES(EASTL/test/packages/EABase/include/Common)
-# TODO TARGET_LINK_LIBRARIES(EASTL)
-
 EXECUTE_PROCESS( COMMAND sh ${CMAKE_SOURCE_DIR}/create-version-cpp.sh
                  OUTPUT_FILE ${CMAKE_SOURCE_DIR}/version.cpp )
 
@@ -39,6 +34,11 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2 -g -Werror")
+
+# TODO:
+#   Add dependencies on header files. Otherwise, the simulator might not be
+#   rebuilt when header files are modified? TODO
+# TODO:
 
 # Main static simulator
 ADD_EXECUTABLE(simulator ${SOURCES_SIM})

@@ -21,7 +21,6 @@ using namespace std;
 #include <string>
 #include <utility>
 
-// TODO #include <stxxl/map>
 
 
 // ----------------------------------------------------------------------
@@ -333,7 +332,10 @@ unsigned int read_trace_file_part1( FILE *f ) // source trace file
     unsigned int total_objects = 0;
     AllocRecord alloc_rec;
     ArrayRecord array_rec;
-    MethodRecord method_rec;
+    ExitRecord exit_rec(123, 13);
+    MethodRecord method_rec(123, 100, 12);
+    UpdateRecord update_rec;
+    WitnessRecord witness_rec;
 #if 0
     // Save the trace in memory:
     std::deque< 

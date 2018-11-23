@@ -15,10 +15,6 @@
 
 using namespace std;
 
-// Type definitions
-typedef unsigned int MethodId_t;
-// TODO typedef unsigned int threadId_t;
-
 class CCNode;
 typedef map<unsigned int, CCNode *> CCMap;
 typedef map<Method *, CCNode *> FullCCMap;
