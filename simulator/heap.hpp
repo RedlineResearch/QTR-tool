@@ -75,7 +75,6 @@ enum class CPairType
 };
 
 
-typedef unsigned int VTime_t;
 typedef std::map<ObjectId_t, Object *> ObjectMap;
 typedef std::map<ObjectId_t, Edge *> EdgeMap;
 typedef set<Object *> ObjectSet;

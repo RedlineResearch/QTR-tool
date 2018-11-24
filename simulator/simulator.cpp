@@ -329,13 +329,14 @@ unsigned int read_trace_file_part1( FILE *f ) // source trace file
     Object *obj;
     Object *target;
     Method *method;
-    unsigned int total_objects = 0;
-    AllocRecord alloc_rec;
-    ArrayRecord array_rec;
+    unsigned int total_objeobcts = 0;
+    // DEBUG ONLY: TODO
+    AllocRecord alloc_rec( 123, 1, 2, 3, 0, 4);
     ExitRecord exit_rec(123, 13);
     MethodRecord method_rec(123, 100, 12);
-    UpdateRecord update_rec;
-    WitnessRecord witness_rec;
+    UpdateRecord update_rec(123, 12, 345, 123456);
+    WitnessRecord witness_rec(123, 12, 123456);
+    // END DEBUG ONLY: TODO
 #if 0
     // Save the trace in memory:
     std::deque< 

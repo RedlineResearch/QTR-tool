@@ -24,6 +24,7 @@ typedef unsigned int SiteId_t;
 typedef unsigned int ThreadId_t;
 typedef unsigned int TypeId_t;
 typedef unsigned int ObjectId_t;
+typedef unsigned int VTime_t;
 
 class Class;
 class Method;
