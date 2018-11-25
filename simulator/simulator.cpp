@@ -330,32 +330,111 @@ unsigned int read_trace_file_part1( FILE *f ) // source trace file
     Object *target;
     Method *method;
     unsigned int total_objeobcts = 0;
-    // DEBUG ONLY: TODO
-    AllocRecord alloc_rec( 123, 1, 2, 3, 0, 4);
-    ExitRecord exit_rec(123, 13);
-    MethodRecord method_rec(123, 100, 12);
-    UpdateRecord update_rec(123, 12, 345, 123456);
-    WitnessRecord witness_rec(123, 12, 123456);
-    // END DEBUG ONLY: TODO
-#if 0
     // Save the trace in memory:
-    std::deque< 
-    // MERLIN: 
-    // std::deque< Object * > new_garbage;
-    Method *main_method = ClassInfo::get_main_method();
-    unsigned int main_id = main_method->getId();
+    std::deque<Record *> trace;
+    // Merlin aglorithm: 
+    std::deque< Object * > new_garbage;
+    // TODO: There's no main method here?
+    //       Method *main_method = ClassInfo::get_main_method();
+    //       unsigned int main_id = main_method->getId();
 
-    unsigned int latest_death_time = 0;
+    VTime_t latest_death_time = 0;
+    VTime_t AllocationTime = 0;
 
-    // -- Allocation time
-    unsigned int AllocationTime = 0;
-    while ( ! tokenizer.isDone()) {
+    while (!tokenizer.isDone()) {
         tokenizer.getLine();
         if (tokenizer.isDone()) {
             break;
         }
-
         switch (tokenizer.getChar(0)) {
+
+            case 'M':
+                {
+                    // M <methodid> <objectId> <threadid>
+                    // 0      1         2           3
+                    assert(tokenizer.numTokens() == 3);
+                    method_id = tokenizer.getInt(1);
+                    object_id = tokenizer.getInt(2);
+                    // TODO: method = ClassInfo::TheMethods[method_id];
+                    thread_id = tokenizer.getInt(3);
+                    auto recptr = new MethodRecord( method_id,
+                                                    object_id,
+                                                    thread_id );
+                    trace.push_back(recptr);
+                }
+                break;
+
+            case 'E':
+                {
+                    // ET1 looked like this:
+                    //     E <methodid> <receiver> [<exceptionobj>] <threadid>
+                    // ET2 is now:
+                    //     E <method-id> <thread-id>
+                    assert(tokenizer.numTokens() == 2);
+                    method_id = tokenizer.getInt(1);
+                    // TODO: method = ClassInfo::TheMethods[method_id];
+                    thread_id = tokenizer.getInt(2);
+                    auto recptr = new ExitRecord( method_id, thread_id );
+                    trace.push_back(recptr);
+                }
+                break;
+
+            case 'A':
+            case 'N':
+                {
+                    // A/N <id> <size> <type> <site> <length?> <threadid>
+                    //   0   1    2      3      4      5           6
+                    assert(tokenizer.numTokens() == 6);
+                    thread_id = tokenizer.getInt(6);
+#if 0
+                    Thread *thread = Exec.getThread(thrdid);
+                    unsigned int length = tokenizer.getInt(5);
+                    AllocSite *as = ClassInfo::TheAllocSites[tokenizer.getInt(4)];
+                    string njlib_sitename;
+                    if (thread) {
+                        MethodDeque javalib_context = thread->top_javalib_methods();
+                        assert(javalib_context.size() > 0);
+                        Method *meth = javalib_context.back();
+                        njlib_sitename = ( meth ? meth->getName() : "NONAME" );
+                    } else {
+                        assert(false);
+                    } // if (thread) ... else
+                    obj = Heap.allocate( tokenizer.getInt(1), // id
+                                         tokenizer.getInt(2), // size
+                                         tokenizer.getChar(0), // kind of alloc
+                                         tokenizer.getString(3), // type
+                                         as, // AllocSite pointer
+                                         njlib_sitename, // NonJava-library alloc sitename
+                                         length, // length
+                                         thread, // thread Id
+                                         Exec.NowUp() ); // Current time
+#ifdef _SIZE_DEBUG
+                    cout << "OS: " << sizeof(obj) << endl;
+#endif // _SIZE_DEBUG
+                    AllocationTime = Heap.getAllocTime();
+                    Exec.SetAllocTime( AllocationTime );
+                    if (as) {
+                        Exec.UpdateObj2AllocContext( obj,
+                                                     as->getMethod()->getName() );
+                    } else {
+                        Exec.UpdateObj2AllocContext( obj,
+                                                     "NOSITE" );
+                    }
+                    if (cckind == ExecMode::Full) {
+                        // Get full stacktrace
+                        DequeId_t strace = thread->stacktrace_using_id();
+                        obj->setAllocContextList( strace );
+                    }
+                    total_objects++;
+#endif
+                }
+                break;
+
+        } // switch (tokenizer.getChar(0))
+    } // while (!tokenizer.isDone())
+#if 0
+    // DONE: ^^^ while ( ! tokenizer.isDone()) {
+        // DONE: switch (tokenizer.getChar(0)) {
             case 'A':
             case 'N':
             // TODO: No more P, V, and I events. 2018-1111
@@ -750,7 +829,7 @@ unsigned int read_trace_file_part1( FILE *f ) // source trace file
                 // cout << "ERROR: Unknown entry " << tokenizer.curChar() << endl;
                 break;
         }
-    }
+    } // TODO: DONE ^^^
     return total_objects;
 #endif
     return 0;

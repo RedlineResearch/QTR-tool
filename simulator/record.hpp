@@ -15,14 +15,14 @@ using namespace std;
 class Record
 {
     private:
-        char m_type;
+        char m_recordType;
 
     public:
         Record() {}
 
-        inline char getType() const
+        inline char getRecordType() const
         {
-            return this->m_type;
+            return this->m_recordType;
         }
 
 };
