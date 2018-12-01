@@ -315,11 +315,12 @@ void apply_merlin( std::deque< Object * > &new_garbage )
 }
 
 // ----------------------------------------------------------------------
-//   Read and process trace events
+//   Read and process trace events. This implements the Merlin algorithm.
 unsigned int read_trace_file_part1( FILE *f ) // source trace file
 {
     Tokenizer tokenizer(f);
 
+    unsigned int total_objects = 0;
     MethodId_t method_id;
     ObjectId_t object_id;
     ObjectId_t target_id;
@@ -338,8 +339,9 @@ unsigned int read_trace_file_part1( FILE *f ) // source trace file
     //       Method *main_method = ClassInfo::get_main_method();
     //       unsigned int main_id = main_method->getId();
 
-    VTime_t latest_death_time = 0;
-    VTime_t AllocationTime = 0;
+    // TODO: No death times yet
+    //      VTime_t latest_death_time = 0;
+    //      VTime_t allocation_time = 0;
 
     while (!tokenizer.isDone()) {
         tokenizer.getLine();
@@ -398,6 +400,49 @@ unsigned int read_trace_file_part1( FILE *f ) // source trace file
                                                    length,
                                                    size );
                     trace.push_back(recptr);
+
+                    {
+                        Thread *thread = Exec.getThread(thread_id);
+#if 0
+                        AllocSite *as = ClassInfo::TheAllocSites[tokenizer.getInt(4)];
+                        string njlib_sitename;
+                        if (thread) {
+                            MethodDeque javalib_context = thread->top_javalib_methods();
+                            assert(javalib_context.size() > 0);
+                            Method *meth = javalib_context.back();
+                            njlib_sitename = ( meth ? meth->getName() : "NONAME" );
+                        } else {
+                            assert(false);
+                        } // if (thread) ... else
+                        obj = Heap.allocate( tokenizer.getInt(1), // id
+                                             tokenizer.getInt(2), // size
+                                             tokenizer.getChar(0), // kind of alloc
+                                             tokenizer.getString(3), // type
+                                             as, // AllocSite pointer
+                                             njlib_sitename, // NonJava-library alloc sitename
+                                             length, // length
+                                             thread, // thread Id
+                                             Exec.NowUp() ); // Current time
+#ifdef _SIZE_DEBUG
+                        cout << "OS: " << sizeof(obj) << endl;
+#endif // _SIZE_DEBUG
+                        AllocationTime = Heap.getAllocTime();
+                        Exec.SetAllocTime( AllocationTime );
+                        if (as) {
+                            Exec.UpdateObj2AllocContext( obj,
+                                                         as->getMethod()->getName() );
+                        } else {
+                            Exec.UpdateObj2AllocContext( obj,
+                                                         "NOSITE" );
+                        }
+                        if (cckind == ExecMode::Full) {
+                            // Get full stacktrace
+                            DequeId_t strace = thread->stacktrace_using_id();
+                            obj->setAllocContextList( strace );
+                        }
+                        total_objects++;
+#endif
+                    }
                 }
                 break;
 

@@ -484,7 +484,7 @@ bool Thread::isLocalVariable(Object *object)
 // -- Look up or create a thread
 Thread* ExecState::getThread(unsigned int threadid)
 {
-    Thread* result = 0;
+    Thread *result = NULL;
     auto p = m_threads.find(threadid);
     if (p == m_threads.end()) {
         // -- Not there, make a new one
@@ -492,7 +492,6 @@ Thread* ExecState::getThread(unsigned int threadid)
                              this->m_kind,
                              this->m_allocCountmap,
                              this->m_deathPairCountMap,
-                             this->m_contextTypeMap,
                              *this,
                              *this->m_output,
                              *this->m_nodefile );
