@@ -45,7 +45,9 @@ int ClassTable::mapOrFind(string className)
 
 void ClassTable::dumpTable(ofstream &dumpFile)
 {
-    for (auto it = table.begin(); it != table.end(); ++it) {
-        dumpFile << it->second << ", " << it->first << endl;
+    for ( auto it = table.begin();
+          it != table.end();
+          ++it ) {
+        dumpFile << it->second << "  " << it->first << endl;
     }
 }

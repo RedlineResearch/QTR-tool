@@ -269,10 +269,10 @@ class HeapState {
         void enableObjectDebug() { m_obj_debug_flag = true; }
         void disableObjectDebug() { m_obj_debug_flag = false; }
 
-        Object *allocate( unsigned int id,
+        Object *allocate( ObjectId_t id,
                           unsigned int size,
                           char kind,
-                          char *type,
+                          string type,
                           AllocSite *site, 
                           string &nonjava_site_name,
                           unsigned int els,
@@ -521,7 +521,7 @@ class Object {
         Object( unsigned int id,
                 unsigned int size,
                 char kind,
-                char* type,
+                string type,
                 AllocSite* site,
                 string &nonjava_site_name,
                 unsigned int els,

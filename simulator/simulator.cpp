@@ -344,11 +344,13 @@ unsigned int read_trace_file_part1( FILE *f ) // source trace file
     //      VTime_t allocation_time = 0;
 
     while (!tokenizer.isDone()) {
+        string tmp_todo_str("TODO");
         tokenizer.getLine();
         if (tokenizer.isDone()) {
             break;
         }
-        switch (tokenizer.getChar(0)) {
+        char rec_type = tokenizer.getChar(0);
+        switch (rec_type) {
 
             case 'M':
                 {
@@ -403,8 +405,8 @@ unsigned int read_trace_file_part1( FILE *f ) // source trace file
 
                     {
                         Thread *thread = Exec.getThread(thread_id);
-#if 0
                         AllocSite *as = ClassInfo::TheAllocSites[tokenizer.getInt(4)];
+#if 0 // TODO ALLOCSITE
                         string njlib_sitename;
                         if (thread) {
                             MethodDeque javalib_context = thread->top_javalib_methods();
@@ -414,15 +416,19 @@ unsigned int read_trace_file_part1( FILE *f ) // source trace file
                         } else {
                             assert(false);
                         } // if (thread) ... else
-                        obj = Heap.allocate( tokenizer.getInt(1), // id
-                                             tokenizer.getInt(2), // size
-                                             tokenizer.getChar(0), // kind of alloc
-                                             tokenizer.getString(3), // type
+#endif // TODO ALLOCSITE
+                        obj = Heap.allocate( object_id,
+                                             size,
+                                             rec_type, // kind of alloc
+                                             tmp_todo_str, // get from type_id
                                              as, // AllocSite pointer
-                                             njlib_sitename, // NonJava-library alloc sitename
+                                             tmp_todo_str, // TODO: njlib_sitename, // NonJava-library alloc sitename
                                              length, // length
                                              thread, // thread Id
                                              Exec.NowUp() ); // Current time
+#if 0 // TODO TEMP
+#endif // TODO TEMP
+#if 0
 #ifdef _SIZE_DEBUG
                         cout << "OS: " << sizeof(obj) << endl;
 #endif // _SIZE_DEBUG
@@ -1598,7 +1604,7 @@ void output_reference_summary( string &reference_summary_filename,
 int main(int argc, char* argv[])
 {
     if (argc != 7) {
-        cout << "Usage: " << argv[0] << " <namesfile> <output base name> <CYCLE/NOCYCLE> <OBJDEBUG/NOOBJDEBUG> <main.class> <main.function>" << endl;
+        cout << "Usage: " << argv[0] << " <namesfile> <output base name> <IGNORED> <OBJDEBUG/NOOBJDEBUG> <main.class> <main.function>" << endl;
         cout << "      git version: " << build_git_sha << endl;
         cout << "      build date : " << build_git_time << endl;
         cout << "      CC kind    : " << Exec.get_kind() << endl;
@@ -1610,17 +1616,12 @@ int main(int argc, char* argv[])
     //--------------------------------------------------------------------------------
     // Setup filenames for output files:
     string basename(argv[2]);
-    string cycle_filename( basename + "-CYCLES.csv" );
-    // string edge_filename( basename + "-EDGES.txt" );
     string objectinfo_filename( basename + "-OBJECTINFO.txt" );
     string edgeinfo_filename( basename + "-EDGEINFO.txt" );
-    string typeinfo_filename( basename + "-TYPEINFO.txt" );
     string summary_filename( basename + "-SUMMARY.csv" );
     string dsite_filename( basename + "-DSITES.csv" );
-
     string dgroups_filename( basename + "-DGROUPS.csv" );
     string dgroups_by_type_filename( basename + "-DGROUPS-BY-TYPE.csv" );
-    string context_death_count_filename( basename + "-CONTEXT-DCOUNT.csv" );
     string reference_summary_filename( basename + "-REF-SUMMARY.csv" );
     string ref_reverse_summary_filename( basename + "-REF-REVERSE-SUMMARY.csv" );
     string stability_summary_filename( basename + "-STABILITY-SUMMARY.csv" );
@@ -1628,9 +1629,14 @@ int main(int argc, char* argv[])
     string call_context_filename( basename + "-CALL-CONTEXT.csv" );
     ofstream call_context_file(call_context_filename);
     Exec.set_output( &call_context_file );
+
     string nodemap_filename( basename + "-NODEMAP.csv" );
     ofstream nodemap_file(nodemap_filename);
     Exec.set_nodefile( &nodemap_file );
+
+    // TODO string cycle_filename( basename + "-CYCLES.csv" );
+    // TODO: UNUSED string typeinfo_filename( basename + "-TYPEINFO.txt" );
+    // TODO: UNUSED string context_death_count_filename( basename + "-CONTEXT-DCOUNT.csv" );
     //--------------------------------------------------------------------------------
 
     // TODO: This sets the 'main' class. But what was exactly the main  class?
@@ -1656,9 +1662,7 @@ int main(int argc, char* argv[])
     // TODO: Names file is likely different
     // TODO: 2018-11-10
     cout << "Read names file..." << endl;
-    ClassInfo::read_names_file( argv[1],
-                                main_class,
-                                main_function );
+    ClassInfo::read_names_file_et2( argv[1] );
 
     cout << "Start trace..." << endl;
     FILE *f = fdopen(0, "r");
@@ -1796,10 +1800,10 @@ int main(int argc, char* argv[])
                                   stability_summary );
         // TODO: What next? 
         // Output cycles
-        set<int> node_set;
-        output_cycles( keyset,
-                       cycle_filename,
-                       node_set );
+        // TODO: CYCLES set<int> node_set;
+        // TODO: CYCLES output_cycles( keyset,
+        // TODO: CYCLES                cycle_filename,
+        // TODO: CYCLES                node_set );
 
         // TODO: Moved the edge output to as needed instead of all at the end.
         // TODO // Output all edges

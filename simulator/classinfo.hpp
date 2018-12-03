@@ -59,14 +59,23 @@ class ClassInfo
         static bool debug_names;
         // -- Flag whether we check for the main function or not
         static bool main_flag;
+
         // -- Read the names file
+        // ---[ ET 1 version ] ----------------------------------------------------------
         static void read_names_file( const char *filename,
                                      string main_package,
                                      string main_function );
         static void read_names_file_no_mainfunc( const char *filename );
-        static void __read_names_file( const char *filename,
-                                       string main_class,
-                                       string main_function );
+        static void impl_read_names_file_et1( const char *filename,
+                                              string main_class,
+                                              string main_function );
+        // ---[ ET 2 version ] -----------------------------------------------------------
+        static void read_names_file_et2( const char *filename );
+        static void read_names_file_no_mainfunc_et2( const char *filename );
+        static void __read_names_file_et2( const char *filename,
+                                           string main_class,
+                                           string main_function );
+
         static Method * get_main_method() {
             return _main_method;
         }
