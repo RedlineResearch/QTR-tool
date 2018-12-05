@@ -1603,8 +1603,8 @@ void output_reference_summary( string &reference_summary_filename,
 
 int main(int argc, char* argv[])
 {
-    if (argc != 7) {
-        cout << "Usage: " << argv[0] << " <namesfile> <output base name> <IGNORED> <OBJDEBUG/NOOBJDEBUG> <main.class> <main.function>" << endl;
+    if (argc != 9) {
+        cout << "Usage: " << argv[0] << " <classesfile> <fieldsfile> <methodsfile> <output base name> <IGNORED> <OBJDEBUG/NOOBJDEBUG> <main.class> <main.function>" << endl;
         cout << "      git version: " << build_git_sha << endl;
         cout << "      build date : " << build_git_time << endl;
         cout << "      CC kind    : " << Exec.get_kind() << endl;
@@ -1615,7 +1615,7 @@ int main(int argc, char* argv[])
     cout << "---------------[ START ]-----------------------------------------------------------" << endl;
     //--------------------------------------------------------------------------------
     // Setup filenames for output files:
-    string basename(argv[2]);
+    string basename(argv[4]);
     string objectinfo_filename( basename + "-OBJECTINFO.txt" );
     string edgeinfo_filename( basename + "-EDGEINFO.txt" );
     string summary_filename( basename + "-SUMMARY.csv" );
@@ -1641,18 +1641,18 @@ int main(int argc, char* argv[])
 
     // TODO: This sets the 'main' class. But what was exactly the main  class?
     // TODO: 2018-11-10
-    string main_class(argv[5]);
-    string main_function(argv[6]);
+    string main_class(argv[7]);
+    string main_function(argv[8]);
     cout << "Main class: " << main_class << endl;
     cout << "Main function: " << main_function << endl;
 
     // Set up 'CYCLE' option.
     // TODO: Document what exactly the CYCLE option is.
-    string cycle_switch(argv[3]);
+    string cycle_switch(argv[5]);
     bool cycle_flag = ((cycle_switch == "NOCYCLE") ? false : true);
     
     // Setup 'DEBUG' option.
-    string obj_debug_switch(argv[4]);
+    string obj_debug_switch(argv[6]);
     bool obj_debug_flag = ((obj_debug_switch == "OBJDEBUG") ? true : false);
     if (obj_debug_flag) {
         cout << "Enable OBJECT DEBUG." << endl;
@@ -1662,8 +1662,11 @@ int main(int argc, char* argv[])
     // TODO: Names file is likely different
     // TODO: 2018-11-10
     cout << "Read names file..." << endl;
-    ClassInfo::read_names_file_et2( argv[1] );
+    ClassInfo::read_names_file_et2( argv[1],
+                                    argv[2], // TODO: fields_filename
+                                    argv[3] ); // TODO: methods_filename 
 
+    exit(100);
     cout << "Start trace..." << endl;
     FILE *f = fdopen(0, "r");
     ofstream edge_info_file(edgeinfo_filename);

@@ -32,6 +32,7 @@ class Field;
 class AllocSite;
 
 typedef map<unsigned int, Method*> MethodMap;
+typedef map<MethodId_t, pair<string, string>> Et2_MethodMap;
 typedef map<unsigned int, Field*> FieldMap;
 typedef map<unsigned int, Class*> ClassMap;
 typedef map<unsigned int, AllocSite*> AllocSiteMap;
@@ -70,11 +71,23 @@ class ClassInfo
                                               string main_class,
                                               string main_function );
         // ---[ ET 2 version ] -----------------------------------------------------------
-        static void read_names_file_et2( const char *filename );
-        static void read_names_file_no_mainfunc_et2( const char *filename );
-        static void __read_names_file_et2( const char *filename,
-                                           string main_class,
-                                           string main_function );
+        static void read_names_file_et2( const char *filename,
+                                         const char *fields_filename,
+                                         const char *methods_filename );
+        static void read_names_file_no_mainfunc_et2( const char *filename,
+                                                     const char *fields_filename,
+                                                     const char *methods_filename );
+        static void impl_read_names_file_et2( const char *filename,
+                                              const char *fields_filename,
+                                              const char *methods_filename,
+                                              string main_class,
+                                              string main_function );
+        static std::map<TypeId_t, string>
+            impl_read_classes_file_et2(const char *classes_filename);
+        static std::map<TypeId_t, string>
+            impl_read_fields_file_et2(const char *fields_filename);
+        static Et2_MethodMap
+            impl_read_methods_file_et2(const char *methods_filename);
 
         static Method * get_main_method() {
             return _main_method;
