@@ -342,7 +342,7 @@ void ClassInfo::impl_read_names_file_et2( const char *classes_filename,
 
 
 // -- Read in the classes file
-std::map<TypeId_t, string>
+RevClassMap
 ClassInfo::impl_read_classes_file_et2( const char *classes_filename )
 {
     FILE *f_classes = fopen(classes_filename, "r");
@@ -353,7 +353,7 @@ ClassInfo::impl_read_classes_file_et2( const char *classes_filename )
 
     unsigned int maxId = 0;
     Tokenizer t_classes(f_classes);
-    std::map< TypeId_t, string> class_map;
+    RevClassMap class_map;
     while ( !t_classes.isDone() ) {
         t_classes.getLine();
         if (t_classes.isDone()) {
@@ -362,13 +362,14 @@ ClassInfo::impl_read_classes_file_et2( const char *classes_filename )
 
         TypeId_t type_id = t_classes.getInt(0);
         string name = t_classes.getString(1);
-        auto iter = class_map.find(type_id);
+        auto iter = class_map.find(name);
         if (iter != class_map.end()) {
             // Duplicate type id
             cerr << "DUPLICATE type id: " << type_id << endl;
             // TODO: Add more info.
             continue;
         }
+        class_map[name] = type_id;
         // -- Class entries:
         // -- Lookup or create the class info...
         Class* cls = NULL;
@@ -418,6 +419,22 @@ ClassInfo::impl_read_fields_file_et2( const char *fields_filename )
             // TODO: Add more info.
             continue;
         }
+#if 0
+        Class *cls = TheClasses[t.getInt(4)];
+        Field *fld = new Field( t.getInt(2),
+                                cls,
+                                t.getString(3),
+                                t.getString(6),
+                                (t.getChar(1) == 'S') );
+        TheFields[fld->getId()] = fld;
+        cls->addField(fld);
+        if (debug_names) {
+            cout << "   + FIELD" << fld->getName()
+                 << " id = " << fld->getId()
+                 << " in class " << cls->getName()
+                 << endl;
+        }
+#endif
     }
 
     return field_map;

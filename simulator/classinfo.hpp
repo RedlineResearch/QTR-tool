@@ -32,6 +32,7 @@ class Field;
 class AllocSite;
 
 typedef map<unsigned int, Method*> MethodMap;
+typedef map<string, TypeId_t> RevClassMap;
 typedef map<MethodId_t, pair<string, string>> Et2_MethodMap;
 typedef map<unsigned int, Field*> FieldMap;
 typedef map<unsigned int, Class*> ClassMap;
@@ -82,12 +83,9 @@ class ClassInfo
                                               const char *methods_filename,
                                               string main_class,
                                               string main_function );
-        static std::map<TypeId_t, string>
-            impl_read_classes_file_et2(const char *classes_filename);
-        static std::map<TypeId_t, string>
-            impl_read_fields_file_et2(const char *fields_filename);
-        static Et2_MethodMap
-            impl_read_methods_file_et2(const char *methods_filename);
+        static RevClassMap impl_read_classes_file_et2(const char *classes_filename);
+        static std::map<TypeId_t, string> impl_read_fields_file_et2(const char *fields_filename);
+        static Et2_MethodMap impl_read_methods_file_et2(const char *methods_filename);
 
         static Method * get_main_method() {
             return _main_method;

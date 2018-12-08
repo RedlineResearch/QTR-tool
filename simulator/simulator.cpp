@@ -1599,23 +1599,47 @@ void output_reference_summary( string &reference_summary_filename,
 }
 
 
+void print_usage(string exec_name)
+{
+    cout << "Usage choices: " << endl;
+    cout << "       " << exec_name << " SIM <classesfile> <fieldsfile> <methodsfile> <output base name> <IGNORED> <OBJDEBUG/NOOBJDEBUG> <main.class> <main.function>" << endl;
+    cout << "       " << exec_name << " CLASS <classesfile>" << endl;
+    cout << "       " << exec_name << " FIELDS <fieldsfile>" << endl;
+    cout << "       " << exec_name << " METHODS <methodsfile>" << endl;
+    cout << "      git version: " << build_git_sha << endl;
+    cout << "      build date : " << build_git_time << endl;
+    cout << "      CC kind    : " << Exec.get_kind() << endl;
+    exit(1);
+}
+
+int sim_main(int argc, char* argv[]);
+
 // ----------------------------------------------------------------------
 
 int main(int argc, char* argv[])
 {
-    if (argc != 9) {
-        cout << "Usage: " << argv[0] << " <classesfile> <fieldsfile> <methodsfile> <output base name> <IGNORED> <OBJDEBUG/NOOBJDEBUG> <main.class> <main.function>" << endl;
-        cout << "      git version: " << build_git_sha << endl;
-        cout << "      build date : " << build_git_time << endl;
-        cout << "      CC kind    : " << Exec.get_kind() << endl;
-        exit(1);
+    if (argc != 10) {
+        print_usage(string(argv[0]));
     }
+    if (string("SIM") == argv[1]) {
+        return sim_main(argc, argv);
+    } else if (string("CLASS") == argv[1]) {
+    } else if (string("FIELDS") == argv[1]) {
+    } else if (string("METHODS") == argv[1]) {
+    } else {
+        print_usage(string(argv[0]));
+    }
+}
+
+
+int sim_main(int argc, char* argv[])
+{
     cout << "#     git version: " <<  build_git_sha << endl;
     cout << "#     build date : " <<  build_git_time << endl;
     cout << "---------------[ START ]-----------------------------------------------------------" << endl;
     //--------------------------------------------------------------------------------
     // Setup filenames for output files:
-    string basename(argv[4]);
+    string basename(argv[5]);
     string objectinfo_filename( basename + "-OBJECTINFO.txt" );
     string edgeinfo_filename( basename + "-EDGEINFO.txt" );
     string summary_filename( basename + "-SUMMARY.csv" );
@@ -1641,18 +1665,18 @@ int main(int argc, char* argv[])
 
     // TODO: This sets the 'main' class. But what was exactly the main  class?
     // TODO: 2018-11-10
-    string main_class(argv[7]);
-    string main_function(argv[8]);
+    string main_class(argv[8]);
+    string main_function(argv[9]);
     cout << "Main class: " << main_class << endl;
     cout << "Main function: " << main_function << endl;
 
     // Set up 'CYCLE' option.
     // TODO: Document what exactly the CYCLE option is.
-    string cycle_switch(argv[5]);
+    string cycle_switch(argv[6]);
     bool cycle_flag = ((cycle_switch == "NOCYCLE") ? false : true);
     
     // Setup 'DEBUG' option.
-    string obj_debug_switch(argv[6]);
+    string obj_debug_switch(argv[7]);
     bool obj_debug_flag = ((obj_debug_switch == "OBJDEBUG") ? true : false);
     if (obj_debug_flag) {
         cout << "Enable OBJECT DEBUG." << endl;
@@ -1662,9 +1686,9 @@ int main(int argc, char* argv[])
     // TODO: Names file is likely different
     // TODO: 2018-11-10
     cout << "Read names file..." << endl;
-    ClassInfo::read_names_file_et2( argv[1],
-                                    argv[2], // TODO: fields_filename
-                                    argv[3] ); // TODO: methods_filename 
+    ClassInfo::read_names_file_et2( argv[2],
+                                    argv[3], // TODO: fields_filename
+                                    argv[4] ); // TODO: methods_filename 
 
     exit(100);
     cout << "Start trace..." << endl;
