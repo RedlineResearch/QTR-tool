@@ -1612,23 +1612,30 @@ void print_usage(string exec_name)
     exit(1);
 }
 
+// Forward declarations
 int sim_main(int argc, char* argv[]);
+int class_main(int argc, char* argv[]);
+int fields_main(int argc, char* argv[]);
+int methods_main(int argc, char* argv[]);
 
 // ----------------------------------------------------------------------
 
 int main(int argc, char* argv[])
 {
-    if (argc != 10) {
-        print_usage(string(argv[0]));
-    }
-    if (string("SIM") == argv[1]) {
+    if ( (argc != 10) && (string("SIM") == argv[1]) ) {
         return sim_main(argc, argv);
-    } else if (string("CLASS") == argv[1]) {
-    } else if (string("FIELDS") == argv[1]) {
-    } else if (string("METHODS") == argv[1]) {
-    } else {
-        print_usage(string(argv[0]));
+    } else if (argc == 3) {
+        if (string("CLASS") == argv[1]) {
+            return class_main(argc, argv);
+        } else if (string("FIELDS") == argv[1]) {
+            return fields_main(argc, argv);
+        } else if (string("METHODS") == argv[1]) {
+            return methods_main(argc, argv);
+        }
+        // Fall through to print_usage.
     }
+    print_usage(string(argv[0]));
+    return 0;
 }
 
 
@@ -1897,4 +1904,27 @@ int sim_main(int argc, char* argv[])
     cout << "---------------[ DONE ]------------------------------------------------------------" << endl;
     cout << "#     git version: " <<  build_git_sha << endl;
     cout << "#     build date : " <<  build_git_time << endl;
+}
+
+// Just read in the class file and output it.
+int class_main(int argc, char* argv[])
+{
+    cout << "#     git version: " <<  build_git_sha << endl;
+    cout << "#     build date : " <<  build_git_time << endl;
+    cout << "---------------[ START ]-----------------------------------------------------------" << endl;
+    //--------------------------------------------------------------------------------
+    
+    auto revmap = ClassInfo::impl_read_classes_file_et2(argv[2]);
+    exit(100);
+    return revmap.size();
+}
+
+int fields_main(int argc, char* argv[])
+{
+    return 0;
+}
+
+int methods_main(int argc, char* argv[])
+{
+    return 0;
 }
