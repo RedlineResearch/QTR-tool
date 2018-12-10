@@ -8,6 +8,7 @@
 
 // -- Contents of the names file
 ClassMap ClassInfo::TheClasses;
+RevClassMap ClassInfo::rev_map;
 
 // -- All methods (also in the classes)
 MethodMap ClassInfo::TheMethods;
@@ -19,7 +20,7 @@ FieldMap ClassInfo::TheFields;
 AllocSiteMap ClassInfo::TheAllocSites;
 
 // -- Debug flag
-bool ClassInfo::debug_names = true;
+bool ClassInfo::debug_names = false;
 
 // Should we check for main method? Default is true.
 bool ClassInfo::main_flag = true;
@@ -89,8 +90,9 @@ void ClassInfo::impl_read_names_file_et1( const char *filename,
                         cls = p->second;
                     }
 
-                    if (debug_names)
+                    if (debug_names) {
                         cout << "CLASS " << cls->getName() << " id = " << cls->getId() << endl;
+                    }
 
                     // Superclass ID and interfaces are optional
                     if (t.numTokens() > 3)
@@ -222,128 +224,14 @@ void ClassInfo::impl_read_names_file_et2( const char *classes_filename,
                                           string main_class,
                                           string main_function )
 {
-    
-    auto class_map = ClassInfo::impl_read_classes_file_et2(classes_filename);
-    auto field_map = ClassInfo::impl_read_fields_file_et2(fields_filename);
-    auto method_map = ClassInfo::impl_read_methods_file_et2(methods_filename);
-
-#if 0
-        switch (t.getChar(0)) {
-            case 'C':
-            case 'I':
-                {
-                    // -- Class and interface entries
-                    // C/I <id> <name> <other stuff>
-                    // -- Lookup or create the class info...
-                    Class* cls = 0;
-                    ClassMap::iterator p = TheClasses.find(t.getInt(1));
-                    if (p == TheClasses.end()) {
-                        // -- Not found, make a new one
-                        cls = new Class(t.getInt(1), t.getString(2), (t.getChar(0) == 'I'));
-                        TheClasses[cls->getId()] = cls;
-                    } else {
-                        cls = p->second;
-                    }
-
-                    if (debug_names)
-                        cout << "CLASS " << cls->getName() << " id = " << cls->getId() << endl;
-
-                    // Superclass ID and interfaces are optional
-                    if (t.numTokens() > 3)
-                        cls->setSuperclassId(t.getInt(3));
-
-                    // -- For now, ignore the rest (interfaces implemented)
-                }
-                break;
-
-            case 'N': 
-                {
-                    // N <id> <classid> <classname> <methodname> <descriptor> <flags S|I +N>
-                    // 0  1       2          3           4            5             6
-                    Class *cls = TheClasses[t.getInt(2)];
-                    string classname( t.getString(3) );
-                    string methodname( t.getString(4) );
-                    unsigned int my_id = t.getInt(1);
-                    Method *m = new Method(my_id, cls, t.getString(4), t.getString(5), t.getString(6));
-                    maxId = std::max(my_id, maxId);
-                    // DEBUG
-                    // cout << classname << " | " <<  methodname << endl;
-                    if (ClassInfo::main_flag) {
-                        if ( (classname.compare(main_class) == 0) &&
-                             (methodname.compare(main_function) == 0) ) {
-                            // this is the main_package
-                            ClassInfo::_main_method = m;
-                        }
-                    }
-                    TheMethods[m->getId()] = m;
-                    cls->addMethod(m);
-                    if (debug_names) {
-                        cout << "   + METHOD " << m->info() << endl;
-                    }
-                }
-                break;
-
-            case 'F':
-                {
-                    // F S/I <id> <name> <classid> <classname> <descriptor>
-                    // 0  1   2     3        4          5           6
-                    Class* cls = TheClasses[t.getInt(4)];
-                    Field* fld = new Field( t.getInt(2),
-                                            cls,
-                                            t.getString(3),
-                                            t.getString(6),
-                                            (t.getChar(1) == 'S') );
-                    TheFields[fld->getId()] = fld;
-                    cls->addField(fld);
-                    if (debug_names) {
-                        cout << "   + FIELD" << fld->getName()
-                             << " id = " << fld->getId()
-                             << " in class " << cls->getName()
-                             << endl;
-                    }
-                }
-                break;
-
-            case 'S':
-                {
-                    // S <methodid> <classid> <id> <type> <dims>
-                    // 0    1           2      3     4      5
-                    Method* meth = TheMethods[t.getInt(1)];
-                    unsigned int my_id = t.getInt(3);
-                    maxId = std::max(my_id, maxId);
-                    AllocSite* as = new AllocSite( my_id, // Id
-                                                   meth, // Method pointer
-                                                   t.getString(3), // Maybe a hack? Use the ID as name.
-                                                   t.getString(4), // descriptor which in this case means type
-                                                   t.getInt(5) );  // Dimensions
-                    TheAllocSites[as->getId()] = as;
-                    meth->addAllocSite(as);
-                    if (debug_names) {
-                        cout << "> ALLOC   : " << as->getType() << endl
-                             << "    id    = " << as->getId() << endl
-                             << " in method: " << meth->info()
-                             << endl;
-                    }
-                }
-                break;
-
-            case 'E':
-                // -- No need to process this entry (end of a class)
-                break;
-
-            default:
-                {
-                    cout << "ERROR: Unknown char " << t.getChar(0) << endl;
-                }
-                break;
-        }
-#endif
+    ClassInfo::impl_read_classes_file_et2(classes_filename);
+    ClassInfo::impl_read_fields_file_et2(fields_filename);
+    ClassInfo::impl_read_methods_file_et2(methods_filename);
 }
 
 
 // -- Read in the classes file
-RevClassMap
-ClassInfo::impl_read_classes_file_et2( const char *classes_filename )
+void ClassInfo::impl_read_classes_file_et2( const char *classes_filename )
 {
     FILE *f_classes = fopen(classes_filename, "r");
     if (!f_classes) {
@@ -353,7 +241,6 @@ ClassInfo::impl_read_classes_file_et2( const char *classes_filename )
 
     unsigned int maxId = 0;
     Tokenizer t_classes(f_classes);
-    RevClassMap class_map;
     while ( !t_classes.isDone() ) {
         t_classes.getLine();
         if (t_classes.isDone()) {
@@ -362,14 +249,14 @@ ClassInfo::impl_read_classes_file_et2( const char *classes_filename )
 
         TypeId_t type_id = t_classes.getInt(0);
         string name = t_classes.getString(1);
-        auto iter = class_map.find(name);
-        if (iter != class_map.end()) {
+        auto iter = rev_map.find(name);
+        if (iter != rev_map.end()) {
             // Duplicate type id
             cerr << "DUPLICATE type id: " << type_id << endl;
             // TODO: Add more info.
             continue;
         }
-        class_map[name] = type_id;
+        rev_map[name] = type_id;
         // -- Class entries:
         // -- Lookup or create the class info...
         Class* cls = NULL;
@@ -387,8 +274,6 @@ ClassInfo::impl_read_classes_file_et2( const char *classes_filename )
             cout << "CLASS " << cls->getName() << " id = " << cls->getId() << endl;
         }
     }
-
-    return class_map;
 }
 
 // -- Read in the fields file

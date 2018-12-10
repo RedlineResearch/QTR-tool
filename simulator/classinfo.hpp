@@ -51,6 +51,7 @@ class ClassInfo
     public:
         // -- Contents of the names file
         static ClassMap TheClasses;
+        static RevClassMap rev_map;
         // -- All methods (also in the classes)
         static MethodMap TheMethods;
         // -- All fields (also in the classes)
@@ -83,7 +84,7 @@ class ClassInfo
                                               const char *methods_filename,
                                               string main_class,
                                               string main_function );
-        static RevClassMap impl_read_classes_file_et2(const char *classes_filename);
+        static void impl_read_classes_file_et2(const char *classes_filename);
         static std::map<TypeId_t, string> impl_read_fields_file_et2(const char *fields_filename);
         static Et2_MethodMap impl_read_methods_file_et2(const char *methods_filename);
 

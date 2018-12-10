@@ -1622,7 +1622,7 @@ int methods_main(int argc, char* argv[]);
 
 int main(int argc, char* argv[])
 {
-    if ( (argc != 10) && (string("SIM") == argv[1]) ) {
+    if ((argc == 10) && (string("SIM") == argv[1])) {
         return sim_main(argc, argv);
     } else if (argc == 3) {
         if (string("CLASS") == argv[1]) {
@@ -1914,9 +1914,11 @@ int class_main(int argc, char* argv[])
     cout << "---------------[ START ]-----------------------------------------------------------" << endl;
     //--------------------------------------------------------------------------------
     
-    auto revmap = ClassInfo::impl_read_classes_file_et2(argv[2]);
-    exit(100);
-    return revmap.size();
+    ClassInfo::impl_read_classes_file_et2(argv[2]);
+    for (auto iter : ClassInfo::rev_map) {
+        cout << "CLASS," << iter.first << "," << iter.second << endl;
+    }
+    return 0;
 }
 
 int fields_main(int argc, char* argv[])
