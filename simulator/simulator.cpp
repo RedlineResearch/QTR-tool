@@ -286,9 +286,8 @@ void apply_merlin( std::deque< Object * > &new_garbage )
                       ptr != otmp->getFields().end();
                       ptr++ ) {
                     Edge *edge = ptr->second;
-                    if ( edge &&
-                         ((edge->getEdgeState() == EdgeState::DEAD_BY_OBJECT_DEATH) ||
-                           (edge->getEdgeState() == EdgeState::DEAD_BY_OBJECT_DEATH_NOT_SAVED)) ) {
+                    // TODO: What to do here now there's no edgestate? TODO
+                    if (edge) {
                         edge->setEndTime( tstamp_max );
                         Object *mytgt = edge->getTarget();
                         if (mytgt) {
@@ -320,7 +319,6 @@ unsigned int read_trace_file_part1( FILE *f ) // source trace file
 {
     Tokenizer tokenizer(f);
 
-    unsigned int total_objects = 0;
     MethodId_t method_id;
     ObjectId_t object_id;
     ObjectId_t target_id;
@@ -341,10 +339,11 @@ unsigned int read_trace_file_part1( FILE *f ) // source trace file
 
     // TODO: No death times yet
     //      VTime_t latest_death_time = 0;
-    //      VTime_t allocation_time = 0;
-
+    VTime_t allocation_time = 0;
+    unsigned int total_objects = 0;
+        
     while (!tokenizer.isDone()) {
-        string tmp_todo_str("TODO");
+        string tmp_todo_str("TODO"); // To mark whatever TODO
         tokenizer.getLine();
         if (tokenizer.isDone()) {
             break;
@@ -356,7 +355,7 @@ unsigned int read_trace_file_part1( FILE *f ) // source trace file
                 {
                     // M <methodid> <objectId> <threadid>
                     // 0      1         2           3
-                    assert(tokenizer.numTokens() == 3);
+                    assert(tokenizer.numTokens() == 4);
                     method_id = tokenizer.getInt(1);
                     object_id = tokenizer.getInt(2);
                     // TODO: method = ClassInfo::TheMethods[method_id];
@@ -374,7 +373,7 @@ unsigned int read_trace_file_part1( FILE *f ) // source trace file
                     //     E <methodid> <receiver> [<exceptionobj>] <threadid>
                     // ET2 is now:
                     //     E <method-id> <thread-id>
-                    assert(tokenizer.numTokens() == 2);
+                    assert(tokenizer.numTokens() == 3);
                     method_id = tokenizer.getInt(1);
                     // TODO: method = ClassInfo::TheMethods[method_id];
                     thread_id = tokenizer.getInt(2);
@@ -388,7 +387,7 @@ unsigned int read_trace_file_part1( FILE *f ) // source trace file
                 {
                     // A/N <id> <size> <type> <site> <length?> <threadid>
                     //   0   1    2      3      4      5           6
-                    assert(tokenizer.numTokens() == 6);
+                    assert(tokenizer.numTokens() == 7);
                     object_id = tokenizer.getInt(1);
                     unsigned int size = tokenizer.getInt(2);
                     TypeId_t type_id = tokenizer.getInt(3);
@@ -402,10 +401,12 @@ unsigned int read_trace_file_part1( FILE *f ) // source trace file
                                                    length,
                                                    size );
                     trace.push_back(recptr);
-
-                    {
-                        Thread *thread = Exec.getThread(thread_id);
-                        AllocSite *as = ClassInfo::TheAllocSites[tokenizer.getInt(4)];
+                    // Add to heap
+                    // TODO: AllocSites
+                    Thread *thread = Exec.getThread(thread_id);
+                    allocation_time = Heap.getAllocTime();
+                    Exec.SetAllocTime(allocation_time);
+                    AllocSite *as = ClassInfo::TheAllocSites[tokenizer.getInt(4)];
 #if 0 // TODO ALLOCSITE
                         string njlib_sitename;
                         if (thread) {
@@ -417,23 +418,17 @@ unsigned int read_trace_file_part1( FILE *f ) // source trace file
                             assert(false);
                         } // if (thread) ... else
 #endif // TODO ALLOCSITE
-                        obj = Heap.allocate( object_id,
-                                             size,
-                                             rec_type, // kind of alloc
-                                             tmp_todo_str, // get from type_id
-                                             as, // AllocSite pointer
-                                             tmp_todo_str, // TODO: njlib_sitename, // NonJava-library alloc sitename
-                                             length, // length
-                                             thread, // thread Id
-                                             Exec.NowUp() ); // Current time
-#if 0 // TODO TEMP
-#endif // TODO TEMP
+                    obj = Heap.allocate( object_id,
+                                         size,
+                                         rec_type, // kind of alloc
+                                         tmp_todo_str, // get from type_id
+                                         as, // AllocSite pointer
+                                         tmp_todo_str, // TODO: njlib_sitename, // NonJava-library alloc sitename
+                                         length, // length
+                                         thread, // thread Id
+                                         Exec.NowUp() ); // Current time
+                    ++total_objects;
 #if 0
-#ifdef _SIZE_DEBUG
-                        cout << "OS: " << sizeof(obj) << endl;
-#endif // _SIZE_DEBUG
-                        AllocationTime = Heap.getAllocTime();
-                        Exec.SetAllocTime( AllocationTime );
                         if (as) {
                             Exec.UpdateObj2AllocContext( obj,
                                                          as->getMethod()->getName() );
@@ -446,9 +441,7 @@ unsigned int read_trace_file_part1( FILE *f ) // source trace file
                             DequeId_t strace = thread->stacktrace_using_id();
                             obj->setAllocContextList( strace );
                         }
-                        total_objects++;
 #endif
-                    }
                 }
                 break;
 
@@ -460,6 +453,7 @@ unsigned int read_trace_file_part1( FILE *f ) // source trace file
                     //       U targetObjectHash fieldID srcObjectHash timestamp
                     //       0         1           2          3           4
                     // -- Look up objects and perform update
+                    assert(tokenizer.numTokens() == 5);
                     target_id = tokenizer.getInt(1);
                     field_id = tokenizer.getInt(2);
                     object_id = tokenizer.getInt(3);
@@ -476,6 +470,8 @@ unsigned int read_trace_file_part1( FILE *f ) // source trace file
                 {
                     // W aliveObjectHash classID timestamp
                     //        1              2       3
+                    assert(tokenizer.numTokens() == 4);
+                    // TODO: cout << "XXX: " << tokenizer.numTokens() << endl;
                     object_id = tokenizer.getInt(1);
                     TypeId_t type_id = tokenizer.getInt(2);
                     VTime_t timestamp = tokenizer.getInt(3);
@@ -493,7 +489,7 @@ unsigned int read_trace_file_part1( FILE *f ) // source trace file
     } // while (!tokenizer.isDone())
 
     // TODO: What should return value be?
-    return 0;
+    return total_objects;
 }
 
 // ----------------------------------------------------------------------
@@ -535,9 +531,6 @@ unsigned int read_trace_file( FILE *f, // source trace file
             case 'A':
             case 'N':
             // TODO: No more P, V, and I events. 2018-1111
-            // case 'P':
-            // case 'V':
-            // case 'I':
                 {
                     // A/N <id> <size> <type> <site> <length?> <threadid>
                     //   0   1    2      3      4      5           6
@@ -1354,98 +1347,6 @@ void output_cycles( KeySet_t &keyset,
     cycle_file.close();
 }
 
-unsigned int output_edges( HeapState &myheap,
-                           ofstream &edge_info_file )
-{
-    unsigned int total_done;
-    // Iterate through 
-    for ( auto it = myheap.begin_edgestate_map();
-          it != myheap.end_edgestate_map();
-          ++it ) {
-        auto key = (std::pair< Edge *, VTime_t >) it->first;
-        auto estate = (EdgeState) it->second;
-        auto edge = (Edge *) std::get<0>(key);
-        auto ctime = (VTime_t) std::get<1>(key);
-        assert(edge);
-        auto src = edge->getSource();
-        assert(src);
-        auto endtime = src->getDeathTime();
-        if ( (estate == EdgeState::DEAD_BY_OBJECT_DEATH) ||
-             (estate == EdgeState::DEAD_BY_UPDATE) ||
-             (estate == EdgeState::DEAD_BY_PROGRAM_END) ) {
-            // If the estate is any of these 3, then we've already
-            // saved this edge. Log a WARNING.
-            cerr << "WARNING: edge(" << edge->getSource()->getId() << ", "
-                 << edge->getTarget()->getId() << ")[time: "
-                 << edge->getCreateTime() << "] -> Estate["
-                 << static_cast<int>(estate) << "]" << endl;
-        } else {
-            if (estate == EdgeState::DEAD_BY_OBJECT_DEATH_NOT_SAVED) {
-                estate = EdgeState::DEAD_BY_OBJECT_DEATH;
-            } else if (estate == EdgeState::DEAD_BY_PROGRAM_END_NOT_SAVED) {
-                estate = EdgeState::DEAD_BY_PROGRAM_END;
-            } else if ((estate == EdgeState::NONE) or
-                       (estate == EdgeState::LIVE)) {
-                cerr << "ERROR: edge(" << edge->getSource()->getId() << ", "
-                     << edge->getTarget()->getId() << ")[time: "
-                     << edge->getCreateTime() << "] -> Estate["
-                     << static_cast<int>(estate) << "]" << endl;
-                cerr << "Quitting." << endl;
-                exit(100);
-            } 
-            output_edge( edge,
-                         endtime,
-                         estate,
-                         edge_info_file );
-            total_done++;
-        }
-    }
-    return total_done;
-}
-
-#if 0
-// Commented out code.
-unsigned int output_edges_OLD( HeapState &myheap,
-                               string &edgeinfo_filename )
-{
-    unsigned int total_edges = 0;
-    ofstream edge_info_file(edgeinfo_filename);
-    edge_info_file << "---------------[ EDGE INFO ]----------------------------------------------------" << endl;
-    // srcId, tgtId, allocTime, deathTime
-    for ( EdgeSet::iterator it = myheap.begin_edges();
-          it != myheap.end_edges();
-          ++it ) {
-        Edge *eptr = *it;
-        Object *source = eptr->getSource();
-        Object *target = eptr->getTarget();
-        assert(source);
-        assert(target);
-        unsigned int srcId = source->getId();
-        unsigned int tgtId = target->getId();
-        EdgeState estate = eptr->getEdgeState();
-        unsigned int endtime = ( (estate == EdgeState::DEAD_BY_OBJECT_DEATH) ?
-                                 source->getDeathTime() : eptr->getEndTime() );
-        // TODO: This code was meant to filter out edges not belonging to cycles.
-        //       But since we're also interested in the non-cycle nodes now, this is
-        //       probably dead code and won't be used again. TODO
-        // set<int>::iterator srcit = node_set.find(srcId);
-        // set<int>::iterator tgtit = node_set.find(tgtId);
-        // if ( (srcit != node_set.end()) || (srcit != node_set.end()) ) {
-        // TODO: Header?
-        edge_info_file << srcId << ","
-            << tgtId << ","
-            << eptr->getCreateTime() << ","
-            << endtime << ","
-            << eptr->getSourceField() << ","
-            << static_cast<int>(estate) << endl;
-        // }
-        total_edges++;
-    }
-    edge_info_file << "---------------[ EDGE INFO END ]------------------------------------------------" << endl;
-    edge_info_file.close();
-    return total_edges;
-}
-#endif // if 0 
 
 // ----------------------------------------------------------------------
 // Output the map of death context site -> count of obects dying
@@ -1476,32 +1377,6 @@ void output_context_summary( string &context_death_count_filename,
     cdeathfile.close();
 }
 
-// ----------------------------------------------------------------------
-// Output the map of simple context pair -> count of obects dying
-// OLD CODE: Currently unused as we're not doing context pairs anymore
-// TODO: void XXX_output_context_summary( string &context_death_count_filename,
-// TODO:                                  ExecState &exstate )
-// TODO: {
-// TODO:     ofstream context_death_count_file(context_death_count_filename);
-// TODO:     for ( auto it = exstate.begin_deathCountMap();
-// TODO:           it != exstate.end_deathCountMap();
-// TODO:           ++it ) {
-// TODO:         ContextPair cpair = it->first;
-// TODO:         Method *first = std::get<0>(cpair); 
-// TODO:         Method *second = std::get<1>(cpair); 
-// TODO:         unsigned int total = it->second;
-// TODO:         unsigned int meth1_id = (first ? first->getId() : 0);
-// TODO:         unsigned int meth2_id = (second ? second->getId() : 0);
-// TODO:         string meth1_name = (first ? first->getName() : "NONAME");
-// TODO:         string meth2_name = (second ? second->getName() : "NONAME");
-// TODO:         char cptype = exstate.get_cptype_name(cpair);
-// TODO:         context_death_count_file << meth1_name << "," 
-// TODO:                                  << meth2_name << ","
-// TODO:                                  << cptype << ","
-// TODO:                                  << total << endl;
-// TODO:     }
-// TODO:     context_death_count_file.close();
-// TODO: }
 
 void output_reference_summary( string &reference_summary_filename,
                                string &ref_reverse_summary_filename,
@@ -1613,33 +1488,40 @@ void print_usage(string exec_name)
 }
 
 // Forward declarations
-int sim_main(int argc, char* argv[]);
-int class_main(int argc, char* argv[]);
-int fields_main(int argc, char* argv[]);
-int methods_main(int argc, char* argv[]);
+void sim_main(int argc, char* argv[]);
+void class_main(int argc, char* argv[]);
+void fields_main(int argc, char* argv[]);
+void methods_main(int argc, char* argv[]);
 
 // ----------------------------------------------------------------------
 
 int main(int argc, char* argv[])
 {
+    bool print_help = false;
     if ((argc == 10) && (string("SIM") == argv[1])) {
-        return sim_main(argc, argv);
+        sim_main(argc, argv);
     } else if (argc == 3) {
         if (string("CLASS") == argv[1]) {
-            return class_main(argc, argv);
+            class_main(argc, argv);
         } else if (string("FIELDS") == argv[1]) {
-            return fields_main(argc, argv);
+            fields_main(argc, argv);
         } else if (string("METHODS") == argv[1]) {
-            return methods_main(argc, argv);
+            methods_main(argc, argv);
+        } else {
+            print_help = true;
         }
         // Fall through to print_usage.
+    } else {
+        print_help = true;
     }
-    print_usage(string(argv[0]));
+    if (print_help) {
+        print_usage(string(argv[0]));
+    }
     return 0;
 }
 
 
-int sim_main(int argc, char* argv[])
+void sim_main(int argc, char* argv[])
 {
     cout << "#     git version: " <<  build_git_sha << endl;
     cout << "#     build date : " <<  build_git_time << endl;
@@ -1697,12 +1579,12 @@ int sim_main(int argc, char* argv[])
                                     argv[3], // TODO: fields_filename
                                     argv[4] ); // TODO: methods_filename 
 
-    exit(100);
     cout << "Start trace..." << endl;
-    FILE *f = fdopen(0, "r");
+    FILE *f = fdopen(STDIN_FILENO, "r");
     ofstream edge_info_file(edgeinfo_filename);
     edge_info_file << "---------------[ EDGE INFO ]----------------------------------------------------" << endl;
-    unsigned int total_objects = read_trace_file(f, edge_info_file);
+    unsigned int total_objects = read_trace_file_part1(f);
+    exit(100);
     unsigned int final_time = Exec.NowUp() + 1;
     unsigned int final_time_alloc = Heap.getAllocTime();
     cout << "Done at update time: " << Exec.NowUp() << endl;
@@ -1714,140 +1596,6 @@ int sim_main(int argc, char* argv[])
     // End of program processing.
     // TODO: Document what happens here.
     Heap.end_of_program( final_time, edge_info_file );
-
-    // TODO: Document the many things that are happening in the CYCLE
-    // processing.
-    // TODO: 2018-11-10
-    if (cycle_flag) {
-        std::deque< pair<int,int> > edgelist; // TODO Do we need the edgelist?
-        // per_group_summary: type -> vector of group summary
-        GroupSum_t per_group_summary;
-        // type_total_summary: summarize the stats per type
-        TypeTotalSum_t type_total_summary;
-        // size_summary: per group size summary. That is, for each group of size X,
-        //               add up the sizes.
-        SizeSum_t size_summary;
-        // Remember the key objects for non-cyclic death groups.
-        set<ObjectId_t> dag_keys;
-        deque<ObjectId_t> dag_all;
-        // Reference stability summary
-        EdgeSrc2Type_t stability_summary;
-        // Lambdas for utility
-        // TODO: lfn and ifNull aren't used.
-        //       auto lfn = [](Object *ptr) -> unsigned int { return ((ptr) ? ptr->getId() : 0); };
-        //       auto ifNull = [](Object *ptr) -> bool { return (ptr == NULL); };
-
-        for ( auto kiter = keyset.begin();
-              kiter != keyset.end();
-              kiter++ ) {
-            Object *optr = kiter->first;
-            ObjectId_t objId = (optr ? optr->getId() : 0); 
-            dag_keys.insert(objId);
-            dag_all.push_back(objId);
-            set< Object * > *sptr = kiter->second;
-            if (!sptr) {
-                continue; // TODO
-            }
-            deque< Object * > deqtmp;
-            // TODO: Worth keeping? 2018-1110
-            //       std::copy( sptr->begin(), sptr->end(), deqtmp.begin() );
-            //       std::remove_if( deqtmp.begin(), deqtmp.end(), ifNull );
-            // TODO:
-            for ( auto setit = sptr->begin();
-                  setit != sptr->end();
-                  setit++ ) {
-                if (*setit) {
-                    deqtmp.push_back( *setit );
-                }
-            }
-            if (deqtmp.size() > 0) {
-                // TODO Not sure why this transform isn't working like the for loop.
-                // Not too important, but kind of curious as to how I'm not using
-                // std::transform properly.
-                // TODO
-                // std::transform( deqtmp.cbegin(),
-                //                 deqtmp.cend(),
-                //                 dag_all.begin(),
-                //                 lfn );
-                for ( auto dqit = deqtmp.begin();
-                      dqit != deqtmp.end();
-                      dqit++ ) {
-                    if (*dqit) {
-                        dag_all.push_back( (*dqit)->getId() );
-                    }
-                }
-            }
-        }
-        // Copy all dag_all object Ids into dag_all_set to get rid of duplicates.
-        set<ObjectId_t> dag_all_set( dag_all.cbegin(), dag_all.cend() );
-
-        // scan_queue2 determines all the death groups that are cyclic
-        // The '2' is a historical version of the function that won't be
-        // removed.
-        Heap.scan_queue2( edgelist,
-                          not_candidate_map );
-        update_summary_from_keyset( keyset,
-                                    per_group_summary,
-                                    type_total_summary,
-                                    size_summary );
-        // Save key object IDs for _all_ death groups.
-        set<ObjectId_t> all_keys;
-        for ( KeySet_t::iterator kiter = keyset.begin();
-              kiter != keyset.end();
-              kiter++ ) {
-            Object *optr = kiter->first;
-            ObjectId_t objId = (optr ? optr->getId() : 0); 
-            all_keys.insert(objId);
-            // NOTE: We don't really need to add ALL objects here since
-            // we can simply test against dag_all_set to see if it's a DAG
-            // object. If not in dag_all_set, then it's a CYC object.
-        }
-
-        // Analyze the edge summaries
-        summarize_reference_stability( stability_summary,
-                                       edge_summary,
-                                       obj2ref_map );
-        // ----------------------------------------------------------------------
-        // OUTPUT THE SUMMARIES
-        // By size summary of death groups
-        output_size_summary( dgroups_filename,
-                             size_summary );
-        // Type total summary output
-        output_type_summary( dgroups_by_type_filename,
-                             type_total_summary );
-        // Output all objects info
-        output_all_objects2( objectinfo_filename,
-                             Heap,
-                             dag_keys,
-                             dag_all_set,
-                             all_keys,
-                             final_time );
-
-        // TODO:  What is context_summary? 2018-1110
-        // TODO 2017-0220 output_context_summary( context_death_count_filename,
-        // TODO 2017-0220                         Exec );
-        output_reference_summary( reference_summary_filename,
-                                  ref_reverse_summary_filename,
-                                  stability_summary_filename,
-                                  edge_summary,
-                                  obj2ref_map,
-                                  stability_summary );
-        // TODO: What next? 
-        // Output cycles
-        // TODO: CYCLES set<int> node_set;
-        // TODO: CYCLES output_cycles( keyset,
-        // TODO: CYCLES                cycle_filename,
-        // TODO: CYCLES                node_set );
-
-        // TODO: Moved the edge output to as needed instead of all at the end.
-        // TODO // Output all edges
-        unsigned int added_edges = output_edges( Heap,
-                                                 edge_info_file );
-        edge_info_file << "---------------[ EDGE INFO END ]------------------------------------------------" << endl;
-        edge_info_file.close();
-    } else {
-        cout << "NOCYCLE chosen. Skipping cycle detection." << endl;
-    }
 
     ofstream summary_file(summary_filename);
     summary_file << "---------------[ SUMMARY INFO ]----------------------------------------------------" << endl;
@@ -1907,7 +1655,7 @@ int sim_main(int argc, char* argv[])
 }
 
 // Just read in the class file and output it.
-int class_main(int argc, char* argv[])
+void class_main(int argc, char* argv[])
 {
     cout << "#     git version: " <<  build_git_sha << endl;
     cout << "#     build date : " <<  build_git_time << endl;
@@ -1918,15 +1666,12 @@ int class_main(int argc, char* argv[])
     for (auto iter : ClassInfo::rev_map) {
         cout << "CLASS," << iter.first << "," << iter.second << endl;
     }
-    return 0;
 }
 
-int fields_main(int argc, char* argv[])
+void fields_main(int argc, char* argv[])
 {
-    return 0;
 }
 
-int methods_main(int argc, char* argv[])
+void methods_main(int argc, char* argv[])
 {
-    return 0;
 }

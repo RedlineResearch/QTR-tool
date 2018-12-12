@@ -82,10 +82,6 @@ typedef set<Edge *> EdgeSet;
 typedef deque< pair<int, int> > EdgeList;
 typedef std::map< Object *, std::set< Object * > * > KeySet_t;
 
-enum class EdgeState : std::uint8_t; // forward declaration
-// typedef std::map< Edge *, EdgeState > EdgeStateMap;
-typedef std::map< std::pair<Edge *, VTime_t>, EdgeState > EdgeStateMap;
-typedef set< std::pair<Edge *, VTime_t>, EdgeState > EdgeStateSet;
 
 typedef std::map<Method *, set<string> *> DeathSitesMap;
 // Where we save the method death sites. This has to be method pointer
@@ -124,11 +120,6 @@ struct compclass {
     }
 };
 
-void output_edge( Edge *edge,
-                  unsigned int endtime,
-                  EdgeState estate,
-                  ofstream &edge_info_file );
-
 class HeapState {
     friend class Object;
     public:
@@ -142,10 +133,6 @@ class HeapState {
         // -- Turn on output of objects to stdout
         bool m_obj_debug_flag;
 
-    protected:
-        void save_output_edge( Edge *edge,
-                               EdgeState estate );
-
     private:
         // -- Map from IDs to objects
         ObjectMap m_objects;
@@ -154,14 +141,6 @@ class HeapState {
 
         // -- Set of edges (all pointers)
         EdgeSet m_edges;
-
-        // Map from IDs to bool if possible cyle root
-        std::map<unsigned int, bool> m_candidate_map;
-
-        // Map from Edge * to Edgestate. This is where we save Edges which 
-        // we can't output to the edgeinfo file yet because we don't know the
-        // edge death time
-        EdgeStateMap m_estate_map;
 
         unsigned long int m_liveSize; // current live size of program in bytes
         unsigned long int m_maxLiveSize; // max live size of program in bytes
@@ -234,9 +213,7 @@ class HeapState {
         HeapState( ObjectPtrMap_t& whereis, KeySet_t& keyset )
             : m_objects()
             , m_liveset()
-            , m_candidate_map()
             , m_edges()
-            , m_estate_map()
             , m_death_sites_map()
             , m_whereis( whereis )
             , m_keyset( keyset )
@@ -356,29 +333,11 @@ class HeapState {
         void set_candidate(unsigned int objId);
         void unset_candidate(unsigned int objId);
         deque< deque<int> > scan_queue( EdgeList& edgelist );
-        void scan_queue2( EdgeList& edgelist,
-                          std::map<unsigned int, bool>& ncmap );
         void set_reason_for_cycles( deque< deque<int> >& cycles );
 
         ObjectPtrMap_t& get_whereis() { return m_whereis; }
         KeySet_t& get_keyset() { return m_keyset; }
 
-        // EdgeState map and set related functions
-        EdgeStateMap::iterator begin_edgestate_map() {
-            return this->m_estate_map.begin();
-        }
-        EdgeStateMap::iterator end_edgestate_map() {
-            return this->m_estate_map.end();
-        }
-};
-
-enum class Color
-    : std::uint8_t {
-    BLUE = 1,
-    RED = 2,
-    PURPLE = 3, // UNUSED
-    BLACK = 4,
-    GREEN = 5,
 };
 
 enum class ObjectRefType
@@ -424,7 +383,6 @@ class Object {
 
         int m_refCount;
         int m_refCount_at_death;
-        Color m_color;
         unsigned int m_maxRefCount;
 
         // How many times reference count would have gone negative for this object
@@ -545,7 +503,6 @@ class Object {
             , m_refCount_at_death(0)
             , m_maxRefCount(0)
             , m_underflow(0)
-            , m_color(Color::GREEN)
             , m_heapptr(heap)
             , m_pointed_by_heap(false)
             , m_was_root(false)
@@ -627,7 +584,6 @@ class Object {
 
         VTime_t getCreateTimeAlloc() const { return this->m_createTime_alloc; }
         VTime_t getDeathTimeAlloc() const { return m_deathTime_alloc; }
-        Color getColor() const { return m_color; }
         EdgeMap::iterator const getEdgeMapBegin() { return m_fields.begin(); }
         EdgeMap::iterator const getEdgeMapEnd() { return m_fields.end(); }
         bool isDead() const { return m_deadFlag; }
@@ -989,7 +945,6 @@ class Object {
         // -- Record death time
         void makeDead( unsigned int death_time,
                        unsigned int death_time_alloc,
-                       EdgeState estate,
                        ofstream &eifile,
                        Reason newreason );
         void makeDead_nosave( unsigned int death_time,
@@ -999,20 +954,9 @@ class Object {
                               Reason newreason );
         void __makeDead( unsigned int death_time,
                          unsigned int death_time_alloc,
-                         EdgeState estate,
                          ofstream *eifile_ptr,
                          Reason newreason,
                          bool save_edge_flag );
-        // -- Set the color
-        void recolor(Color newColor);
-        // Mark object as red
-        void mark_red();
-        // Searches for a GREEN object
-        void scan();
-        // Recolors all nodes visited GREEN.
-        void scan_green();
-        // Searches for garbage cycle
-        deque<int> collect_blue( deque< pair<int,int> >& edgelist );
 
         // Global debug counter
         static unsigned int g_counter;
@@ -1034,8 +978,6 @@ class Edge {
         // Died with source? (tribool state)
         // MAYBE == Unknown
         tribool m_died_with_source;
-        // EdgeState
-        EdgeState m_edgestate;
         // Flag on whether edge has been outputed to edgeinfo file
         bool m_output_done;
 
@@ -1048,7 +990,6 @@ class Edge {
             , m_createTime(cur_time)
             , m_endTime(0)
             , m_died_with_source(indeterminate)
-            , m_edgestate(EdgeState::NONE)
             , m_output_done(false) {
         }
 
@@ -1074,26 +1015,6 @@ class Edge {
 
         void setEndTime(unsigned int end) {
             m_endTime = end;
-        }
-
-        // EdgeState setter/getter
-        EdgeState getEdgeState() const {
-            return m_edgestate;
-        }
-        void setEdgeState(EdgeState newestate ) {
-            // DEBUG
-            // if (newestate == EdgeState::DEAD_BY_OBJECT_DEATH) {
-            //     cerr << "X: DBOD" << endl; 
-            // } else if (newestate == EdgeState::DEAD_BY_PROGRAM_END) {
-            //     if (this->m_edgestate == EdgeState::DEAD_BY_OBJECT_DEATH) {
-            //         cerr << "X: DBOD -> PROGEND" << endl;
-            //     } else if (this->m_edgestate == EdgeState::LIVE) {
-            //         cerr << "Y: LIVE -> PROGEND" << endl;
-            //     } else if (this->m_edgestate == EdgeState::DEAD_BY_UPDATE) {
-            //         cerr << "Z: DBU -> PROGEND" << endl;
-            //     }
-            // }
-            this->m_edgestate = newestate;
         }
 
         // Flag on whether edge has been sent to edgeinfo output file
