@@ -124,9 +124,6 @@ class HeapState {
     friend class Object;
     public:
 
-        // -- Do ref counting?
-        static bool do_refcounting;
-
         // -- Turn on debugging
         static bool debug;
 
@@ -381,10 +378,6 @@ class Object {
         unsigned int m_createTime_alloc;
         unsigned int m_deathTime_alloc;
 
-        int m_refCount;
-        int m_refCount_at_death;
-        unsigned int m_maxRefCount;
-
         // How many times reference count would have gone negative for this object
         unsigned int m_underflow;
 
@@ -417,46 +410,15 @@ class Object {
         unsigned int m_last_action_time;
         // Time of last update away. This is the 'timestamp' in the Merlin algorithm
         unsigned int m_last_timestamp;
-        // Time of last update away. This is the 'timestamp' in the Merlin algorithm
-        unsigned int m_actual_last_timestamp;
         // Last action method
         Method *m_last_action_method;
         // Method where this object died
         Method *m_methodDeathSite; // level 1
         Method *m_methodDeathSite_l2; // level 2
-        // Last method to decrement reference count
-        Method *m_lastMethodDecRC;
-        // Method where the refcount went to 0, if ever. If null, then
-        // either RC never went to 0, or we don't have the method, depending
-        // on the m_decToZero flag.
-        Method *m_methodRCtoZero;
-        // TODO: Is DeathSite _ALWAYS_ the same as RCtoZero method?
-        //
-        // Was this object's refcount ever decremented to zero?
-        //     indeterminate - no refcount action
-        //     false - last incremented to positive
-        //     true - decremented to zero
-        tribool m_decToZero;
-        // Was this object incremented to positive AFTER being
-        // decremented to zero?
-        //     indeterminate - not yet decremented to zero
-        //     false - decremented to zero
-        //     true - decremented to zero, then incremented to positive
-        tribool m_incFromZero;
+
         // METHOD 2: Use Elephant Track events instead
         LastEvent m_last_event;
         Object *m_last_object;
-
-        // TODO: // Simple (ContextPair) context of where this object died. Type is defined in classinfo.h
-        // TODO: // And the associated type.
-        // TODO: ContextPair m_death_cpair;
-        // TODO: CPairType  m_death_cptype;
-        // TODO: // Simple (ContextPair) context of where this object was allocated. Type is defined in classinfo.h
-        // TODO: // And the associated type.
-        // TODO: ContextPair m_alloc_cpair;
-        // TODO: CPairType  m_alloc_cptype;
-        // TODO: // NOTE: This could have been made into a single class which felt like overkill.
-        // TODO: // The option is there if it seems better to do so, but chose to go the simpler route.
 
         string m_deathsite_name;
         string m_deathsite_name_l2;
@@ -499,9 +461,6 @@ class Object {
             , m_deathTime(UINT_MAX)
             , m_createTime_alloc( heap->getAllocTime() )
             , m_deathTime_alloc(UINT_MAX)
-            , m_refCount(0)
-            , m_refCount_at_death(0)
-            , m_maxRefCount(0)
             , m_underflow(0)
             , m_heapptr(heap)
             , m_pointed_by_heap(false)
@@ -514,16 +473,11 @@ class Object {
             , m_reason(Reason::UNKNOWN_REASON)
             , m_last_action_time(0)
             , m_last_timestamp(0)
-            , m_actual_last_timestamp(0)
             , m_last_update_null(indeterminate)
             , m_last_update_away_from_static(false)
             , m_last_action_method(NULL)
             , m_methodDeathSite(0)
             , m_methodDeathSite_l2(0)
-            , m_methodRCtoZero(NULL)
-            , m_lastMethodDecRC(NULL)
-            , m_decToZero(indeterminate)
-            , m_incFromZero(indeterminate)
             , m_last_event(LastEvent::UNKNOWN_EVENT)
             , m_death_root(NULL)
             , m_last_object(NULL)
@@ -532,7 +486,6 @@ class Object {
             , m_deathsite_name_l2("NONE")
             , m_nonjavalib_death_context("NONE")
             , m_nonjavalib_last_action_context("NONE")
-            // , m_death_cpair(NULL, NULL)
             , m_reftarget_type(ObjectRefType::UNKNOWN)
         {
             // Allocation site
@@ -549,14 +502,17 @@ class Object {
         {
             return this->m_id;
         }
+
         inline unsigned int getSize() const
         {
             return this->m_size;
         }
+
         inline const string& getType() const
         {
             return this->m_type;
         }
+
         inline char getKind() const
         {
             return this->m_kind;
@@ -686,14 +642,6 @@ class Object {
         void setLastTimestamp( unsigned int new_ts ) {
             this->m_last_timestamp = new_ts;
         }
-        // Return the actual non-Merlinized timestamp
-        auto getActualLastTimestamp() -> unsigned int const {
-            return this->m_actual_last_timestamp;
-        }
-        // Set the actual non-Merlinized timestamp
-        void setActualLastTimestamp( unsigned int new_ts ) {
-            this->m_actual_last_timestamp = new_ts;
-        }
 
         // Returns whether last update to this object was NULL.
         // If indeterminate, then there have been no updates
@@ -728,16 +676,7 @@ class Object {
                 assert(false);
             }
         }
-        // Get the last method to decrement the reference count
-        Method *getLastMethodDecRC() const { return m_lastMethodDecRC; }
-        // Get the method to decrement the reference count to zero
-        // -- If the refcount is ever incremented from zero, this is set back
-        //    to NULL
-        Method *getMethodDecToZero() const { return m_methodRCtoZero; }
-        // No corresponding set of lastMethodDecRC because set happens through
-        // decrementRefCountReal
-        tribool wasDecrementedToZero() { return m_decToZero; }
-        tribool wasIncrementedFromZero() const { return m_incFromZero; }
+
         // Set and get last event
         void setLastEvent( LastEvent le ) { m_last_event = le; }
         LastEvent getLastEvent() const { return m_last_event; }
@@ -771,31 +710,6 @@ class Object {
         void setRefTargetType( ObjectRefType newtype ) { this->m_reftarget_type = newtype; }
         ObjectRefType getRefTargetType() const { return this->m_reftarget_type; }
 
-        // --------------------------------------------------------------------------------
-        // ----[ Context pair related functions ]------------------------------------------
-        // Get Allocation context pair. Note that if <NULL, NULL> then none yet assigned.
-        // TODO ContextPair getAllocContextPair() const { return this->m_alloc_cpair; }
-        // TODO // Set Allocation context pair. Note that if <NULL, NULL> then none yet assigned.
-        // TODO ContextPair setAllocContextPair( ContextPair cpair, CPairType cptype ) {
-        // TODO     this->m_alloc_cpair = cpair;
-        // TODO     this->m_alloc_cptype = cptype;
-        // TODO     return this->m_alloc_cpair;
-        // TODO }
-        // TODO // Get Allocation context type
-        // TODO CPairType getAllocContextType() const { return this->m_alloc_cptype; }
-
-        // TODO // Get Death context pair. Note that if <NULL, NULL> then none yet assigned.
-        // TODO ContextPair getDeathContextPair() const { return this->m_death_cpair; }
-        // TODO // Set Death context pair. Note that if <NULL, NULL> then none yet assigned.
-        // TODO ContextPair setDeathContextPair( ContextPair cpair, CPairType cptype ) {
-        // TODO     this->m_death_cpair = cpair;
-        // TODO     this->m_death_cptype = cptype;
-        // TODO     return this->m_death_cpair;
-        // TODO }
-        // TODO // Get Death context type
-        // TODO CPairType getDeathContextType() const { return this->m_death_cptype; }
-        // --------------------------------------------------------------------------------
-        // --------------------------------------------------------------------------------
 
         // First level death context
         // Getter
@@ -864,44 +778,11 @@ class Object {
         }
 
 
-        // -- Ref counting
-        inline int getRefCount() const
-        {
-            return this->m_refCount;
-        }
-        inline unsigned int getMaxRefCount() const
-        {
-            return this->m_maxRefCount;
-        }
-        inline void incrementRefCount()
-        {
-            this->m_refCount++;
-        }
-        inline void decrementRefCount()
-        {
-            this->m_refCount--;
-            // Sanity check
-            if (this->m_refCount < 0) {
-                // Underflow!
-                this->m_underflow++;
-            }
-        }
         inline unsigned int get_underflow_count()
         {
             return this->m_underflow;
         }
-        inline int getRefCountAtDeath() const
-        {
-            return this->m_refCount_at_death;
-        }
 
-        void incrementRefCountReal();
-        void decrementRefCountReal( unsigned int cur_time,
-                                    Method *method,
-                                    Reason r,
-                                    Object *death_root,
-                                    LastEvent last_event,
-                                    ofstream *eifile_ptr );
         // -- Access the fields
         const EdgeMap& getFields() const { return m_fields; }
         // -- Get a string representation

@@ -1,7 +1,6 @@
 #include "heap.hpp"
 
 // -- Global flags
-bool HeapState::do_refcounting = true;
 bool HeapState::debug = false;
 unsigned int Object::g_counter = 0;
 
@@ -223,13 +222,6 @@ void HeapState::__makeDead( Object *obj,
 void HeapState::update_death_counters( Object *obj )
 {
     unsigned int obj_size = obj->getSize();
-    // VERSION 1
-    // TODO: This could use some refactoring.
-    //
-    // TODO TODO TODO DEBUG
-    // TODO TODO TODO DEBUG
-    // TODO TODO TODO DEBUG
-    // TODO TODO TODO END DEBUG
     // Check for end of program kind first.
     if ( (obj->getReason() ==  Reason::END_OF_PROGRAM_REASON) ||
          obj->getDiedAtEndFlag() ) {
@@ -319,19 +311,13 @@ void HeapState::update_death_counters( Object *obj )
     }
     // END VERSION 1
     
-    // VM type objects
-    if (obj->getKind() == 'V') {
-        if (obj->getRefCount() == 0) {
-            m_vm_refcount_0++;
-        } else {
-            m_vm_refcount_positive++;
-        }
-    }
 }
 
 Method * HeapState::get_method_death_site( Object *obj )
 {
-    Method *dsite = obj->getDeathSite();
+    return obj->getDeathSite();
+    /*
+     * TODO: This not needed? TODO RLV - 2018-1212
     if (obj->getDiedByHeapFlag()) {
         // DIED BY HEAP
         if (!dsite) {
@@ -341,7 +327,6 @@ Method * HeapState::get_method_death_site( Object *obj )
                 dsite = obj->getMethodDecToZero();
             } else {
                 // TODO: No dsite here yet
-                // TODO TODO TODO
                 // This probably should be the garbage cycles. Question is 
                 // where should we get this?
             }
@@ -354,6 +339,7 @@ Method * HeapState::get_method_death_site( Object *obj )
         }
     }
     return dsite;
+    */
 }
 
 // TODO Documentation :)
@@ -406,7 +392,7 @@ void HeapState::__end_of_program( unsigned int cur_time,
                                           *eifile_ptr,
                                           Reason::END_OF_PROGRAM_REASON );
                 }
-                obj->setActualLastTimestamp( cur_time );
+                obj->setLastTimestamp( cur_time );
             }
             string progend("PROG_END");
             obj->unsetDiedByStackFlag();
@@ -654,7 +640,6 @@ void Object::__makeDead( unsigned int death_time,
     this->m_deathTime = death_time;
     this->m_deathTime_alloc = death_time_alloc;
     // -- Record the refcount at death
-    this->m_refCount_at_death = this->getRefCount();
     // -- Set up reasons
     this->setReason( newreason, death_time );
     if (this->m_deadFlag) {

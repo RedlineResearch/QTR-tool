@@ -126,8 +126,6 @@ bool debug = false;
 deque< deque<Object*> > cycle_list;
 set<unsigned int> root_set;
 
-map<unsigned int, unsigned int> deathrc_map;
-map<unsigned int, bool> not_candidate_map;
 
 EdgeSummary_t edge_summary;
 Object2EdgeSrcMap_t obj2ref_map;
@@ -324,7 +322,6 @@ unsigned int read_trace_file_part1( FILE *f ) // source trace file
     ObjectId_t target_id;
     FieldId_t field_id;
     ThreadId_t thread_id;
-    // TODO: unsigned int exception_id;
     Object *obj;
     Object *target;
     Method *method;
@@ -622,7 +619,6 @@ unsigned int read_trace_file( FILE *f, // source trace file
                             target->setPointedAtByHeap();
                         }
                         target->setLastTimestamp( Exec.NowUp() );
-                        // TODO: target->setActualLastTimestamp( Exec.NowUp() );
                         // TODO: Maybe LastUpdateFromStatic isn't the most descriptive
                         // So since target has an incoming edge, LastUpdateFromStatic
                         //    should be FALSE.
@@ -632,7 +628,6 @@ unsigned int read_trace_file( FILE *f, // source trace file
                     if (oldObj) {
                         // Set the last time stamp for Merlin Algorithm purposes
                         oldObj->setLastTimestamp( Exec.NowUp() );
-                        oldObj->setActualLastTimestamp( Exec.NowUp() );
                         // Keep track of other properties
                         if (tgtId != 0) {
                             oldObj->unsetLastUpdateNull();
@@ -827,9 +822,6 @@ unsigned int read_trace_file( FILE *f, // source trace file
                                 }
                             }
                         } // if (thread)
-                        unsigned int rc = obj->getRefCount();
-                        deathrc_map[objId] = rc;
-                        not_candidate_map[objId] = (rc == 0);
                     } else {
                         assert(false);
                     } // if (obj) ... else
@@ -888,7 +880,6 @@ unsigned int read_trace_file( FILE *f, // source trace file
                         object->setRootFlag(Exec.NowUp());
                         object->setLastEvent( LastEvent::ROOT );
                         object->setLastTimestamp( Exec.NowUp() );
-                        object->setActualLastTimestamp( Exec.NowUp() );
                         Thread *thread = Exec.getThread(threadId);
                         Method *topMethod_using_action = NULL;
                         if (thread) {
@@ -921,39 +912,6 @@ unsigned int read_trace_file( FILE *f, // source trace file
         }
     }
     return total_objects;
-}
-
-// ----------------------------------------------------------------------
-// Remove edges not in cyclic garbage
-void filter_edgelist( deque< pair<int,int> >& edgelist, deque< deque<int> >& cycle_list )
-{
-    set<int> nodes;
-    deque< pair<int,int> > newlist;
-    for ( auto it = cycle_list.begin();
-          it != cycle_list.end();
-          ++it ) {
-        for ( auto tmp = it->begin();
-              tmp != it->end();
-              ++tmp ) {
-            nodes.insert(*tmp);
-        }
-    }
-    for ( auto it = edgelist.begin();
-          it != edgelist.end();
-          ++it ) {
-        auto first_it = nodes.find(it->first);
-        if (first_it == nodes.end()) {
-            // First node not found, carry on.
-            continue;
-        }
-        auto second_it = nodes.find(it->second);
-        if (second_it != nodes.end()) {
-            // Found both edge nodes in cycle set 'nodes'
-            // Add the edge.
-            newlist.push_back(*it);
-        }
-    }
-    edgelist = newlist;
 }
 
 unsigned int sumSize( std::set< Object * >& s )
@@ -1295,9 +1253,6 @@ void output_all_objects2( string &objectinfo_filename,
             << "," << "TODO" //  Full death context height
             // TODO << "," << alloc_method1 // Part 1 of simple context pair - alloc site
             //--------------------------------------------------------------------------------
-            << "," << object->getRefCountAtDeath() //  Ref count at death
-            // TODO << "," << alloc_method2 // part 2 of simple context pair - alloc site
-            //--------------------------------------------------------------------------------
             << "," << "X" //  padding - used to be allocContextType
             // TODO << "," << (object->getAllocContextType() == CPairType::CP_Call ? "C" : "R") // C is call. R is return.
             //--------------------------------------------------------------------------------
@@ -1305,7 +1260,7 @@ void output_all_objects2( string &objectinfo_filename,
             << "," << object->getDeathTimeAlloc()
             << "," << allocsite_name
             << "," << stability  // S, U, or X
-            << "," << object->getActualLastTimestamp()
+            << "," << object->getLastTimestamp()
             << "," << nonjlib_allocsite_name
             << endl;
             // TODO: The following can be made into a lookup table:
