@@ -425,6 +425,9 @@ unsigned int read_trace_file_part1( FILE *f ) // source trace file
                                          thread, // thread Id
                                          Exec.NowUp() ); // Current time
                     ++total_objects;
+                    Exec.IncUpdateTime();
+                    VTime_t current_time = Exec.NowUp();
+                    obj->setLastTimestamp( current_time );
 #if 0
                         if (as) {
                             Exec.UpdateObj2AllocContext( obj,
@@ -460,6 +463,11 @@ unsigned int read_trace_file_part1( FILE *f ) // source trace file
                                                     object_id,
                                                     timestamp );
                     trace.push_back(recptr);
+                    Exec.IncUpdateTime();
+                    VTime_t current_time = Exec.NowUp();
+                    obj = Heap.getObject(object_id);
+                    assert(obj != NULL);
+                    obj->setLastTimestamp( current_time );
                 }
                 break;
 
@@ -545,6 +553,7 @@ unsigned int read_trace_file( FILE *f, // source trace file
                     } else {
                         assert(false);
                     } // if (thread) ... else
+                    VTime_t current_time = Exec.NowUp();
                     obj = Heap.allocate( tokenizer.getInt(1), // id
                                          tokenizer.getInt(2), // size
                                          tokenizer.getChar(0), // kind of alloc
@@ -553,7 +562,8 @@ unsigned int read_trace_file( FILE *f, // source trace file
                                          njlib_sitename, // NonJava-library alloc sitename
                                          length, // length
                                          thread, // thread Id
-                                         Exec.NowUp() ); // Current time
+                                         current_time ); // Current time
+                    obj->setLastTimestamp( current_time );
 #ifdef _SIZE_DEBUG
                     cout << "OS: " << sizeof(obj) << endl;
 #endif // _SIZE_DEBUG
@@ -866,44 +876,6 @@ unsigned int read_trace_file( FILE *f, // source trace file
 
             case 'H':
                 // H <methodid> <receiver> <exceptionobj>
-                break;
-
-            case 'R':
-                // R <objid> <threadid>
-                // 0    1        2
-                {
-                    unsigned int objId = tokenizer.getInt(1);
-                    Object *object = Heap.getObject(objId);
-                    unsigned int threadId = tokenizer.getInt(2);
-                    // cout << "objId: " << objId << "     threadId: " << threadId << endl;
-                    if (object) {
-                        object->setRootFlag(Exec.NowUp());
-                        object->setLastEvent( LastEvent::ROOT );
-                        object->setLastTimestamp( Exec.NowUp() );
-                        Thread *thread = Exec.getThread(threadId);
-                        Method *topMethod_using_action = NULL;
-                        if (thread) {
-                            MethodDeque tjmeth = thread->top_javalib_methods();
-                            topMethod_using_action = tjmeth.back();
-                        }
-                        if (thread) {
-                            thread->objectRoot(object);
-                        }
-                        if (topMethod_using_action) {
-                            // Last action site
-                            object->setLastActionSite(topMethod_using_action);
-                            string last_action_name = topMethod_using_action->getName();
-                            object->set_nonJavaLib_last_action_context( last_action_name );
-                        } else {
-                            // Last action site
-                            object->setLastActionSite(NULL);
-                            string last_action_name("VMCONTEXT");
-                            object->set_nonJavaLib_last_action_context( last_action_name );
-                        }
-                    }
-                    root_set.insert(objId);
-                    // TODO last_map.setLast( threadId, LastEvent::ROOT, object );
-                }
                 break;
 
             default:

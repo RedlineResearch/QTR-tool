@@ -361,35 +361,46 @@ enum class EdgeState
 
 class Object {
     private:
+        // Object id
         unsigned int m_id;
+        // Size in bytes
         unsigned int m_size;
+        // Allocation type(?)
         char m_kind;
+        // Java type/class
         string m_type;
         // Allocation sites
         AllocSite *m_site;
         string m_allocsite_name;
         string m_nonjavalib_allocsite_name;
 
+        // AKA length of array if it is one
         unsigned int m_elements;
+        // Thread object this object belongs to
         Thread *m_thread;
 
+        // Time object was created (method time)
         unsigned int m_createTime;
+        // Death time - set to 0 to start. Then adjusted by Merlin algorithm.
         unsigned int m_deathTime;
+        // Time object was created (allocation time)
         unsigned int m_createTime_alloc;
+        // Death time - set to 0 to start. Then adjusted by Merlin algorithm.
         unsigned int m_deathTime_alloc;
-
-        // How many times reference count would have gone negative for this object
-        unsigned int m_underflow;
 
         EdgeMap m_fields;
 
+        // Pointer back to the heap
         HeapState *m_heapptr;
         bool m_deadFlag;
 
+        // Merlin algorithm fields:
+        // Time of last update away. This is the 'timestamp' in the Merlin algorithm
+        unsigned int m_last_timestamp;
+
+        // ==[ Death reasons ]==============================================================
         // Was this object ever a target of a heap pointer?
         bool m_pointed_by_heap;
-        // Was this object ever a root?
-        bool m_was_root;
         // Did last update move to NULL?
         tribool m_last_update_null; // If false, it moved to a differnet object
         // Was last update away from this object from a static field?
@@ -402,14 +413,15 @@ class Object {
         bool m_diedAtEnd;
         // Did this object die because of an update away from a global/static variable?
         bool m_diedByGlobal;
+
         // Has the diedBy***** flag been set?
+        // This is for debug.
         bool m_diedFlagSet;
+
         // Reason for death
         Reason m_reason;
         // Time that m_reason happened
         unsigned int m_last_action_time;
-        // Time of last update away. This is the 'timestamp' in the Merlin algorithm
-        unsigned int m_last_timestamp;
         // Last action method
         Method *m_last_action_method;
         // Method where this object died
@@ -461,10 +473,8 @@ class Object {
             , m_deathTime(UINT_MAX)
             , m_createTime_alloc( heap->getAllocTime() )
             , m_deathTime_alloc(UINT_MAX)
-            , m_underflow(0)
             , m_heapptr(heap)
             , m_pointed_by_heap(false)
-            , m_was_root(false)
             , m_diedByHeap(false)
             , m_diedByStack(false)
             , m_diedAtEnd(false)
@@ -546,12 +556,6 @@ class Object {
 
         bool wasPointedAtByHeap() const { return m_pointed_by_heap; }
         void setPointedAtByHeap() { m_pointed_by_heap = true; }
-        bool wasRoot() const { return m_was_root; }
-        void setRootFlag( unsigned int t ) {
-            m_was_root = true;
-            m_reason = Reason::STACK;
-            m_last_action_time = t;
-        }
 
         // ==================================================
         // The diedBy***** flags
@@ -627,13 +631,16 @@ class Object {
         Reason setReason( Reason r, unsigned int t ) { m_reason = r; m_last_action_time = t; }
         Reason getReason() const { return m_reason; }
         // Last action related
-        unsigned int getLastActionTime() const { return m_last_action_time; }
+        unsigned int getLastActionTime() const {
+            return m_last_action_time;
+        }
         Method *getLastActionSite() const {
             return this->m_last_action_method;
         }
         void setLastActionSite( Method *newsite ) {
             this->m_last_action_method = newsite;
         }
+
         // Return the Merlin timestamp
         auto getLastTimestamp() -> unsigned int const {
             return this->m_last_timestamp;
@@ -777,11 +784,6 @@ class Object {
             return this->m_death_context;
         }
 
-
-        inline unsigned int get_underflow_count()
-        {
-            return this->m_underflow;
-        }
 
         // -- Access the fields
         const EdgeMap& getFields() const { return m_fields; }

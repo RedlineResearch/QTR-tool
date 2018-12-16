@@ -321,7 +321,7 @@ class ExecState
         }
 
         // -- Get the current update time
-        unsigned int NowUp() const {
+        VTime_t NowUp() const {
             return this->m_uptime + this->m_methexit_time + this->m_meth_time;
         }
 
