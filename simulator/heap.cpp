@@ -530,7 +530,6 @@ void Object::updateField_save( Edge *edge,
                                Reason reason,
                                Object *death_root,
                                LastEvent last_event,
-                               EdgeState estate,
                                ofstream &eifile )
 
 {
@@ -541,7 +540,6 @@ void Object::updateField_save( Edge *edge,
                         reason,
                         death_root,
                         last_event,
-                        estate,
                         &eifile,
                         true );
 }
@@ -552,8 +550,7 @@ void Object::updateField( Edge *edge,
                           Method *method,
                           Reason reason,
                           Object *death_root,
-                          LastEvent last_event,
-                          EdgeState estate )
+                          LastEvent last_event )
 {
    this->__updateField( edge,
                         fieldId,
@@ -562,7 +559,6 @@ void Object::updateField( Edge *edge,
                         reason,
                         death_root,
                         last_event,
-                        estate,
                         NULL,
                         false );
 }
@@ -575,7 +571,6 @@ void Object::__updateField( Edge *edge,
                             Reason reason,
                             Object *death_root,
                             LastEvent last_event,
-                            EdgeState estate,
                             ofstream *eifile_ptr,
                             bool save_edge_flag )
 {

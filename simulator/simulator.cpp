@@ -485,7 +485,6 @@ unsigned int read_trace_file_part1( FILE *f ) // source trace file
                         // TODO:                        Reason::HEAP, // reason
                         // TODO:                        NULL, // death root 0 because may not be a root
                         // TODO:                        lastevent, // last event to determine cause
-                        // TODO:                        EdgeState::DEAD_BY_UPDATE, // edge is dead because of update
                         // TODO:                        eifile ); // output edge info file
                     }
                     // TODO [ END ]
@@ -713,7 +712,6 @@ unsigned int read_trace_file( FILE *f, // source trace file
                                                    Reason::HEAP, // reason
                                                    NULL, // death root 0 because may not be a root
                                                    lastevent, // last event to determine cause
-                                                   EdgeState::DEAD_BY_UPDATE, // edge is dead because of update
                                                    eifile ); // output edge info file
                             //
                             // NOTE: topMethod COULD be NULL here.
@@ -851,7 +849,6 @@ unsigned int read_trace_file( FILE *f, // source trace file
                                                            myreason,
                                                            obj,
                                                            lastevent,
-                                                           EdgeState::DEAD_BY_OBJECT_DEATH_NOT_SAVED,
                                                            eifile ); // output edge info file
                                     // NOTE: STACK is used because the object that died,
                                     // died by STACK.

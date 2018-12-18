@@ -804,7 +804,6 @@ class Object {
                                Reason reason,
                                Object *death_root,
                                LastEvent last_event,
-                               EdgeState estate,
                                ofstream &eifile );
         // -- Update a field
         void updateField( Edge* edge,
@@ -813,8 +812,7 @@ class Object {
                           Method *method,
                           Reason reason,
                           Object *death_root,
-                          LastEvent last_event,
-                          EdgeState estate );
+                          LastEvent last_event );
         // -- Update a field
         void __updateField( Edge* edge,
                             FieldId_t fieldId,
@@ -823,7 +821,6 @@ class Object {
                             Reason reason,
                             Object *death_root,
                             LastEvent last_event,
-                            EdgeState estate,
                             ofstream *eifile_ptr,
                             bool save_edge_flag );
         // -- Record death time
