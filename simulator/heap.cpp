@@ -523,15 +523,15 @@ string Object::info2() {
 }
 
 // Save the edge
-void Object::updateField( Edge *edge,
-                          FieldId_t fieldId,
-                          unsigned int cur_time,
-                          Method *method,
-                          Reason reason,
-                          Object *death_root,
-                          LastEvent last_event,
-                          EdgeState estate,
-                          ofstream &eifile )
+void Object::updateField_save( Edge *edge,
+                               FieldId_t fieldId,
+                               unsigned int cur_time,
+                               Method *method,
+                               Reason reason,
+                               Object *death_root,
+                               LastEvent last_event,
+                               EdgeState estate,
+                               ofstream &eifile )
 
 {
    this->__updateField( edge,
@@ -546,14 +546,14 @@ void Object::updateField( Edge *edge,
                         true );
 }
 
-void Object::updateField_nosave( Edge *edge,
-                                 FieldId_t fieldId,
-                                 unsigned int cur_time,
-                                 Method *method,
-                                 Reason reason,
-                                 Object *death_root,
-                                 LastEvent last_event,
-                                 EdgeState estate )
+void Object::updateField( Edge *edge,
+                          FieldId_t fieldId,
+                          unsigned int cur_time,
+                          Method *method,
+                          Reason reason,
+                          Object *death_root,
+                          LastEvent last_event,
+                          EdgeState estate )
 {
    this->__updateField( edge,
                         fieldId,
@@ -670,4 +670,11 @@ void Object::__makeDead( unsigned int death_time,
 void Object::setDeathTime( VTime_t new_deathtime )
 {
     this->m_deathTime = new_deathtime;
+}
+
+
+Edge * Object::getEdge(FieldId_t fieldId) const
+{
+    auto iter = m_fields.find(fieldId);
+    return (iter == m_fields.end() ? iter->second : NULL);
 }

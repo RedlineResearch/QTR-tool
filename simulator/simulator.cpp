@@ -361,6 +361,7 @@ unsigned int read_trace_file_part1( FILE *f ) // source trace file
                                                     object_id,
                                                     thread_id );
                     trace.push_back(recptr);
+                    Exec.IncUpdateTime();
                 }
                 break;
 
@@ -428,20 +429,6 @@ unsigned int read_trace_file_part1( FILE *f ) // source trace file
                     Exec.IncUpdateTime();
                     VTime_t current_time = Exec.NowUp();
                     obj->setLastTimestamp( current_time );
-#if 0
-                        if (as) {
-                            Exec.UpdateObj2AllocContext( obj,
-                                                         as->getMethod()->getName() );
-                        } else {
-                            Exec.UpdateObj2AllocContext( obj,
-                                                         "NOSITE" );
-                        }
-                        if (cckind == ExecMode::Full) {
-                            // Get full stacktrace
-                            DequeId_t strace = thread->stacktrace_using_id();
-                            obj->setAllocContextList( strace );
-                        }
-#endif
                 }
                 break;
 
@@ -464,10 +451,44 @@ unsigned int read_trace_file_part1( FILE *f ) // source trace file
                                                     timestamp );
                     trace.push_back(recptr);
                     Exec.IncUpdateTime();
+                    // Set the Merlin timestamps:
                     VTime_t current_time = Exec.NowUp();
                     obj = Heap.getObject(object_id);
+                    target = ((target_id > 0) ? Heap.getObject(target_id) : NULL);
                     assert(obj != NULL);
                     obj->setLastTimestamp( current_time );
+                    if (target) {
+                        target->setLastTimestamp( current_time );
+                    }
+                    Edge *old_target_edge = obj->getEdge(field_id);
+                    Object *old_target = old_target_edge->getTarget();
+                    ObjectId_t old_target_id = old_target->getId();
+                    // TODO [ START ]
+                    if (old_target_id == target_id) {
+                        // It sometimes happens that the newtarget is the same as
+                        // the old target. So we won't create any more new edges.
+                        // DEBUG: cout << "UPDATE same new == old: " << target << endl;
+                    } else {
+                        Edge *new_edge = NULL;
+                        // Can't call updateField if obj is NULL
+                        if (target) {
+                            new_edge = Heap.make_edge( obj,
+                                                       field_id,
+                                                       target,
+                                                       Exec.NowUp() );
+                        }
+                        // TODO
+                        // TODO: obj->updateField_save( new_edge,
+                        // TODO:                        field_id,
+                        // TODO:                        Exec.NowUp(),
+                        // TODO:                        topMethod, // for death site info
+                        // TODO:                        Reason::HEAP, // reason
+                        // TODO:                        NULL, // death root 0 because may not be a root
+                        // TODO:                        lastevent, // last event to determine cause
+                        // TODO:                        EdgeState::DEAD_BY_UPDATE, // edge is dead because of update
+                        // TODO:                        eifile ); // output edge info file
+                    }
+                    // TODO [ END ]
                 }
                 break;
 
@@ -476,7 +497,6 @@ unsigned int read_trace_file_part1( FILE *f ) // source trace file
                     // W aliveObjectHash classID timestamp
                     //        1              2       3
                     assert(tokenizer.numTokens() == 4);
-                    // TODO: cout << "XXX: " << tokenizer.numTokens() << endl;
                     object_id = tokenizer.getInt(1);
                     TypeId_t type_id = tokenizer.getInt(2);
                     VTime_t timestamp = tokenizer.getInt(3);
@@ -484,6 +504,11 @@ unsigned int read_trace_file_part1( FILE *f ) // source trace file
                                                      type_id,
                                                      timestamp );
                     trace.push_back(recptr);
+                    // Set the Merlin timestamps:
+                    VTime_t current_time = Exec.NowUp();
+                    obj = Heap.getObject(object_id);
+                    assert(obj != NULL);
+                    obj->setLastTimestamp( current_time );
                 }
                 break;
 
@@ -681,15 +706,15 @@ unsigned int read_trace_file( FILE *f, // source trace file
                                 cout << "ES: " << sizeof(new_edge) << endl;
 #endif // _SIZE_DEBUG
                             }
-                            obj->updateField( new_edge,
-                                              field_id,
-                                              Exec.NowUp(),
-                                              topMethod, // for death site info
-                                              Reason::HEAP, // reason
-                                              NULL, // death root 0 because may not be a root
-                                              lastevent, // last event to determine cause
-                                              EdgeState::DEAD_BY_UPDATE, // edge is dead because of update
-                                              eifile ); // output edge info file
+                            obj->updateField_save( new_edge,
+                                                   field_id,
+                                                   Exec.NowUp(),
+                                                   topMethod, // for death site info
+                                                   Reason::HEAP, // reason
+                                                   NULL, // death root 0 because may not be a root
+                                                   lastevent, // last event to determine cause
+                                                   EdgeState::DEAD_BY_UPDATE, // edge is dead because of update
+                                                   eifile ); // output edge info file
                             //
                             // NOTE: topMethod COULD be NULL here.
                             // DEBUG ONLY IF NEEDED
@@ -818,15 +843,16 @@ unsigned int read_trace_file( FILE *f, // source trace file
                                 Edge* target_edge = p->second;
                                 if (target_edge) {
                                     unsigned int fieldId = target_edge->getSourceField();
-                                    obj->updateField( NULL,
-                                                      fieldId,
-                                                      Exec.NowUp(),
-                                                      topMethod,
-                                                      myreason,
-                                                      obj,
-                                                      lastevent,
-                                                      EdgeState::DEAD_BY_OBJECT_DEATH_NOT_SAVED,
-                                                      eifile ); // output edge info file
+                                    // TODO
+                                    obj->updateField_save( NULL,
+                                                           fieldId,
+                                                           Exec.NowUp(),
+                                                           topMethod,
+                                                           myreason,
+                                                           obj,
+                                                           lastevent,
+                                                           EdgeState::DEAD_BY_OBJECT_DEATH_NOT_SAVED,
+                                                           eifile ); // output edge info file
                                     // NOTE: STACK is used because the object that died,
                                     // died by STACK.
                                 }

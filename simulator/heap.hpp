@@ -76,7 +76,7 @@ enum class CPairType
 
 
 typedef std::map<ObjectId_t, Object *> ObjectMap;
-typedef std::map<ObjectId_t, Edge *> EdgeMap;
+typedef std::map<FieldId_t, Edge *> EdgeMap;
 typedef set<Object *> ObjectSet;
 typedef set<Edge *> EdgeSet;
 typedef deque< pair<int, int> > EdgeList;
@@ -552,6 +552,7 @@ class Object {
         VTime_t getDeathTimeAlloc() const { return m_deathTime_alloc; }
         EdgeMap::iterator const getEdgeMapBegin() { return m_fields.begin(); }
         EdgeMap::iterator const getEdgeMapEnd() { return m_fields.end(); }
+        Edge * getEdge(FieldId_t fieldId) const;
         bool isDead() const { return m_deadFlag; }
 
         bool wasPointedAtByHeap() const { return m_pointed_by_heap; }
@@ -796,6 +797,16 @@ class Object {
             return (this->m_deathTime >= tm);
         }
         // -- Update a field
+        void updateField_save( Edge *edge,
+                               FieldId_t fieldId,
+                               unsigned int cur_time,
+                               Method *method,
+                               Reason reason,
+                               Object *death_root,
+                               LastEvent last_event,
+                               EdgeState estate,
+                               ofstream &eifile );
+        // -- Update a field
         void updateField( Edge* edge,
                           FieldId_t fieldId,
                           unsigned int cur_time,
@@ -803,17 +814,7 @@ class Object {
                           Reason reason,
                           Object *death_root,
                           LastEvent last_event,
-                          EdgeState estate,
-                          ofstream &eifile );
-        // -- Update a field
-        void updateField_nosave( Edge* edge,
-                                 FieldId_t fieldId,
-                                 unsigned int cur_time,
-                                 Method *method,
-                                 Reason reason,
-                                 Object *death_root,
-                                 LastEvent last_event,
-                                 EdgeState estate );
+                          EdgeState estate );
         // -- Update a field
         void __updateField( Edge* edge,
                             FieldId_t fieldId,
