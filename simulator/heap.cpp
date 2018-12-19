@@ -533,15 +533,17 @@ void Object::updateField_save( Edge *edge,
                                ofstream &eifile )
 
 {
-   this->__updateField( edge,
-                        fieldId,
-                        cur_time,
-                        method,
-                        reason,
-                        death_root,
-                        last_event,
-                        &eifile,
-                        true );
+    cerr << "Saving the edge file isn't supported." << endl;
+    assert(false);
+    // this->__updateField( edge,
+    //                      fieldId,
+    //                      cur_time,
+    //                      method,
+    //                      reason,
+    //                      death_root,
+    //                      last_event,
+    //                      &eifile,
+    //                      true );
 }
 
 void Object::updateField( Edge *edge,
@@ -559,8 +561,7 @@ void Object::updateField( Edge *edge,
                         reason,
                         death_root,
                         last_event,
-                        NULL,
-                        false );
+                        NULL );
 }
 
 // Doesn't output to the edgefile.
@@ -571,16 +572,16 @@ void Object::__updateField( Edge *edge,
                             Reason reason,
                             Object *death_root,
                             LastEvent last_event,
-                            ofstream *eifile_ptr,
-                            bool save_edge_flag )
+                            ofstream *eifile_ptr )
 {
+#if 0 // This was code used for the Garbology paper. Not used here, but keeping it here. - RLV 12/2018
     if (save_edge_flag) {
         assert(eifile_ptr);
     }
-    auto p = this->m_fields.find(fieldId);
-    if (p != this->m_fields.end()) {
+    auto iter = this->m_fields.find(fieldId);
+    if (iter != this->m_fields.end()) {
         // -- Old edge
-        auto old_edge = p->second;
+        auto old_edge = iter->second;
         if (old_edge) {
             // -- Now we know the end time
             auto old_target = old_edge->getTarget(); // pointer to old target object
@@ -596,6 +597,7 @@ void Object::__updateField( Edge *edge,
             }
         }
     }
+#endif
     // -- Do store
     this->m_fields[fieldId] = edge;
 }

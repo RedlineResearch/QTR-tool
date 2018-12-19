@@ -821,8 +821,7 @@ class Object {
                             Reason reason,
                             Object *death_root,
                             LastEvent last_event,
-                            ofstream *eifile_ptr,
-                            bool save_edge_flag );
+                            ofstream *eifile_ptr );
         // -- Record death time
         void makeDead( unsigned int death_time,
                        unsigned int death_time_alloc,
