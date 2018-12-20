@@ -143,7 +143,7 @@ void analyze(unsigned int max_time)
     map<Object*, int> targetCount;
 
     double d_max_time = (double) max_time;
-
+/*
     for ( EdgeSet::iterator i = Heap.begin_edges();
           i != Heap.end_edges();
           ++i ) {
@@ -173,6 +173,7 @@ void analyze(unsigned int max_time)
         int count = j->second;
         cout << "Source with " << count << " short-lived targets -- " << src->info() << endl;
     }
+    */
 }
 
 void analyze2()
@@ -183,7 +184,10 @@ void analyze2()
 
     map<Object*, EdgeSet> strong_edges;
     map<Object*, EdgeSet> weak_edges;
-
+#if 0
+    // This was an analysis of ALL edges. I removed the EdgeSet in heap.h/cpp
+    // because this I haven't used this analysis.
+    //
     for ( EdgeSet::iterator i = Heap.begin_edges();
           i != Heap.end_edges();
           ++i ) {
@@ -291,4 +295,5 @@ void analyze2()
     cout << "Number small sets " << num_small_sets << endl;
 
     // sets.report();
+#endif
 }

@@ -134,23 +134,15 @@ Object* HeapState::getObject(unsigned int id)
     }
 }
 
-Edge* HeapState::make_edge( Object *source,
+Edge * HeapState::make_edge( Object *source,
                             FieldId_t field_id,
                             Object *target,
                             unsigned int cur_time )
 {
-    Edge* new_edge = new Edge( source, field_id,
+    Edge *new_edge = new Edge( source, field_id,
                                target, cur_time );
-    m_edges.insert(new_edge);
     assert(target != NULL);
     // TODO target->setPointedAtByHeap();
-
-#ifndef DEBUG_SPECJBB
-    if (m_edges.size() % 100000 == 0) {
-        cout << "EDGES: " << m_edges.size() << endl;
-    }
-#endif // DEBUG_SPECJBB
-
     return new_edge;
 }
 
@@ -159,14 +151,9 @@ HeapState::make_edge( Edge *edgeptr )
 {
     // Edge* new_edge = new Edge( source, field_id,
     //                            target, cur_time );
-    this->m_edges.insert(edgeptr);
     Object *target = edgeptr->getTarget();
     assert(target != NULL);
     // TODO target->setPointedAtByHeap();
-
-    if (this->m_edges.size() % 100000 == 0) {
-        cout << "EDGES: " << this->m_edges.size() << endl;
-    }
 
     return edgeptr;
 }
@@ -523,82 +510,13 @@ string Object::info2() {
 }
 
 // Save the edge
-void Object::updateField_save( Edge *edge,
-                               FieldId_t fieldId,
-                               unsigned int cur_time,
-                               Method *method,
-                               Reason reason,
-                               Object *death_root,
-                               LastEvent last_event,
-                               ofstream &eifile )
-
+// ET2 version:
+void Object::updateField( Edge *edge, FieldId_t fieldId )
 {
-    cerr << "Saving the edge file isn't supported." << endl;
-    assert(false);
-    // this->__updateField( edge,
-    //                      fieldId,
-    //                      cur_time,
-    //                      method,
-    //                      reason,
-    //                      death_root,
-    //                      last_event,
-    //                      &eifile,
-    //                      true );
-}
-
-void Object::updateField( Edge *edge,
-                          FieldId_t fieldId,
-                          unsigned int cur_time,
-                          Method *method,
-                          Reason reason,
-                          Object *death_root,
-                          LastEvent last_event )
-{
-   this->__updateField( edge,
-                        fieldId,
-                        cur_time,
-                        method,
-                        reason,
-                        death_root,
-                        last_event,
-                        NULL );
-}
-
-// Doesn't output to the edgefile.
-void Object::__updateField( Edge *edge,
-                            FieldId_t fieldId,
-                            unsigned int cur_time,
-                            Method *method,
-                            Reason reason,
-                            Object *death_root,
-                            LastEvent last_event,
-                            ofstream *eifile_ptr )
-{
-#if 0 // This was code used for the Garbology paper. Not used here, but keeping it here. - RLV 12/2018
-    if (save_edge_flag) {
-        assert(eifile_ptr);
+    Edge *old_edge = this->m_fields[fieldId];
+    if (old_edge) {
+        delete old_edge;
     }
-    auto iter = this->m_fields.find(fieldId);
-    if (iter != this->m_fields.end()) {
-        // -- Old edge
-        auto old_edge = iter->second;
-        if (old_edge) {
-            // -- Now we know the end time
-            auto old_target = old_edge->getTarget(); // pointer to old target object
-            if (old_target) {
-                if (reason == Reason::HEAP) {
-                    old_target->setHeapReason( cur_time );
-                } else if (reason == Reason::STACK) {
-                    old_target->setStackReason( cur_time );
-                } else {
-                    cerr << "Invalid reason." << endl;
-                    assert( false );
-                }
-            }
-        }
-    }
-#endif
-    // -- Do store
     this->m_fields[fieldId] = edge;
 }
 

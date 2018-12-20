@@ -136,9 +136,6 @@ class HeapState {
         // Live set
         ObjectSet m_liveset;
 
-        // -- Set of edges (all pointers)
-        EdgeSet m_edges;
-
         unsigned long int m_liveSize; // current live size of program in bytes
         unsigned long int m_maxLiveSize; // max live size of program in bytes
         unsigned int m_alloc_time; // current alloc time
@@ -210,7 +207,6 @@ class HeapState {
         HeapState( ObjectPtrMap_t& whereis, KeySet_t& keyset )
             : m_objects()
             , m_liveset()
-            , m_edges()
             , m_death_sites_map()
             , m_whereis( whereis )
             , m_keyset( keyset )
@@ -313,11 +309,6 @@ class HeapState {
 
         DeathSitesMap::iterator begin_dsites() { return m_death_sites_map.begin(); }
         DeathSitesMap::iterator end_dsites() { return m_death_sites_map.end(); }
-
-        void addEdge(Edge* e) { m_edges.insert(e); }
-        EdgeSet::iterator begin_edges() { return m_edges.begin(); }
-        EdgeSet::iterator end_edges() { return m_edges.end(); }
-        unsigned int numberEdges() { return m_edges.size(); }
 
         // End of program event handling
         void end_of_program( unsigned int cur_time,
@@ -796,6 +787,10 @@ class Object {
         bool isLive(unsigned int tm) const {
             return (this->m_deathTime >= tm);
         }
+        // ET2 version
+        void updateField( Edge *edge, FieldId_t fieldId );
+
+#if 0 // ET1 version
         // -- Update a field
         void updateField_save( Edge *edge,
                                FieldId_t fieldId,
@@ -822,6 +817,7 @@ class Object {
                             Object *death_root,
                             LastEvent last_event,
                             ofstream *eifile_ptr );
+#endif // ET1 version END
         // -- Record death time
         void makeDead( unsigned int death_time,
                        unsigned int death_time_alloc,
