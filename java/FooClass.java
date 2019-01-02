@@ -8,11 +8,11 @@ class FooClass {
         this.y = 14.0f;
     }
 
-    private void setX(int newX) {
+    public void setX(int newX) {
         this.x = newX;
     }
 
-    private void setY(float newY) {
+    public void setY(float newY) {
         this.y = newY;
     }
 
