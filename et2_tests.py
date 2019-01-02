@@ -8,8 +8,10 @@ from shutil import copyfile
 # Runs java on the class using the ET2 agent.
 def run_java( java_path,
               agent_path,
-              java_class,
+              main_java_class,
+              used_class_list,
               tmp_path ):
+    assert(isinstance(used_class_list, list))
     # Copy libet2.so file
     et2_filename = "libet2.so"
     src_path = os.path.join(agent_path, et2_filename)
@@ -19,11 +21,17 @@ def run_java( java_path,
     # Copy class file
     # For now, the classpath is hardcoded:
     classpath = "java"
-    java_class_filename = java_class + ".class"
+    java_class_filename = main_java_class + ".class"
     class_src_path = os.path.join(classpath, java_class_filename)
     class_tgt_path = tmp_path.joinpath(java_class_filename)
     copyfile( class_src_path,
               class_tgt_path.absolute().as_posix() )
+    # Copy the used class list:
+    for used_class_filename in used_class_list:
+        class_src_path = os.path.join(classpath, used_class_filename)
+        class_tgt_path = tmp_path.joinpath(used_class_filename)
+        copyfile( class_src_path,
+                  class_tgt_path.absolute().as_posix() )
     # Setup environment variables
     tmp_path_name = tmp_path.absolute().as_posix()
     my_env = os.environ.copy()
@@ -35,7 +43,7 @@ def run_java( java_path,
     cmd = [ java_path,
             "-cp", tmp_path_name,
             "-agentpath:" + os.path.join(tmp_path_name, et2_filename),
-            java_class ]
+            main_java_class ]
     fp = subprocess.Popen( cmd,
                            stdout = subprocess.PIPE,
                            stderr = subprocess.STDOUT,
@@ -58,7 +66,8 @@ def test_hello_world( capsys,
     with run_java( java_path = java_path,
                    agent_path = agent_path,
                    tmp_path = tmp_path,
-                   java_class = "HelloWorld" ) as fp:
+                   main_java_class = "HelloWorld",
+                   used_class_list = [] ) as fp:
         for x in fp:
             xstr = x.decode('utf-8')
             if xstr.find("Hello world.") != -1:
@@ -76,11 +85,29 @@ def test_methods( capsys,
     with run_java( java_path = java_path,
                    agent_path = agent_path,
                    tmp_path = tmp_path,
-                   java_class = "Methods" ) as fp:
+                   main_java_class = "Methods",
+                   used_class_list = [] ) as fp:
         for x in fp:
             sys.stdout.write(x.decode('utf-8'))
     out, err = capsys.readouterr()
     sys.stdout.write(out)
     sys.stderr.write(err)
-    # TODO:
-    # - Need to run with ET2
+
+def test_new_call( capsys,
+                   java_path,
+                   agent_path,
+                   tmp_path ):
+    # Either check that NewCall.class is there.
+    # Or compile it here.
+    # NewCall.java is in `java/`
+    used_class_list = [ "FooClass.class", ]
+    with run_java( java_path = java_path,
+                   agent_path = agent_path,
+                   tmp_path = tmp_path,
+                   main_java_class = "NewCall",
+                   used_class_list = used_class_list ) as fp:
+        for x in fp:
+            sys.stdout.write(x.decode('utf-8'))
+    out, err = capsys.readouterr()
+    sys.stdout.write(out)
+    sys.stderr.write(err)
