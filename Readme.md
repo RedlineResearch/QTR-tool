@@ -48,7 +48,12 @@ use our fork of JNIF.
                   -DBOOST_ROOT=/path/to/boost_1.66`
        * This generates a `Makefile` in `/path/to/BUILD`
            * `cd /path/to/BUILD && make`
-   
+
+## Running tests
+   * The tests are run using [pytest](https://docs.pytest.org/en/latest/).
+   * Use the following command:
+       * `python3.4  -m pytest et2_tests.py --java_path /etc/alternatives/java_sdk_1.8.0/bin/java --agent_path /data/rveroy/pulsrc/et2-java/BUILD  --rootdir .`
+   * Modify `--java_path` and `--agent_path` to fit your setup.
 
 ## Building with the Makefile in source (DEPRECATED)
    * Ensure `JAVA_HOME` is set correctly
