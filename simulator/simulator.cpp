@@ -365,17 +365,18 @@ unsigned int read_trace_file_part1( FILE *f ) // source trace file
                     // If object Id isn't available via an allocation event,
                     // then it's a stack object.
                     VTime_t current_time = Exec.NowUp();
+                    Thread *thread = Exec.getThread(thread_id);
                     obj = Heap.getObject(object_id);
                     if (obj == NULL) {
                         // Object isn't in the heap yet!
                         // NOTE: new_flag is false.
                         obj = Heap.allocate( object_id,
-                                             size,
-                                             rec_type, // kind of alloc
+                                             4, // TODO: we don't have the size!
+                                             rec_type, // kind of alloc - TODO: M isn't an allocation type really.
                                              tmp_todo_str, // get from type_id
-                                             as, // AllocSite pointer
+                                             NULL, // AllocSite pointer - TODO: Would this NULL cause problems somewhere else?
                                              tmp_todo_str, // TODO: njlib_sitename, // NonJava-library alloc sitename
-                                             length, // length
+                                             1, // length - TODO: No length either
                                              thread, // thread Id
                                              false, // new_flag
                                              Exec.NowUp() ); // Current time
@@ -397,6 +398,8 @@ unsigned int read_trace_file_part1( FILE *f ) // source trace file
                     thread_id = tokenizer.getInt(2);
                     auto recptr = new ExitRecord( method_id, thread_id );
                     trace.push_back(recptr);
+                    obj = Heap.getObject(object_id);
+                    assert(obj != NULL);
                 }
                 break;
 
@@ -475,8 +478,8 @@ unsigned int read_trace_file_part1( FILE *f ) // source trace file
                     // Set the Merlin timestamps:
                     VTime_t current_time = Exec.NowUp();
                     obj = Heap.getObject(object_id);
-                    target = ((target_id > 0) ? Heap.getObject(target_id) : NULL);
                     assert(obj != NULL);
+                    target = ((target_id > 0) ? Heap.getObject(target_id) : NULL);
                     obj->setLastTimestamp( current_time );
                     if (target) {
                         target->setLastTimestamp( current_time );

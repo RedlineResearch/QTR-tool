@@ -241,6 +241,7 @@ class HeapState {
                           string &nonjava_site_name,
                           unsigned int els,
                           Thread *thread,
+                          bool new_flag,
                           unsigned int create_time );
         // TODO: DOC
         Object *allocate( Object * objptr );
