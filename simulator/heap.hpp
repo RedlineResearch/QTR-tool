@@ -122,13 +122,6 @@ struct compclass {
 
 class HeapState {
     friend class Object;
-    public:
-
-        // -- Turn on debugging
-        static bool debug;
-
-        // -- Turn on output of objects to stdout
-        bool m_obj_debug_flag;
 
     private:
         // -- Map from IDs to objects
@@ -204,6 +197,7 @@ class HeapState {
         NodeId_t getNodeId( ObjectId_t objId, bimap< ObjectId_t, NodeId_t >& bmap );
 
     public:
+
         HeapState( ObjectPtrMap_t& whereis, KeySet_t& keyset )
             : m_objects()
             , m_liveset()
@@ -326,6 +320,10 @@ class HeapState {
         ObjectPtrMap_t& get_whereis() { return m_whereis; }
         KeySet_t& get_keyset() { return m_keyset; }
 
+        // -- Turn on debugging
+        static bool debug;
+        // -- Turn on output of objects to stdout
+        bool m_obj_debug_flag;
 };
 
 enum class ObjectRefType
@@ -380,6 +378,9 @@ class Object {
         unsigned int m_deathTime_alloc;
 
         EdgeMap m_fields;
+
+        // Created via new?
+        bool m_newFlag;
 
         // Pointer back to the heap
         HeapState *m_heapptr;
@@ -450,6 +451,7 @@ class Object {
                 unsigned int els,
                 Thread* thread,
                 unsigned int create_time,
+                bool new_flag,
                 HeapState* heap )
             : m_id(id)
             , m_size(size)
@@ -460,6 +462,7 @@ class Object {
             , m_elements(els)
             , m_thread(thread)
             , m_deadFlag(false)
+            , m_newFlag(new_flag)
             , m_createTime(create_time)
             , m_deathTime(UINT_MAX)
             , m_createTime_alloc( heap->getAllocTime() )
@@ -545,6 +548,9 @@ class Object {
         EdgeMap::iterator const getEdgeMapEnd() { return m_fields.end(); }
         Edge * getEdge(FieldId_t fieldId) const;
         bool isDead() const { return m_deadFlag; }
+
+        bool isNewedObject() const { return m_newFlag; }
+        bool setNewedObject(bool flag) { m_newFlag = flag; }
 
         bool wasPointedAtByHeap() const { return m_pointed_by_heap; }
         void setPointedAtByHeap() { m_pointed_by_heap = true; }

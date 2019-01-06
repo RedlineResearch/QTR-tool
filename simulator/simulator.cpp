@@ -362,6 +362,26 @@ unsigned int read_trace_file_part1( FILE *f ) // source trace file
                                                     thread_id );
                     trace.push_back(recptr);
                     Exec.IncUpdateTime();
+                    // If object Id isn't available via an allocation event,
+                    // then it's a stack object.
+                    VTime_t current_time = Exec.NowUp();
+                    obj = Heap.getObject(object_id);
+                    if (obj == NULL) {
+                        // Object isn't in the heap yet!
+                        // NOTE: new_flag is false.
+                        obj = Heap.allocate( object_id,
+                                             size,
+                                             rec_type, // kind of alloc
+                                             tmp_todo_str, // get from type_id
+                                             as, // AllocSite pointer
+                                             tmp_todo_str, // TODO: njlib_sitename, // NonJava-library alloc sitename
+                                             length, // length
+                                             thread, // thread Id
+                                             false, // new_flag
+                                             Exec.NowUp() ); // Current time
+                        ++total_objects;
+                    }
+                    obj->setLastTimestamp( current_time ); // TODO: Maybe not needed?
                 }
                 break;
 
@@ -424,6 +444,7 @@ unsigned int read_trace_file_part1( FILE *f ) // source trace file
                                          tmp_todo_str, // TODO: njlib_sitename, // NonJava-library alloc sitename
                                          length, // length
                                          thread, // thread Id
+                                         true, // new_flag
                                          Exec.NowUp() ); // Current time
                     ++total_objects;
                     Exec.IncUpdateTime();

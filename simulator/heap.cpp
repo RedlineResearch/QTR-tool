@@ -73,6 +73,7 @@ Object* HeapState::allocate( unsigned int id,
                              string &nonjavalib_site_name,
                              unsigned int els,
                              Thread *thread,
+                             bool new_flag,
                              unsigned int create_time )
 {
     // Design decision: allocation time isn't 0 based.
@@ -86,6 +87,7 @@ Object* HeapState::allocate( unsigned int id,
                               els,
                               thread,
                               create_time,
+                              new_flag,
                               this );
     // Add to object map
     this->m_objects[obj->getId()] = obj;
@@ -126,12 +128,8 @@ Object *HeapState::allocate( Object * obj )
 Object* HeapState::getObject(unsigned int id)
 {
     ObjectMap::iterator p = m_objects.find(id);
-    if (p != m_objects.end()) {
-        return (*p).second;
-    }
-    else {
-        return 0;
-    }
+    return ((p != m_objects.end()) ? (*p).second
+                                   : NULL);
 }
 
 Edge * HeapState::make_edge( Object *source,
