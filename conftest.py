@@ -15,10 +15,10 @@ def pytest_generate_tests(metafunc):
     if "java_path" in metafunc.fixturenames and java_path is not None:
         metafunc.parametrize("java_path", [java_path])
     else:
-        sys.stderr.write("Please provide path to Java 1.8 binary via --java_path" 
+        sys.stderr.write("Please provide path to Java 1.8 binary via --java_path")
     # Get the agent_path
     agent_path = metafunc.config.option.agent_path
     if "agent_path" in metafunc.fixturenames and agent_path is not None:
         metafunc.parametrize("agent_path", [agent_path])
     else:
-        sys.stderr.write("Please provide path to Elephant Tracks directory via --agent_path" 
+        sys.stderr.write("Please provide path to Elephant Tracks directory via --agent_path")

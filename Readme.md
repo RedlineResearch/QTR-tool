@@ -54,6 +54,7 @@ use our fork of JNIF.
    * Use the following command:
        * `python3.4  -m pytest et2_tests.py --java_path /etc/alternatives/java_sdk_1.8.0/bin/java --agent_path /data/rveroy/pulsrc/et2-java/BUILD  --rootdir .`
    * Modify `--java_path` and `--agent_path` to fit your setup.
+   * The `--rootdir` option specifies where the pytest cache is placed.
 
 ## Building with the Makefile in source (DEPRECATED)
    * Ensure `JAVA_HOME` is set correctly
@@ -61,7 +62,7 @@ use our fork of JNIF.
    * `make`
    * Note: this is deprecated. Please see how to build with cmake.
 
-## Testing
+## Testing (the old way)
    * `make test`
    * `java -agentlib:et2 Hello`
    * `java -agentlib:et2 BinarySearchTree`
