@@ -51,6 +51,7 @@ use our fork of JNIF.
 
 ## Running tests
    * The tests are run using [pytest](https://docs.pytest.org/en/latest/).
+       * See the [et2_tests.py](https://github.com/ElephantTracksProject/et2-java/blob/master/et2_tests.py) for details.
    * Use the following command:
        * `python3.4  -m pytest et2_tests.py --java_path /etc/alternatives/java_sdk_1.8.0/bin/java --agent_path /data/rveroy/pulsrc/et2-java/BUILD  --rootdir .`
    * Modify `--java_path` and `--agent_path` to fit your setup.
