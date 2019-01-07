@@ -311,6 +311,13 @@ void apply_merlin( std::deque< Object * > &new_garbage )
     // Until the vector is empty
 }
 
+
+// ----------------------------------------------------------------------
+//   TODO: todo
+void get_size( std::map< TypeId_t, unsigned int > &size_map )
+{
+}
+
 // ----------------------------------------------------------------------
 //   Read and process trace events. This implements the Merlin algorithm.
 unsigned int read_trace_file_part1( FILE *f ) // source trace file
@@ -327,7 +334,11 @@ unsigned int read_trace_file_part1( FILE *f ) // source trace file
     Method *method;
     unsigned int total_objeobcts = 0;
     // Save the trace in memory:
-    std::deque<Record *> trace;
+    std::deque< Record * > trace;
+    // Map of objects without N/A allocation events:
+    std::map< ObjectId_t, Object * > no_alloc_map;
+    // Size map
+    std::map< TypeId_t, unsigned int > class2size_map;
     // Merlin aglorithm: 
     std::deque< Object * > new_garbage;
     // TODO: There's no main method here?
@@ -461,23 +472,44 @@ unsigned int read_trace_file_part1( FILE *f ) // source trace file
                     // ET1 looked like this:
                     //       U <old-target> <object> <new-target> <field> <thread>
                     // ET2 is now:
-                    //       U targetObjectHash fieldID srcObjectHash timestamp
+                    //       U targetObjectHash fieldID srcObjectHash threadId?
                     //       0         1           2          3           4
                     // -- Look up objects and perform update
                     assert(tokenizer.numTokens() == 5);
                     target_id = tokenizer.getInt(1);
                     field_id = tokenizer.getInt(2);
                     object_id = tokenizer.getInt(3);
-                    VTime_t timestamp = tokenizer.getInt(4);
+                    ThreadId_t thread_id = tokenizer.getInt(4);
                     auto recptr = new UpdateRecord( target_id,
                                                     field_id,
                                                     object_id,
-                                                    timestamp );
+                                                    thread_id );
                     trace.push_back(recptr);
                     Exec.IncUpdateTime();
                     // Set the Merlin timestamps:
                     VTime_t current_time = Exec.NowUp();
                     obj = Heap.getObject(object_id);
+                    if (obj == NULL) {
+                        auto iter = no_alloc_map.find(object_id);
+                        if (iter == no_alloc_map.end()) {
+                            cerr << "-- No alloc event: " << object_id << endl;
+                            Thread *thread = Exec.getThread(thread_id);
+                            obj = Heap.allocate( object_id,
+                                                 4, // TODO: we don't have the size!
+                                                 rec_type, // kind of alloc - TODO: M isn't an allocation type really.
+                                                 tmp_todo_str, // get from type_id
+                                                 NULL, // AllocSite pointer - TODO: Would this NULL cause problems somewhere else?
+                                                 tmp_todo_str, // TODO: njlib_sitename, // NonJava-library alloc sitename
+                                                 1, // length - TODO: No length either
+                                                 thread, // thread Id
+                                                 false, // new_flag
+                                                 Exec.NowUp() ); // Current time
+                            ++total_objects;
+                            no_alloc_map[object_id] = NULL;
+                        } else {
+                            cerr << "-- No alloc event DUPE: " << object_id << endl;
+                        }
+                    }
                     assert(obj != NULL);
                     target = ((target_id > 0) ? Heap.getObject(target_id) : NULL);
                     obj->setLastTimestamp( current_time );
