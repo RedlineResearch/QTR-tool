@@ -224,7 +224,9 @@ void ClassInfo::impl_read_names_file_et2( const char *classes_filename,
                                           string main_class,
                                           string main_function )
 {
+    // TODO: Does this save the classes anywhere?
     ClassInfo::impl_read_classes_file_et2(classes_filename);
+    // TODO: Does this save the fields anywhere?
     ClassInfo::impl_read_fields_file_et2(fields_filename);
     ClassInfo::impl_read_methods_file_et2(methods_filename);
 }
@@ -277,7 +279,7 @@ void ClassInfo::impl_read_classes_file_et2( const char *classes_filename )
 }
 
 // -- Read in the fields file
-std::map<TypeId_t, string>
+std::map<FieldId_t, string>
 ClassInfo::impl_read_fields_file_et2( const char *fields_filename )
 {
     FILE *f_fields = fopen(fields_filename, "r");
@@ -288,14 +290,14 @@ ClassInfo::impl_read_fields_file_et2( const char *fields_filename )
 
     unsigned int maxId = 0;
     Tokenizer t_fields(f_fields);
-    std::map< TypeId_t, string> field_map;
+    std::map< FieldId_t, string> field_map;
     while (!t_fields.isDone()) {
         t_fields.getLine();
         if (t_fields.isDone()) {
             break;
         }
 
-        TypeId_t field_id = t_fields.getInt(0);
+        FieldId_t field_id = t_fields.getInt(0);
         string name = t_fields.getString(1);
         auto iter = field_map.find(field_id);
         if (iter != field_map.end()) {

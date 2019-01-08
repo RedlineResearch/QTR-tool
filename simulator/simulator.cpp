@@ -1284,6 +1284,19 @@ void class_main(int argc, char* argv[])
 
 void fields_main(int argc, char* argv[])
 {
+    cout << "#     git version: " <<  build_git_sha << endl;
+    cout << "#     build date : " <<  build_git_time << endl;
+    cout << "---------------[ START ]-----------------------------------------------------------" << endl;
+    //--------------------------------------------------------------------------------
+    cout << "Read names file..." << endl;
+    string fields_filename(argv[2]);
+    std::map<FieldId_t, string> fields_map = ClassInfo::impl_read_fields_file_et2(argv[2]);
+    auto iter = fields_map.begin();
+    while (iter != fields_map.end()) {
+        iter++;
+        cerr << ".";
+    }
+    cerr << "DONE" << endl;
 }
 
 void methods_main(int argc, char* argv[])

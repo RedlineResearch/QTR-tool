@@ -36,8 +36,8 @@ use our fork of JNIF.
      operating systems.
    * cmake 3.9 or greater
 
-## Building the *Elephant Tracks 2 agent* with cmake
-   * `cmake` is many things, but most importantly it's a Makefile generator.
+## Building the *Elephant Tracks 2 agent* with `cmake`
+   * [cmake](https://cmake.org/) is many things, but most importantly it's a Makefile generator.
    * Steps to building with `cmake`:
        * Create a `BUILD` directory anywhere.
            * `mkdir /path/to/et2-agent/BUILD`
@@ -49,7 +49,7 @@ use our fork of JNIF.
        * This generates a `Makefile` in `/path/to/BUILD`
            * `cd /path/to/BUILD && make`
 
-## Building the *Elephant Tracks 2 simulator* with cmake
+## Building the *Elephant Tracks 2 simulator* with `cmake`
    * Steps to building with `cmake`:
        * Create a `BUILD` directory anywhere.
            * `mkdir /path/to/et2-simulator/BUILD`
