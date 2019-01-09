@@ -1,10 +1,14 @@
 #include "classinfo.hpp"
 #include "tokenizer.hpp"
 
+#include <algorithm>
+#include <assert.h>
 #include <deque>
 #include <map>
 #include <stdlib.h>
 #include <utility>
+
+#include "et2utility.hpp"
 
 // -- Contents of the names file
 ClassMap ClassInfo::TheClasses;
@@ -299,6 +303,7 @@ ClassInfo::impl_read_fields_file_et2( const char *fields_filename )
 
         FieldId_t field_id = t_fields.getInt(0);
         string name = t_fields.getString(1);
+        cerr << "XXX: " << name << endl;
         auto iter = field_map.find(field_id);
         if (iter != field_map.end()) {
             // Duplicate field id
@@ -306,6 +311,17 @@ ClassInfo::impl_read_fields_file_et2( const char *fields_filename )
             // TODO: Add more info.
             continue;
         }
+        field_map[field_id] = name;
+        auto classpath = split(name, '/');
+        if (classpath.size() >= 2 ) {
+            string class_name = classpath[classpath.size() - 2];
+            string method_name = classpath[classpath.size() - 1];
+            cerr << "   : " << class_name << " :: " << method_name << endl;
+        } else {
+            cerr << "   : " << name << endl;
+        }
+        // TODO: RLV
+        // What if the classname isn't in TheClasses yet?
 #if 0
         Class *cls = TheClasses[t.getInt(4)];
         Field *fld = new Field( t.getInt(2),
