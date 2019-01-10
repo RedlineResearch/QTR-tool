@@ -52,6 +52,7 @@ class ClassInfo
         // -- Contents of the names file
         static ClassMap TheClasses;
         static RevClassMap rev_map;
+        static TypeId_t max_class_id;
         // -- All methods (also in the classes)
         static MethodMap TheMethods;
         // -- All fields (also in the classes)

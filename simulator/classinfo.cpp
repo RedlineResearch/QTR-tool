@@ -13,6 +13,8 @@
 // -- Contents of the names file
 ClassMap ClassInfo::TheClasses;
 RevClassMap ClassInfo::rev_map;
+//     Max class id
+TypeId_t ClassInfo::max_class_id = 0;
 
 // -- All methods (also in the classes)
 MethodMap ClassInfo::TheMethods;
@@ -270,6 +272,7 @@ void ClassInfo::impl_read_classes_file_et2( const char *classes_filename )
         if (iter2 == TheClasses.end()) {
             // -- Not found, make a new one
             cls = new Class(type_id, name, false); // false because we have no info on interfaces -RLV
+            max_class_id = std::max(max_class_id, type_id);
             TheClasses[cls->getId()] = cls;
         } else {
             cls = iter2->second;
@@ -313,15 +316,23 @@ ClassInfo::impl_read_fields_file_et2( const char *fields_filename )
         }
         field_map[field_id] = name;
         auto classpath = split(name, '/');
+        string class_name;
+        string method_name;
         if (classpath.size() >= 2 ) {
-            string class_name = classpath[classpath.size() - 2];
-            string method_name = classpath[classpath.size() - 1];
-            cerr << "   : " << class_name << " :: " << method_name << endl;
-        } else {
-            cerr << "   : " << name << endl;
+            class_name = classpath[classpath.size() - 2];
+            method_name = classpath[classpath.size() - 1];
         }
         // TODO: RLV
         // What if the classname isn't in TheClasses yet?
+        auto reviter = rev_map.find(class_name);
+        if (reviter != rev_map.end()) {
+        } else {
+            // Class not yet in the map!
+            cerr << "CLASS not found: " << class_name << endl;
+            TypeId_t type_id = max_class_id;
+            max_class_id += 1;
+            auto cls = new Class(type_id, class_name, false); // false because we have no info on interfaces -RLV
+        }
 #if 0
         Class *cls = TheClasses[t.getInt(4)];
         Field *fld = new Field( t.getInt(2),
