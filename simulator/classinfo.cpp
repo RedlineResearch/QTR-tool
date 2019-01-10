@@ -306,7 +306,6 @@ ClassInfo::impl_read_fields_file_et2( const char *fields_filename )
 
         FieldId_t field_id = t_fields.getInt(0);
         string name = t_fields.getString(1);
-        cerr << "XXX: " << name << endl;
         auto iter = field_map.find(field_id);
         if (iter != field_map.end()) {
             // Duplicate field id
@@ -325,21 +324,23 @@ ClassInfo::impl_read_fields_file_et2( const char *fields_filename )
         // TODO: RLV
         // What if the classname isn't in TheClasses yet?
         auto reviter = rev_map.find(class_name);
-        if (reviter != rev_map.end()) {
-        } else {
+        Class *cls = NULL;
+        if (reviter == rev_map.end()) {
             // Class not yet in the map!
-            cerr << "CLASS not found: " << class_name << endl;
             TypeId_t type_id = max_class_id;
             max_class_id += 1;
-            auto cls = new Class(type_id, class_name, false); // false because we have no info on interfaces -RLV
+            cls = new Class(type_id, class_name, false); // false because we have no info on interfaces -RLV
+            TheClasses[cls->getId()] = cls;
+        } else {
+            cerr << "Class found: " << class_name << endl;
+            cls = TheClasses[reviter->second];
         }
+        // Field *fld = new Field( field_id,
+        //                         cls,
+        //                         name, // Field name
+        //                         "TODO",
+        //                         "TODO - static" );
 #if 0
-        Class *cls = TheClasses[t.getInt(4)];
-        Field *fld = new Field( t.getInt(2),
-                                cls,
-                                t.getString(3),
-                                t.getString(6),
-                                (t.getChar(1) == 'S') );
         TheFields[fld->getId()] = fld;
         cls->addField(fld);
         if (debug_names) {
