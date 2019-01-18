@@ -230,9 +230,7 @@ void ClassInfo::impl_read_names_file_et2( const char *classes_filename,
                                           string main_class,
                                           string main_function )
 {
-    // TODO: Does this save the classes anywhere?
     ClassInfo::impl_read_classes_file_et2(classes_filename);
-    // TODO: Does this save the fields anywhere?
     ClassInfo::impl_read_fields_file_et2(fields_filename);
     ClassInfo::impl_read_methods_file_et2(methods_filename);
 }
@@ -335,12 +333,13 @@ ClassInfo::impl_read_fields_file_et2( const char *fields_filename )
             cerr << "Class found: " << class_name << endl;
             cls = TheClasses[reviter->second];
         }
-        // Field *fld = new Field( field_id,
-        //                         cls,
-        //                         name, // Field name
-        //                         "TODO",
-        //                         "TODO - static" );
-#if 0
+        assert(cls != NULL);
+        string todo= "TODO";
+        Field *fld = new Field( field_id,
+                                cls,
+                                name.c_str(), // Field name
+                                todo.c_str(),
+                                false ); // Is static? TODO: We don't have this info.
         TheFields[fld->getId()] = fld;
         cls->addField(fld);
         if (debug_names) {
@@ -349,7 +348,6 @@ ClassInfo::impl_read_fields_file_et2( const char *fields_filename )
                  << " in class " << cls->getName()
                  << endl;
         }
-#endif
     }
 
     return field_map;

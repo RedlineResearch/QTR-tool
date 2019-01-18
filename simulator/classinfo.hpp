@@ -134,7 +134,7 @@ class Field : public Entity
         string m_descriptor;
 
     public:
-        Field(FieldId_t id, Class *cls, char *name, char *descriptor, bool isstatic)
+        Field(FieldId_t id, Class *cls, const char *name, const char *descriptor, bool isstatic)
             : Entity(id, name)
             , m_isStatic(isstatic)
             , m_class(cls)

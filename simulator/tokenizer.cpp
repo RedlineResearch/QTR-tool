@@ -43,7 +43,7 @@ unsigned int Tokenizer::getInt(int i)
 {
     if (i < m_num_tokens) {
         unsigned int value = 0;
-        sscanf(m_tokens[i], "%X", &value);
+        sscanf(m_tokens[i], "%d", &value);
         return value;
     } else {
         return 0;

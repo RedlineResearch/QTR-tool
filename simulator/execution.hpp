@@ -75,23 +75,18 @@ class CCNode
             return result;
         }
 
-        // File to output the callstack
-        ofstream &m_output;
-
     public:
-        CCNode( ofstream &output )
+        CCNode()
             : m_method(0)
             , m_parent(0)
             , m_done(false)
-            , m_node_id(this->get_next_node_id())
-            , m_output(output) {
+            , m_node_id(this->get_next_node_id()) {
         }
 
-        CCNode( CCNode* parent, Method* m, ofstream &output )
+        CCNode( CCNode* parent, Method* m )
             : m_method(m)
             , m_parent(parent)
-            , m_node_id(this->get_next_node_id())
-            , m_output(output) {
+            , m_node_id(this->get_next_node_id()) {
         }
 
         // -- Get method
@@ -177,30 +172,20 @@ class Thread
         ContextPairCountMap &m_deathPairCountMap;
         // -- Map to ExecState
         ExecState &m_exec;
-        // File to output the callstack
-        ofstream &m_output;
-        // File to output the nodeId to method name
-        ofstream &m_nodefile;
 
     public:
         Thread( unsigned int id,
                 ExecMode kind,
                 ContextCountMap &allocCountmap,
                 ContextPairCountMap &deathCountMap,
-                ExecState &execstate,
-                ofstream &output,
-                ofstream &nodefile )
+                ExecState &execstate )
             : m_id(id)
             , m_kind(kind)
-            , m_rootcc(output)
-            , m_curcc(&m_rootcc)
             , m_context( NULL, NULL )
             , m_cptype(CPairType::CP_None) 
             , m_allocCountmap(allocCountmap)
             , m_deathPairCountMap(deathCountMap)
-            , m_exec(execstate)
-            , m_output(output)
-            , m_nodefile(nodefile) {
+            , m_exec(execstate) {
             m_locals.push_back(new LocalVarSet());
             m_deadlocals.push_back(new LocalVarSet());
         }
@@ -306,9 +291,7 @@ class ExecState
             , m_execPairCountMap()
             , m_objAlloc2cmap()
             , m_objDeath2cmap()
-            , m_thread_stack()
-            , m_output(NULL)
-            , m_nodefile(NULL) {
+            , m_thread_stack() {
         }
 
         // -- Get the current method time
@@ -427,14 +410,6 @@ class ExecState
         }
 
         ExecMode get_kind() const { return m_kind; }
-
-        // File to output the callstack
-        ofstream *m_output;
-        void set_output( ofstream *out ) { this->m_output = out; }
-        // File to output the node id to method name map 
-        ofstream *m_nodefile;
-        void set_nodefile( ofstream *nfile ) { this->m_nodefile = nfile; }
-
 
         // Related to getting the time when the main function was called
         inline VTime_t get_main_func_uptime() {

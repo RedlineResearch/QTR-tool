@@ -78,17 +78,18 @@ Object* HeapState::allocate( unsigned int id,
 {
     // Design decision: allocation time isn't 0 based.
     this->m_alloc_time += size;
-    Object* obj = new Object( id,
-                              size,
-                              kind,
-                              type,
-                              site,
-                              nonjavalib_site_name,
-                              els,
-                              thread,
-                              create_time,
-                              new_flag,
-                              this );
+    Object *obj = NULL;
+    obj = new Object( id,
+                      size,
+                      kind,
+                      type,
+                      site,
+                      nonjavalib_site_name,
+                      els,
+                      thread,
+                      create_time,
+                      new_flag,
+                      this );
     // Add to object map
     this->m_objects[obj->getId()] = obj;
     // Add to live set. Given that it's a set, duplicates are not a problem.
@@ -100,6 +101,7 @@ Object* HeapState::allocate( unsigned int id,
     if (this->m_maxLiveSize < this->m_liveSize) {
         this->m_maxLiveSize = this->m_liveSize;
     }
+    // cerr << "ALLOC: " << id << " - " << obj << endl;
     return obj;
 }
 
@@ -133,13 +135,14 @@ Object* HeapState::getObject(unsigned int id)
 }
 
 Edge * HeapState::make_edge( Object *source,
-                            FieldId_t field_id,
-                            Object *target,
-                            unsigned int cur_time )
+                             FieldId_t field_id,
+                             Object *target,
+                             unsigned int cur_time )
 {
+    // cerr << "EDGE: [" << source << "]< " << source->getId() << " > ::"
+    //      << field_id << " -> " << target << " -- at " << cur_time << endl;
     Edge *new_edge = new Edge( source, field_id,
                                target, cur_time );
-    assert(target != NULL);
     // TODO target->setPointedAtByHeap();
     return new_edge;
 }
@@ -589,5 +592,5 @@ void Object::setDeathTime( VTime_t new_deathtime )
 Edge * Object::getEdge(FieldId_t fieldId) const
 {
     auto iter = m_fields.find(fieldId);
-    return (iter == m_fields.end() ? iter->second : NULL);
+    return (iter != m_fields.end() ? iter->second : NULL);
 }

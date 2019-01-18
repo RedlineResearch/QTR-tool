@@ -320,25 +320,18 @@ void get_size( std::map< TypeId_t, unsigned int > &size_map )
 
 // ----------------------------------------------------------------------
 //   Read and process trace events. This implements the Merlin algorithm.
-unsigned int read_trace_file_part1( FILE *f ) // source trace file
+unsigned int read_trace_file_part1( FILE *f, // source trace file
+                                    std::deque< Record * > &trace )
 {
     Tokenizer tokenizer(f);
 
-    MethodId_t method_id;
-    ObjectId_t object_id;
-    ObjectId_t target_id;
-    FieldId_t field_id;
-    ThreadId_t thread_id;
-    Object *obj;
-    Object *target;
-    Method *method;
-    unsigned int total_objeobcts = 0;
-    // Save the trace in memory:
-    std::deque< Record * > trace;
+    unsigned int total_objects = 0;
     // Map of objects without N/A allocation events:
     std::map< ObjectId_t, Object * > no_alloc_map;
     // Size map
     std::map< TypeId_t, unsigned int > class2size_map;
+    // Edge map
+    std::set< Edge * > edge_set;
     // Merlin aglorithm: 
     std::deque< Object * > new_garbage;
     // TODO: There's no main method here?
@@ -348,9 +341,17 @@ unsigned int read_trace_file_part1( FILE *f ) // source trace file
     // TODO: No death times yet
     //      VTime_t latest_death_time = 0;
     VTime_t allocation_time = 0;
-    unsigned int total_objects = 0;
         
     while (!tokenizer.isDone()) {
+        MethodId_t method_id;
+        ObjectId_t object_id;
+        ObjectId_t target_id;
+        FieldId_t field_id;
+        ThreadId_t thread_id;
+        Object *obj = NULL;
+        Object *target = NULL;
+        Method *method = NULL;
+        Thread *thread = NULL;
         string tmp_todo_str("TODO"); // To mark whatever TODO
         tokenizer.getLine();
         if (tokenizer.isDone()) {
@@ -376,24 +377,27 @@ unsigned int read_trace_file_part1( FILE *f ) // source trace file
                     // If object Id isn't available via an allocation event,
                     // then it's a stack object.
                     VTime_t current_time = Exec.NowUp();
-                    Thread *thread = Exec.getThread(thread_id);
-                    obj = Heap.getObject(object_id);
-                    if (obj == NULL) {
-                        // Object isn't in the heap yet!
-                        // NOTE: new_flag is false.
-                        obj = Heap.allocate( object_id,
-                                             4, // TODO: we don't have the size!
-                                             rec_type, // kind of alloc - TODO: M isn't an allocation type really.
-                                             tmp_todo_str, // get from type_id
-                                             NULL, // AllocSite pointer - TODO: Would this NULL cause problems somewhere else?
-                                             tmp_todo_str, // TODO: njlib_sitename, // NonJava-library alloc sitename
-                                             1, // length - TODO: No length either
-                                             thread, // thread Id
-                                             false, // new_flag
-                                             Exec.NowUp() ); // Current time
-                        ++total_objects;
+                    thread = Exec.getThread(thread_id);
+                    if (object_id > 0) {
+                        obj = Heap.getObject(object_id);
+                        if (obj == NULL) {
+                            // Object isn't in the heap yet!
+                            // NOTE: new_flag is false.
+                            obj = Heap.allocate( object_id,
+                                                 4, // TODO: we don't have the size!
+                                                 rec_type, // kind of alloc - TODO: M isn't an allocation type really.
+                                                 tmp_todo_str, // get from type_id
+                                                 NULL, // AllocSite pointer - TODO: Would this NULL cause problems somewhere else?
+                                                 tmp_todo_str, // TODO: njlib_sitename, // NonJava-library alloc sitename
+                                                 1, // length - TODO: No length either
+                                                 thread, // thread Id
+                                                 false, // new_flag
+                                                 Exec.NowUp() ); // Current time
+                            ++total_objects;
+                        }
+                        assert(obj);
+                        obj->setLastTimestamp( current_time ); // TODO: Maybe not needed?
                     }
-                    obj->setLastTimestamp( current_time ); // TODO: Maybe not needed?
                 }
                 break;
 
@@ -409,8 +413,10 @@ unsigned int read_trace_file_part1( FILE *f ) // source trace file
                     thread_id = tokenizer.getInt(2);
                     auto recptr = new ExitRecord( method_id, thread_id );
                     trace.push_back(recptr);
-                    obj = Heap.getObject(object_id);
-                    assert(obj != NULL);
+                    if (object_id > 0) {
+                        obj = Heap.getObject(object_id);
+                        assert(obj != NULL);
+                    }
                 }
                 break;
 
@@ -435,7 +441,7 @@ unsigned int read_trace_file_part1( FILE *f ) // source trace file
                     trace.push_back(recptr);
                     // Add to heap
                     // TODO: AllocSites
-                    Thread *thread = Exec.getThread(thread_id);
+                    thread = Exec.getThread(thread_id);
                     allocation_time = Heap.getAllocTime();
                     Exec.SetAllocTime(allocation_time);
                     AllocSite *as = ClassInfo::TheAllocSites[tokenizer.getInt(4)];
@@ -450,20 +456,22 @@ unsigned int read_trace_file_part1( FILE *f ) // source trace file
                             assert(false);
                         } // if (thread) ... else
 #endif // TODO ALLOCSITE
-                    obj = Heap.allocate( object_id,
-                                         size,
-                                         rec_type, // kind of alloc
-                                         tmp_todo_str, // get from type_id
-                                         as, // AllocSite pointer
-                                         tmp_todo_str, // TODO: njlib_sitename, // NonJava-library alloc sitename
-                                         length, // length
-                                         thread, // thread Id
-                                         true, // new_flag
-                                         Exec.NowUp() ); // Current time
-                    ++total_objects;
-                    Exec.IncUpdateTime();
                     VTime_t current_time = Exec.NowUp();
-                    obj->setLastTimestamp( current_time );
+                    if (object_id > 0) {
+                        obj = Heap.allocate( object_id,
+                                             size,
+                                             rec_type, // kind of alloc
+                                             tmp_todo_str, // get from type_id
+                                             as, // AllocSite pointer
+                                             tmp_todo_str, // TODO: njlib_sitename, // NonJava-library alloc sitename
+                                             length, // length
+                                             thread, // thread Id
+                                             true, // new_flag
+                                             Exec.NowUp() ); // Current time
+                        ++total_objects;
+                        Exec.IncUpdateTime();
+                        obj->setLastTimestamp( current_time );
+                    }
                 }
                 break;
 
@@ -486,14 +494,19 @@ unsigned int read_trace_file_part1( FILE *f ) // source trace file
                                                     thread_id );
                     trace.push_back(recptr);
                     Exec.IncUpdateTime();
+                    // ---------------------------------------------------------------------------
                     // Set the Merlin timestamps:
                     VTime_t current_time = Exec.NowUp();
+                    if (object_id == 0) {
+                        continue;
+                    }
                     obj = Heap.getObject(object_id);
                     if (obj == NULL) {
                         auto iter = no_alloc_map.find(object_id);
                         if (iter == no_alloc_map.end()) {
                             cerr << "-- No alloc event: " << object_id << endl;
-                            Thread *thread = Exec.getThread(thread_id);
+                            thread = Exec.getThread(thread_id);
+                            assert(thread);
                             obj = Heap.allocate( object_id,
                                                  4, // TODO: we don't have the size!
                                                  rec_type, // kind of alloc - TODO: M isn't an allocation type really.
@@ -505,36 +518,74 @@ unsigned int read_trace_file_part1( FILE *f ) // source trace file
                                                  false, // new_flag
                                                  Exec.NowUp() ); // Current time
                             ++total_objects;
-                            no_alloc_map[object_id] = NULL;
+                            no_alloc_map[object_id] = obj;
                         } else {
                             cerr << "-- No alloc event DUPE: " << object_id << endl;
+                            assert(false);
                         }
                     }
                     assert(obj != NULL);
-                    target = ((target_id > 0) ? Heap.getObject(target_id) : NULL);
+                    target = NULL;
+                    if (target_id > 0) {
+                        target = Heap.getObject(target_id);
+                        if (target == NULL) {
+                            auto iter = no_alloc_map.find(target_id);
+                            if (iter == no_alloc_map.end()) {
+                                cerr << "-- No alloc event: " << target_id << endl;
+                                thread = Exec.getThread(thread_id);
+                                target = Heap.allocate( target_id,
+                                                        4, // TODO: we don't have the size!
+                                                        rec_type, // kind of alloc - TODO: M isn't an allocation type really.
+                                                        tmp_todo_str, // get from type_id
+                                                        NULL, // AllocSite pointer - TODO: Would this NULL cause problems somewhere else?
+                                                        tmp_todo_str, // TODO: njlib_sitename, // NonJava-library alloc sitename
+                                                        1, // length - TODO: No length either
+                                                        thread, // thread Id
+                                                        false, // new_flag
+                                                        Exec.NowUp() ); // Current time
+                                ++total_objects;
+                                no_alloc_map[target_id] = target;
+                            } else {
+                                cerr << "-- No alloc event DUPE: " << object_id << endl;
+                                assert(false);
+                            }
+                        }
+                        assert(target != NULL);
+                    }
                     obj->setLastTimestamp( current_time );
-                    if (target) {
+                    if (target && target_id > 0) {
                         target->setLastTimestamp( current_time );
                     }
-                    Edge *old_target_edge = obj->getEdge(field_id);
-                    Object *old_target = old_target_edge->getTarget();
-                    ObjectId_t old_target_id = old_target->getId();
-                    // TODO [ START ]
-                    if (old_target_id == target_id) {
-                        // It sometimes happens that the newtarget is the same as
-                        // the old target. So we won't create any more new edges.
-                        // DEBUG: cout << "UPDATE same new == old: " << target << endl;
-                    } else {
-                        Edge *new_edge = NULL;
-                        // Can't call updateField if target is NULL
-                        if (target) {
-                            new_edge = Heap.make_edge( obj,
-                                                       field_id,
-                                                       target,
-                                                       Exec.NowUp() );
+                    if (object_id > 0) {
+                        // cerr << "DBG: obj[ " << obj << " ] obj_id[ " << object_id << " ] target_id[ " << target_id << " ] field_id[ " << field_id << " ]" << endl;
+                        Edge *old_target_edge;
+                        Object *old_target;
+                        ObjectId_t old_target_id = 0;
+                        Edge *new_edge;
+
+                        old_target_edge = obj->getEdge(field_id);
+                        if (old_target_edge) {
+                            old_target = old_target_edge->getTarget();
                         }
-                        obj->updateField( new_edge,
-                                          field_id );
+                        if (old_target) {
+                            old_target_id = old_target->getId();
+                            // TODO [ START ]
+                            // if (old_target_id == target_id) {
+                            //     // It sometimes happens that the newtarget is the same as
+                            //     // the old target. So we won't create any more new edges.
+                            //     // DEBUG: cout << "UPDATE same new == old: " << target << endl;
+                            // } else
+                            if (old_target_id != target_id) {
+                                if (target && target_id > 0) {
+                                    Edge *new_edge = Heap.make_edge( obj,
+                                                                     field_id,
+                                                                     target,
+                                                                     Exec.NowUp() );
+                                    obj->updateField( new_edge,
+                                                      field_id );
+                                 }
+                             }
+                        }
                     }
                     // TODO [ END ]
                 }
@@ -544,7 +595,16 @@ unsigned int read_trace_file_part1( FILE *f ) // source trace file
                 {
                     // W aliveObjectHash classID timestamp
                     //        1              2       3
-                    assert(tokenizer.numTokens() == 4);
+                    // TODO: cerr << "DBG: W--" << endl;
+                    if (tokenizer.numTokens() != 4) {
+                        unsigned int num = tokenizer.numTokens();
+                        cerr << "ERROR -- W[ " << num << " ] :";
+                        for (int i = 0; i < num; ++i) {
+                            cerr << tokenizer.getInt(i);
+                        }
+                        cerr << endl;
+                        // assert(tokenizer.numTokens() == 4);
+                    }
                     object_id = tokenizer.getInt(1);
                     TypeId_t type_id = tokenizer.getInt(2);
                     VTime_t timestamp = tokenizer.getInt(3);
@@ -555,11 +615,8 @@ unsigned int read_trace_file_part1( FILE *f ) // source trace file
                     // Set the Merlin timestamps:
                     VTime_t current_time = Exec.NowUp();
                     obj = Heap.getObject(object_id);
-                    if (obj) {
-                        obj->setLastTimestamp( current_time );
-                    } else {
-                        cerr << "NULL object: " << object_id << endl;
-                    }
+                    assert(obj != NULL);
+                    obj->setLastTimestamp( current_time );
                 }
                 break;
 
@@ -1154,14 +1211,6 @@ void sim_main(int argc, char* argv[])
     string ref_reverse_summary_filename( basename + "-REF-REVERSE-SUMMARY.csv" );
     string stability_summary_filename( basename + "-STABILITY-SUMMARY.csv" );
 
-    string call_context_filename( basename + "-CALL-CONTEXT.csv" );
-    ofstream call_context_file(call_context_filename);
-    Exec.set_output( &call_context_file );
-
-    string nodemap_filename( basename + "-NODEMAP.csv" );
-    ofstream nodemap_file(nodemap_filename);
-    Exec.set_nodefile( &nodemap_file );
-
     // TODO string cycle_filename( basename + "-CYCLES.csv" );
     // TODO: UNUSED string typeinfo_filename( basename + "-TYPEINFO.txt" );
     // TODO: UNUSED string context_death_count_filename( basename + "-CONTEXT-DCOUNT.csv" );
@@ -1198,7 +1247,8 @@ void sim_main(int argc, char* argv[])
     FILE *f = fdopen(STDIN_FILENO, "r");
     ofstream edge_info_file(edgeinfo_filename);
     edge_info_file << "---------------[ EDGE INFO ]----------------------------------------------------" << endl;
-    unsigned int total_objects = read_trace_file_part1(f);
+    std::deque< Record * > trace; // IN memory trace deque
+    unsigned int total_objects = read_trace_file_part1(f, trace);
     exit(100);
     unsigned int final_time = Exec.NowUp() + 1;
     unsigned int final_time_alloc = Heap.getAllocTime();

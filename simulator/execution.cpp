@@ -16,8 +16,7 @@ CCNode* CCNode::Call(Method* m)
     // TODO auto p = m_callees.find(m);
     if (p == m_callees.end()) {
         result = new CCNode( this, // parent
-                             m,    // method
-                             this->m_output ); // file output
+                             m );    // method
         m_callees[m->getId()] = result;
         // TODO m_callees[m] = result;
     } else {
@@ -25,9 +24,6 @@ CCNode* CCNode::Call(Method* m)
     }
     NodeId_t parent = this->get_node_id();
     NodeId_t child = result->get_node_id();
-    if (this->m_output.is_open()) {
-        this->m_output << parent << "," << child << endl;
-    }
     return result;
 }
 
@@ -492,9 +488,8 @@ Thread* ExecState::getThread(unsigned int threadid)
                              this->m_kind,
                              this->m_allocCountmap,
                              this->m_deathPairCountMap,
-                             *this,
-                             *this->m_output,
-                             *this->m_nodefile );
+                             *this );
+        assert(result);
         m_threads[threadid] = result;
     } else {
         result = (*p).second;
