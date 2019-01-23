@@ -497,9 +497,6 @@ unsigned int read_trace_file_part1( FILE *f, // source trace file
                     // ---------------------------------------------------------------------------
                     // Set the Merlin timestamps:
                     VTime_t current_time = Exec.NowUp();
-                    if (object_id == 0) {
-                        continue;
-                    }
                     obj = Heap.getObject(object_id);
                     if (obj == NULL) {
                         auto iter = no_alloc_map.find(object_id);
