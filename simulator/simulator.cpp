@@ -235,56 +235,62 @@ void update_reference_summaries( Object *src,
 }
 
 // ----------------------------------------------------------------------
-//   Read and process trace events
-void apply_merlin( std::deque< Object * > &new_garbage )
+//   Uses global:
+//       * Heap
+void apply_merlin( std::deque< Record * > &trace )
 {
-    if (new_garbage.size() == 0) { 
-        // TODO Log an ERROR or a WARNING
-        return;
-    }
+    cerr << "apply_merlin: " << endl;
     // TODO: Use setDeathTime( new_dtime );
-    // Sort the new_garbage vector according to latest last_timestamp.
-    std::sort( new_garbage.begin(),
-               new_garbage.end(),
+    std::deque< Object * > garbage;
+    for ( auto iter = Heap.begin();
+          iter != Heap.end();
+          iter++ ) {
+        garbage.push_back(iter->second);
+    }
+    cerr << garbage.size() << " objects in garbage." << endl;
+    // Sort the garbage vector according to latest last_timestamp.
+    std::sort( garbage.begin(),
+               garbage.end(),
                []( Object *left, Object *right ) {
                    return (left->getLastTimestamp() > right->getLastTimestamp());
                } );
     // Do a standard DFS.
-    while (new_garbage.size() > 0) {
+    while (garbage.size() > 0) {
         // Start with the latest for the DFS.
-        Object *cur = new_garbage[0];
-        new_garbage.pop_front();
+        Object *cur = garbage[0];
+        garbage.pop_front();
         std::deque< Object * > mystack; // stack for DFS
         std::set< Object * > labeled; // What Objects have been labeled
         mystack.push_front( cur );
         while (mystack.size() > 0) {
-            Object *otmp = mystack[0];
+            cerr << ".";
+            Object *objtmp = mystack[0];
             mystack.pop_front();
-            assert(otmp);
+            assert(objtmp);
             // The current timestamp max
-            unsigned int tstamp_max = otmp->getLastTimestamp();
-            otmp->setDeathTime( tstamp_max );
-            // Remove from new_garbage deque
-            auto ngiter = std::find( new_garbage.begin(),
-                                     new_garbage.end(),
-                                     otmp );
-            if (ngiter != new_garbage.end()) {
-                // still in the new_garbage deque
-                new_garbage.erase(ngiter);
+            unsigned int tstamp_max = objtmp->getLastTimestamp();
+            objtmp->setDeathTime( tstamp_max );
+            // Remove from garbage deque
+            auto ngiter = std::find( garbage.begin(),
+                                     garbage.end(),
+                                     objtmp );
+            if (ngiter != garbage.end()) {
+                // still in the garbage deque
+                garbage.erase(ngiter);
             }
             // Check if labeled already
-            auto iter = labeled.find(otmp);
+            auto iter = labeled.find(objtmp);
             if (iter == labeled.end()) {
                 // Not found => not labeled
 
-                labeled.insert(otmp);
-                // Go through all the edges out of otmp
+                labeled.insert(objtmp);
+                // Go through all the edges out of objtmp
                 // -- Visit all edges
-                for ( auto ptr = otmp->getFields().begin();
-                      ptr != otmp->getFields().end();
+                for ( auto ptr = objtmp->getFields().begin();
+                      ptr != objtmp->getFields().end();
                       ptr++ ) {
+                    cerr << "-";
                     Edge *edge = ptr->second;
-                    // TODO: What to do here now there's no edgestate? TODO
                     if (edge) {
                         edge->setEndTime( tstamp_max );
                         Object *mytgt = edge->getTarget();
@@ -308,6 +314,7 @@ void apply_merlin( std::deque< Object * > &new_garbage )
             }
         }
     }
+    cerr << endl;
     // Until the vector is empty
 }
 
@@ -369,14 +376,13 @@ unsigned int read_trace_file_part1( FILE *f, // source trace file
                     object_id = tokenizer.getInt(2);
                     // TODO: method = ClassInfo::TheMethods[method_id];
                     thread_id = tokenizer.getInt(3);
+                    Exec.IncUpdateTime();
+                    VTime_t current_time = Exec.NowUp();
                     auto recptr = new MethodRecord( method_id,
                                                     object_id,
-                                                    thread_id );
+                                                    thread_id,
+                                                    current_time );
                     trace.push_back(recptr);
-                    Exec.IncUpdateTime();
-                    // If object Id isn't available via an allocation event,
-                    // then it's a stack object.
-                    VTime_t current_time = Exec.NowUp();
                     thread = Exec.getThread(thread_id);
                     if (object_id > 0) {
                         obj = Heap.getObject(object_id);
@@ -411,7 +417,8 @@ unsigned int read_trace_file_part1( FILE *f, // source trace file
                     method_id = tokenizer.getInt(1);
                     // TODO: method = ClassInfo::TheMethods[method_id];
                     thread_id = tokenizer.getInt(2);
-                    auto recptr = new ExitRecord( method_id, thread_id );
+                    VTime_t current_time = Exec.NowUp();
+                    auto recptr = new ExitRecord( method_id, thread_id, current_time );
                     trace.push_back(recptr);
                     if (object_id > 0) {
                         obj = Heap.getObject(object_id);
@@ -432,12 +439,14 @@ unsigned int read_trace_file_part1( FILE *f, // source trace file
                     SiteId_t site_id = tokenizer.getInt(4);
                     unsigned int length = tokenizer.getInt(5);
                     thread_id = tokenizer.getInt(6);
+                    VTime_t current_time = Exec.NowUp();
                     auto recptr = new AllocRecord( object_id,
                                                    site_id,
                                                    thread_id,
                                                    type_id,
                                                    length,
-                                                   size );
+                                                   size,
+                                                   current_time );
                     trace.push_back(recptr);
                     // Add to heap
                     // TODO: AllocSites
@@ -456,7 +465,6 @@ unsigned int read_trace_file_part1( FILE *f, // source trace file
                             assert(false);
                         } // if (thread) ... else
 #endif // TODO ALLOCSITE
-                    VTime_t current_time = Exec.NowUp();
                     if (object_id > 0) {
                         obj = Heap.allocate( object_id,
                                              size,
@@ -488,15 +496,16 @@ unsigned int read_trace_file_part1( FILE *f, // source trace file
                     field_id = tokenizer.getInt(2);
                     object_id = tokenizer.getInt(3);
                     ThreadId_t thread_id = tokenizer.getInt(4);
+                    Exec.IncUpdateTime();
+                    VTime_t current_time = Exec.NowUp();
                     auto recptr = new UpdateRecord( target_id,
                                                     field_id,
                                                     object_id,
-                                                    thread_id );
+                                                    thread_id,
+                                                    current_time );
                     trace.push_back(recptr);
-                    Exec.IncUpdateTime();
                     // ---------------------------------------------------------------------------
                     // Set the Merlin timestamps:
-                    VTime_t current_time = Exec.NowUp();
                     obj = Heap.getObject(object_id);
                     if (obj == NULL) {
                         auto iter = no_alloc_map.find(object_id);
@@ -548,43 +557,33 @@ unsigned int read_trace_file_part1( FILE *f, // source trace file
                             }
                         }
                         assert(target != NULL);
-                    }
-                    obj->setLastTimestamp( current_time );
-                    if (target && target_id > 0) {
                         target->setLastTimestamp( current_time );
                     }
-                    if (object_id > 0) {
-                        // cerr << "DBG: obj[ " << obj << " ] obj_id[ " << object_id << " ] target_id[ " << target_id << " ] field_id[ " << field_id << " ]" << endl;
-                        Edge *old_target_edge;
-                        Object *old_target;
-                        ObjectId_t old_target_id = 0;
-                        Edge *new_edge;
+                    obj->setLastTimestamp( current_time );
 
-                        old_target_edge = obj->getEdge(field_id);
-                        if (old_target_edge) {
-                            old_target = old_target_edge->getTarget();
-                        }
-                        if (old_target) {
-                            old_target_id = old_target->getId();
-                            // TODO [ START ]
-                            // if (old_target_id == target_id) {
-                            //     // It sometimes happens that the newtarget is the same as
-                            //     // the old target. So we won't create any more new edges.
-                            //     // DEBUG: cout << "UPDATE same new == old: " << target << endl;
-                            // } else
-                            if (old_target_id != target_id) {
-                                if (target && target_id > 0) {
-                                    Edge *new_edge = Heap.make_edge( obj,
-                                                                     field_id,
-                                                                     target,
-                                                                     Exec.NowUp() );
-                                    obj->updateField( new_edge,
-                                                      field_id );
-                                 }
-                             }
-                        }
+                    Edge *old_target_edge;
+                    Object *old_target;
+                    ObjectId_t old_target_id = 0;
+                    Edge *new_edge;
+
+                    old_target_edge = obj->getEdge(field_id);
+                    if (old_target_edge) {
+                        old_target = old_target_edge->getTarget();
+                        delete old_target_edge;
                     }
-                    // TODO [ END ]
+                    if (old_target) {
+                        old_target_id = old_target->getId();
+                        if (old_target_id != target_id) {
+                            if (target && target_id > 0) {
+                                Edge *new_edge = Heap.make_edge( obj,
+                                                                 field_id,
+                                                                 target,
+                                                                 Exec.NowUp() );
+                                obj->updateField( new_edge,
+                                                  field_id );
+                             }
+                         }
+                    }
                 }
                 break;
 
@@ -600,17 +599,17 @@ unsigned int read_trace_file_part1( FILE *f, // source trace file
                             cerr << tokenizer.getInt(i);
                         }
                         cerr << endl;
-                        // assert(tokenizer.numTokens() == 4);
                     }
                     object_id = tokenizer.getInt(1);
                     TypeId_t type_id = tokenizer.getInt(2);
                     VTime_t timestamp = tokenizer.getInt(3);
+                    VTime_t current_time = Exec.NowUp();
                     auto recptr = new WitnessRecord( object_id,
                                                      type_id,
-                                                     timestamp );
+                                                     timestamp,
+                                                     current_time );
                     trace.push_back(recptr);
                     // Set the Merlin timestamps:
-                    VTime_t current_time = Exec.NowUp();
                     obj = Heap.getObject(object_id);
                     assert(obj != NULL);
                     obj->setLastTimestamp( current_time );
@@ -623,7 +622,6 @@ unsigned int read_trace_file_part1( FILE *f, // source trace file
         } // switch (tokenizer.getChar(0))
     } // while (!tokenizer.isDone())
 
-    // TODO: What should return value be?
     return total_objects;
 }
 
@@ -1192,25 +1190,10 @@ int main(int argc, char* argv[])
 
 void sim_main(int argc, char* argv[])
 {
-    cout << "#     git version: " <<  build_git_sha << endl;
-    cout << "#     build date : " <<  build_git_time << endl;
     cout << "---------------[ START ]-----------------------------------------------------------" << endl;
     //--------------------------------------------------------------------------------
     // Setup filenames for output files:
     string basename(argv[5]);
-    string objectinfo_filename( basename + "-OBJECTINFO.txt" );
-    string edgeinfo_filename( basename + "-EDGEINFO.txt" );
-    string summary_filename( basename + "-SUMMARY.csv" );
-    string dsite_filename( basename + "-DSITES.csv" );
-    string dgroups_filename( basename + "-DGROUPS.csv" );
-    string dgroups_by_type_filename( basename + "-DGROUPS-BY-TYPE.csv" );
-    string reference_summary_filename( basename + "-REF-SUMMARY.csv" );
-    string ref_reverse_summary_filename( basename + "-REF-REVERSE-SUMMARY.csv" );
-    string stability_summary_filename( basename + "-STABILITY-SUMMARY.csv" );
-
-    // TODO string cycle_filename( basename + "-CYCLES.csv" );
-    // TODO: UNUSED string typeinfo_filename( basename + "-TYPEINFO.txt" );
-    // TODO: UNUSED string context_death_count_filename( basename + "-CONTEXT-DCOUNT.csv" );
     //--------------------------------------------------------------------------------
 
     // TODO: This sets the 'main' class. But what was exactly the main  class?
@@ -1242,77 +1225,15 @@ void sim_main(int argc, char* argv[])
 
     cout << "Start trace..." << endl;
     FILE *f = fdopen(STDIN_FILENO, "r");
-    ofstream edge_info_file(edgeinfo_filename);
-    edge_info_file << "---------------[ EDGE INFO ]----------------------------------------------------" << endl;
     std::deque< Record * > trace; // IN memory trace deque
     unsigned int total_objects = read_trace_file_part1(f, trace);
-    exit(100);
-    unsigned int final_time = Exec.NowUp() + 1;
-    unsigned int final_time_alloc = Heap.getAllocTime();
-    cout << "Done at update time: " << Exec.NowUp() << endl;
-    cout << "Total objects: " << total_objects << endl;
-    cout << "Heap.size:     " << Heap.size() << endl;
-    // TODO: Why is this commented out? 2018-11-10
-    // assert( total_objects == Heap.size() );
-
-    // End of program processing.
-    // TODO: Document what happens here.
-    Heap.end_of_program( final_time, edge_info_file );
-
-    ofstream summary_file(summary_filename);
-    summary_file << "---------------[ SUMMARY INFO ]----------------------------------------------------" << endl;
-    summary_file << "number_of_objects," << Heap.size() << endl
-                 << "died_by_stack," << Heap.getTotalDiedByStack2() << endl
-                 << "died_by_heap," << Heap.getTotalDiedByHeap2() << endl
-                 << "died_by_global," << Heap.getTotalDiedByGlobal() << endl
-                 << "died_at_end," << Heap.getTotalDiedAtEnd() << endl
-                 << "last_update_null," << Heap.getTotalLastUpdateNull() << endl
-                 << "last_update_null_heap," << Heap.getTotalLastUpdateNullHeap() << endl
-                 << "last_update_null_stack," << Heap.getTotalLastUpdateNullStack() << endl
-                 << "last_update_null_size," << Heap.getSizeLastUpdateNull() << endl
-                 << "last_update_null_heap_size," << Heap.getSizeLastUpdateNullHeap() << endl
-                 << "last_update_null_stack_size," << Heap.getSizeLastUpdateNullStack() << endl
-                 << "died_by_stack_only," << Heap.getDiedByStackOnly() << endl
-                 << "died_by_stack_after_heap," << Heap.getDiedByStackAfterHeap() << endl
-                 << "died_by_stack_only_size," << Heap.getSizeDiedByStackOnly() << endl
-                 << "died_by_stack_after_heap_size," << Heap.getSizeDiedByStackAfterHeap() << endl
-                 << "no_death_sites," << Heap.getNumberNoDeathSites() << endl
-                 << "size_died_by_stack," << Heap.getSizeDiedByStack() << endl
-                 << "size_died_by_heap," << Heap.getSizeDiedByHeap() << endl
-                 << "size_died_at_end," << Heap.getSizeDiedAtEnd() << endl
-                 << "vm_RC_zero," << Heap.getVMObjectsRefCountZero() << endl
-                 << "vm_RC_positive," << Heap.getVMObjectsRefCountPositive() << endl
-                 << "max_live_size," << Heap.maxLiveSize() << endl
-                 << "main_func_uptime," << Exec.get_main_func_uptime() << endl
-                 << "main_func_alloctime," << Exec.get_main_func_alloctime() << endl
-                 << "final_time," << final_time << endl
-                 << "final_time_alloc," << final_time_alloc << endl;
-    summary_file << "---------------[ SUMMARY INFO END ]------------------------------------------------" << endl;
-    summary_file.close();
-    //---------------------------------------------------------------------
-    ofstream dsite_file(dsite_filename);
-    dsite_file << "---------------[ DEATH SITES INFO ]------------------------------------------------" << endl;
-    for ( DeathSitesMap::iterator it = Heap.begin_dsites();
-          it != Heap.end_dsites();
-          ++it ) {
-        Method *meth = it->first;
-        set<string> *types = it->second;
-        if (meth && types) {
-            dsite_file << meth->getName() << "," << types->size();
-            for ( set<string>::iterator sit = types->begin();
-                  sit != types->end();
-                  ++sit ) {
-                dsite_file << "," << *sit;
-            }
-            dsite_file << endl;
-        }
-    }
-    dsite_file << "---------------[ DEATH SITES INFO END ]--------------------------------------------" << endl;
-    dsite_file.close();
-    dsite_file << "---------------[ DONE ]------------------------------------------------------------" << endl;
+    // Do the Merlin algorithm.
+    apply_merlin( trace );
+    // TODO:
     cout << "---------------[ DONE ]------------------------------------------------------------" << endl;
     cout << "#     git version: " <<  build_git_sha << endl;
     cout << "#     build date : " <<  build_git_time << endl;
+    exit(0);
 }
 
 // Just read in the class file and output it.

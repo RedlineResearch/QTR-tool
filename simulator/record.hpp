@@ -15,16 +15,30 @@ using namespace std;
 class Record
 {
     private:
-        char m_recordType;
+        char m_record_type;
+        VTime_t m_ET_timestamp;
 
     public:
-        Record() {}
+        Record(char record_type, VTime_t et_timestamp)
+            : m_record_type(record_type)
+            , m_ET_timestamp(et_timestamp)
+        {
+        }
 
         inline char getRecordType() const
         {
-            return this->m_recordType;
+            return this->m_record_type;
         }
 
+        inline void set_ET_timestamp(VTime_t new_ts)
+        {
+            this->m_ET_timestamp = new_ts;
+        }
+
+        inline VTime_t get_ET_timestamp()
+        {
+            return this->m_ET_timestamp;
+        }
 };
 
 // Derived record classes
@@ -45,13 +59,15 @@ class AllocRecord : public Record
                      ThreadId_t threadId,
                      TypeId_t typeId,
                      unsigned int length,
-                     unsigned int size )
+                     unsigned int size,
+                     VTime_t et_timestamp )
             : m_objectId(objectId)
             , m_siteId(siteId)
             , m_threadId(threadId)
             , m_typeId(typeId)
             , m_length(length)
             , m_size(size)
+            , Record('A', et_timestamp)
         {
         }
 
@@ -61,7 +77,6 @@ class AllocRecord : public Record
         TypeId_t getTypeId() { return this->m_typeId; }
         unsigned int getLength() { return this->m_length; }
         unsigned int getSize() { return this->m_size; }
-
 };
 
 class ExitRecord : public Record
@@ -72,9 +87,11 @@ class ExitRecord : public Record
 
     public:
         ExitRecord( MethodId_t methId,
-                    ThreadId_t threadId )
+                    ThreadId_t threadId,
+                    VTime_t et_timestamp )
             : m_methId(methId)
             , m_threadId(threadId)
+            , Record('E', et_timestamp)
         {
         }
 
@@ -92,10 +109,12 @@ class MethodRecord : public Record
     public:
         MethodRecord( MethodId_t methId,
                       ObjectId_t objectId,
-                      ThreadId_t threadId )
+                      ThreadId_t threadId,
+                      VTime_t et_timestamp )
             : m_methId(methId)
             , m_objectId(objectId)
             , m_threadId(threadId)
+            , Record('M', et_timestamp)
         {
         }
 
@@ -119,11 +138,13 @@ class UpdateRecord : public Record
         UpdateRecord( ObjectId_t tgtObjectHash,
                       FieldId_t fieldId,
                       ObjectId_t srcObjectHash,
-                      VTime_t timestamp )
+                      VTime_t timestamp,
+                      VTime_t et_timestamp )
             : m_tgtObjectHash(tgtObjectHash)
             , m_fieldId(fieldId)
             , m_srcObjectHash(srcObjectHash)
             , m_timestamp(timestamp)
+            , Record('U', et_timestamp)
         {
         }
 
@@ -145,10 +166,12 @@ class WitnessRecord : public Record
     public:
         WitnessRecord( ObjectId_t objectId,
                        TypeId_t typeId,
-                       VTime_t timestamp )
+                       VTime_t timestamp,
+                       VTime_t et_timestamp )
             : m_objectId(objectId)
             , m_typeId(typeId)
             , m_timestamp(timestamp)
+            , Record('U', et_timestamp)
         {
         }
 
