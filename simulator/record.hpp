@@ -180,4 +180,24 @@ class WitnessRecord : public Record
         VTime_t getTimestamp() { return this->m_timestamp; }
 };
 
+class DeathRecord : public Record
+{
+    private:
+        ObjectId_t m_objectId;
+        TypeId_t m_typeId;
+
+    public:
+        DeathRecord( ObjectId_t objectId,
+                     TypeId_t typeId,
+                     VTime_t et_timestamp )
+            : m_objectId(objectId)
+            , m_typeId(typeId)
+            , Record('D', et_timestamp)
+        {
+        }
+
+        ObjectId_t getObjectId() { return this->m_objectId; }
+        TypeId_t getTypeId() { return this->m_typeId; }
+};
+
 #endif // RECORD_HPP

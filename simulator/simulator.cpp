@@ -10,16 +10,17 @@ using namespace std;
 #include "tokenizer.hpp"
 #include "version.hpp"
 
-#include <iostream>
-#include <fstream>
-#include <sstream>
 #include <cstdio>
+#include <deque>
+#include <fstream>
+#include <iostream>
+#include <limits>
 #include <map>
 #include <set>
-#include <vector>
-#include <deque>
+#include <sstream>
 #include <string>
 #include <utility>
+#include <vector>
 
 
 
@@ -131,107 +132,75 @@ EdgeSummary_t edge_summary;
 Object2EdgeSrcMap_t obj2ref_map;
 
 
-// ----------------------------------------------------------------------
-void sanity_check()
+bool verify_trace( std::deque< Record * > &trace )
 {
-/*
-   if (Now > obj->getDeathTime() && obj->getRefCount() != 0) {
-   nonzero_ref++;
-   printf(" Non-zero-ref-dead %X of type %s\n", obj->getId(), obj->getType().c_str());
-   }
-   */
-}
-
-bool member( Object* obj, const ObjectSet& theset )
-{
-    return theset.find(obj) != theset.end();
-}
-
-unsigned int closure( ObjectSet& roots,
-                      ObjectSet& premarked,
-                      ObjectSet& result )
-{
-    unsigned int mark_work = 0;
-
-    vector<Object*> worklist;
-
-    // -- Initialize the worklist with only unmarked roots
-    for ( ObjectSet::iterator i = roots.begin();
-          i != roots.end();
-          i++ ) {
-        Object* root = *i;
-        if ( !member(root, premarked) ) {
-            worklist.push_back(root);
+    VTime_t rec_timestamp = 0;
+    VTime_t prev_timestamp = 0;
+    unsigned int recnum = 0;
+    for ( auto iter = trace.begin();
+          iter != trace.end();
+          iter++ ) {
+        prev_timestamp = rec_timestamp;
+        rec_timestamp = (*iter)->get_ET_timestamp();
+        cerr << "prev: " << prev_timestamp << "    rec: " << rec_timestamp << endl;
+        if (rec_timestamp < prev_timestamp) {
+            cerr << "ERROR at record number: " << recnum << endl;
+            // TODO
+            assert(false);
         }
+        recnum++;
     }
+}
 
-    // -- Do DFS until the worklist is empty
-    while (worklist.size() > 0) {
-        Object* obj = worklist.back();
-        worklist.pop_back();
-        result.insert(obj);
-        mark_work++;
-
-        const EdgeMap& fields = obj->getFields();
-        for ( EdgeMap::const_iterator p = fields.begin();
-              p != fields.end();
-              p++ ) {
-            Edge* edge = p->second;
-            Object* target = edge->getTarget();
-            if (target) {
-                // if (target->isLive(Exec.NowUp())) {
-                if ( !member(target, premarked) &&
-                     !member(target, result) ) {
-                    worklist.push_back(target);
-                }
-                // } else {
-                // cout << "WEIRD: Found a dead object " << target->info() << " from " << obj->info() << endl;
-                // }
+// Uses global:
+//     * Heap
+unsigned int insert_death_records_into_trace( std::deque< Record * > &trace )
+{
+    auto reciter = trace.begin(); 
+    VTime_t rec_timestamp = 0;
+    VTime_t prev_timestamp = 0;
+    for ( auto iter = Heap.begin();
+          iter != Heap.end();
+          iter++ ) {
+        ObjectId_t object_id = iter->first;
+        Object *obj = iter->second;
+        VTime_t ettime = obj->getLastTimestamp();
+        while (reciter != trace.end()) {
+            prev_timestamp = rec_timestamp;
+            rec_timestamp = (*reciter)->get_ET_timestamp();
+            cerr << "prev: " << prev_timestamp << "    rec: " << rec_timestamp << endl;
+            if (rec_timestamp > ettime) {
+                break;
             }
+            reciter++;
         }
-    }
+        DeathRecord *drec = new DeathRecord( object_id,
+                                             0, // TODO: type_id
+                                             prev_timestamp );
 
-    return mark_work;
+        trace.insert(reciter, drec);
+    }
 }
 
-unsigned int count_live( ObjectSet & objects, unsigned int at_time )
+bool verify_garbage_order( std::deque< Object * > &garbage )
 {
-    int count = 0;
-    // -- How many are actually live
-    for ( ObjectSet::iterator p = objects.begin();
-          p != objects.end();
-          p++ ) {
-        Object* obj = *p;
-        if (obj->isLive(at_time)) {
-            count++;
+    VTime_t rec_timestamp = std::numeric_limits<unsigned int>::min();
+    VTime_t prev_timestamp = rec_timestamp;
+    unsigned int recnum = 0;
+    for ( auto iter = garbage.begin();
+          iter != garbage.end();
+          iter++ ) {
+        prev_timestamp = rec_timestamp;
+        rec_timestamp = (*iter)->getLastTimestamp();
+        cerr << "prev: " << prev_timestamp << "    rec: " << rec_timestamp << endl;
+        if (rec_timestamp < prev_timestamp) {
+            cerr << "ERROR at record number: " << recnum << endl;
+            // TODO
+            // assert(false);
         }
+        recnum++;
     }
-
-    return count;
-}
-
-void update_reference_summaries( Object *src,
-                                 FieldId_t fieldId,
-                                 Object *tgt )
-{
-    // edge_summary : EdgeSummary_t is a global
-    // obj2ref_map : Object2EdgeSrcMap_t is a global
-    EdgeSrc_t ref = std::make_pair( src, fieldId );
-    // The reference 'ref' points to the new target
-    auto iter = edge_summary.find(ref);
-    if (iter == edge_summary.end()) {
-        // Not found. Create a new vector of Object pointers
-        edge_summary[ref] = std::vector< Object * >();
-    }
-    edge_summary[ref].push_back(tgt);
-    // Do the reverse mapping ONLY if tgt is not NULL
-    if (tgt) {
-        auto rev = obj2ref_map.find(tgt);
-        if (rev == obj2ref_map.end()) {
-            obj2ref_map[tgt] = std::move(std::vector< EdgeSrc_t >());
-        }
-        obj2ref_map[tgt].push_back(ref);
-    }
+    return true;
 }
 
 // ----------------------------------------------------------------------
@@ -254,6 +223,7 @@ void apply_merlin( std::deque< Record * > &trace )
                []( Object *left, Object *right ) {
                    return (left->getLastTimestamp() > right->getLastTimestamp());
                } );
+    assert(verify_garbage_order(garbage));
     // Do a standard DFS.
     while (garbage.size() > 0) {
         // Start with the latest for the DFS.
@@ -316,6 +286,7 @@ void apply_merlin( std::deque< Record * > &trace )
     }
     cerr << endl;
     // Until the vector is empty
+    insert_death_records_into_trace(trace);
 }
 
 
@@ -626,249 +597,9 @@ unsigned int read_trace_file_part1( FILE *f, // source trace file
 }
 
 
-unsigned int sumSize( std::set< Object * >& s )
-{
-    unsigned int total = 0;
-    for ( auto it = s.begin();
-          it != s.end();
-          ++it ) {
-        total += (*it)->getSize();
-    }
-    return total;
-}
-
-void update_summaries( Object *key,
-                       std::set< Object * >& tgtSet,
-                       GroupSum_t& pgs,
-                       TypeTotalSum_t& tts,
-                       SizeSum_t& ssum )
-{
-    string mytype = key->getType();
-    unsigned gsize = tgtSet.size();
-    // per group summary
-    auto git = pgs.find(mytype);
-    if (git == pgs.end()) {
-        pgs[mytype] = std::move(std::vector< Summary * >());
-    }
-    unsigned int total_size = sumSize( tgtSet );
-    Summary *s = new Summary( gsize, total_size, 1 );
-    // -- third parameter is number of groups which is simply 1 here.
-    pgs[mytype].push_back(s);
-    // type total summary
-    auto titer = tts.find(mytype);
-    if (titer == tts.end()) {
-        Summary *t = new Summary( gsize, total_size, 1 );
-        tts[mytype] = t;
-    } else {
-        tts[mytype]->size += total_size;
-        tts[mytype]->num_objects += tgtSet.size();
-        tts[mytype]->num_groups++;
-    }
-    // size summary
-    auto sit = ssum.find(gsize);
-    if (sit == ssum.end()) {
-        Summary *u = new Summary( gsize, total_size, 1 );
-        ssum[gsize] = u;
-    } else {
-        ssum[gsize]->size += total_size;
-        ssum[gsize]->num_groups++;
-        // Doesn't make sense to make use of the num_objects field.
-    }
-}
-
-void update_summary_from_keyset( KeySet_t &keyset,
-                                 GroupSum_t &per_group_summary,
-                                 TypeTotalSum_t &type_total_summary,
-                                 SizeSum_t &size_summary )
-{
-    for ( auto it = keyset.begin();
-          it != keyset.end();
-          ++it ) {
-        Object *key = it->first;
-        std::set< Object * > *tgtSet = it->second;
-        // TODO TODO 7 March 2016 - Put into CSV file.
-        cout << "[ " << key->getType() << " ]: " << tgtSet->size() << endl;
-        update_summaries( key,
-                          *tgtSet,
-                          per_group_summary,
-                          type_total_summary,
-                          size_summary );
-    }
-}
-
-
-void summarize_reference_stability( EdgeSrc2Type_t &stability,
-                                    EdgeSummary_t &my_refsum,
-                                    Object2EdgeSrcMap_t &my_obj2ref )
-{
-    // Check each object to see if it's stable...(see ObjectRefType)
-    for ( auto it = my_obj2ref.begin();
-          it != my_obj2ref.end();
-          ++it ) {
-        // my_obj2ref : Object2EdgeSrcMap_t is a reverse map of sorts.
-        //      For each object in the map, it maps to a vector of references
-        //          that point/refer to that object
-        // This Object is the target
-        Object *obj = it->first;
-        // This is the vector of references
-        std::vector< EdgeSrc_t > reflist = it->second;
-        // Convert to a set in order to remove possible duplicates
-        std::set< EdgeSrc_t > refset( reflist.begin(), reflist.end() );
-        if (!obj) {
-            continue;
-        }
-        // obj is not NULL.
-        // if ( (refset.size() <= 1) && (obj->wasLastUpdateNull() != true) ) {
-        if (refset.size() <= 1) {
-            obj->setRefTargetType( ObjectRefType::SINGLY_OWNED );
-        } else {
-            obj->setRefTargetType( ObjectRefType::MULTI_OWNED );
-        }
-    }
-    // Check each edge source to see if its stable...(see EdgeSrcType)
-    for ( auto it = my_refsum.begin();
-          it != my_refsum.end();
-          ++it ) {
-        // my_refsum : EdgeSummary_t is a map from reference to a vector of
-        //      objects that the reference pointed to. A reference is a pair
-        //      of (Object pointer, fieldId).
-        // Get the reference and deconstruct into parts.
-        EdgeSrc_t ref = it->first;
-        Object *obj = std::get<0>(ref); 
-        FieldId_t fieldId = std::get<1>(ref); 
-        // Get the vector/list of object pointers
-        std::vector< Object * > objlist = it->second;
-        // We need to make sure that all elements are not duplicates.
-        std::set< Object * > objset( objlist.begin(), objlist.end() );
-        // Is NULL in there?
-        auto findit = objset.find(NULL);
-        bool nullflag = (findit != objset.end());
-        if (nullflag) {
-            // If NULL is in the list, remove NULL.
-            objset.erase(findit);
-        }
-        unsigned int size = objset.size();
-        if (size == 1) {
-            // The reference only points to one object!
-            // Convert object set back into a vector.
-            std::vector< Object * > tmplist( objset.begin(), objset.end() );
-            assert( tmplist.size() == 1 );
-            Object *tgt = tmplist[0];
-            // Check for source and target death times
-            // The checks for NULL are probably NOT necessary.
-            assert(obj != NULL);
-            VTime_t src_dtime = obj->getDeathTime();
-            assert(tgt != NULL);
-            VTime_t tgt_dtime = tgt->getDeathTime();
-            if (tgt_dtime != src_dtime) {
-                // UNSTABLE if target and source deathtimes are different
-                // NOTE: This used to be UNSTABLE if target died before source.
-                //       We are using a more conservative definition of stability here.
-                stability[ref] = EdgeSrcType::UNSTABLE;
-            } else {
-                stability[ref] = (tgt->wasLastUpdateNull() ? EdgeSrcType::UNSTABLE : EdgeSrcType::STABLE);
-            }
-        } else {
-            // objlist is of length > 1
-            // This may still be stable if all objects in
-            // the list are STABLE. Assume they're all stable unless
-            // otherwise proven.
-            stability[ref] = EdgeSrcType::SERIAL_STABLE; // aka serial monogamist
-            for ( auto objit = objset.begin();
-                  objit != objset.end();
-                  ++objit ) {
-                ObjectRefType objtype = (*objit)->getRefTargetType();
-                if (objtype == ObjectRefType::MULTI_OWNED) {
-                    stability[ref] = EdgeSrcType::UNSTABLE;
-                    break;
-                } else if (objtype == ObjectRefType::UNKNOWN) {
-                    // Not sure if this is even possible.
-                    // TODO: Make this an assertion?
-                    // Let's assume that UNKNOWNs make it UNSTABLE.
-                    stability[ref] = EdgeSrcType::UNSTABLE;
-                    break;
-                } // else continue
-            }
-        }
-    }
-}
-
 // ---------------------------------------------------------------------------
 // ------[ OUTPUT FUNCTIONS ]-------------------------------------------------
 // ---------------------------------------------------------------------------
-void output_size_summary( string &dgroups_filename,
-                          SizeSum_t &size_summary )
-{
-    ofstream dgroups_file(dgroups_filename);
-    dgroups_file << "\"num_objects\",\"size_bytes\",\"num_groups\"" << endl;
-    for ( auto it = size_summary.begin();
-          it != size_summary.end();
-          ++it ) {
-        unsigned int gsize = it->first;
-        Summary *s = it->second;
-        dgroups_file << s->num_objects << ","
-            << s->size << ","
-            << s->num_groups << endl;
-    }
-    dgroups_file.close();
-}
-
-void output_type_summary( string &dgroups_by_type_filename,
-                          TypeTotalSum_t &type_total_summary )
-{
-    ofstream dgroups_by_type_file(dgroups_by_type_filename);
-    for ( TypeTotalSum_t::iterator it = type_total_summary.begin();
-          it != type_total_summary.end();
-          ++it ) {
-        string myType = it->first;
-        Summary *s = it->second;
-        dgroups_by_type_file << myType << "," 
-            << s->size << ","
-            << s->num_groups  << ","
-            << s->num_objects << endl;
-    }
-    dgroups_by_type_file.close();
-}
-
-// All sorts of hacky debug function. Very brittle.
-void debug_type_algo( Object *object,
-                      string& dgroup_kind )
-{
-    KeyType ktype = object->getKeyType();
-    unsigned int objId = object->getId();
-    if (ktype == KeyType::UNKNOWN_KEYTYPE) {
-        cout << "ERROR: objId[ " << objId << " ] : "
-             << "Keytype not set but algo determines [ " << dgroup_kind << " ]" << endl;
-        return;
-    }
-    if (dgroup_kind == "CYCLE") {
-        if (ktype != KeyType::CYCLE) {
-            goto fail;
-        }
-    } else if (dgroup_kind == "CYCKEY") {
-        if (ktype != KeyType::CYCLEKEY) {
-            goto fail;
-        }
-    } else if (dgroup_kind == "DAG") {
-        if (ktype != KeyType::DAG) {
-            goto fail;
-        }
-    } else if (dgroup_kind == "DAGKEY") {
-        if (ktype != KeyType::DAGKEY) {
-            goto fail;
-        }
-    } else {
-        cout << "ERROR: objId[ " << objId << " ] : "
-             << "Unknown key type: " << dgroup_kind << endl;
-    }
-    return;
-fail:
-    cout << "ERROR: objId[ " << objId << " ] : "
-         << "Keytype [ " << keytype2str(ktype) << " ]"
-         << " doesn't match [ " << dgroup_kind << " ]" << endl;
-    return;
-}
-
 
 void output_all_objects2( string &objectinfo_filename,
                           HeapState &myheap,
@@ -986,159 +717,6 @@ void output_all_objects2( string &objectinfo_filename,
     object_info_file.close();
 }
 
-void output_cycles( KeySet_t &keyset,
-                    string &cycle_filename,
-                    std::set<int> &node_set )
-{
-    ofstream cycle_file(cycle_filename);
-    cycle_file << "---------------[ CYCLES ]-------------------------------------------------------" << endl;
-    for ( KeySet_t::iterator it = keyset.begin();
-          it != keyset.end();
-          ++it ) {
-        Object *obj = it->first;
-        set< Object * > *sptr = it->second;
-        unsigned int keyObjId = obj->getId();
-        cycle_file << keyObjId;
-        for ( set<Object *>::iterator tmp = sptr->begin();
-              tmp != sptr->end();
-              ++tmp ) {
-            unsigned int tmpId = (*tmp)->getId();
-            if (tmpId != keyObjId) {
-                cycle_file  << "," << tmpId;
-            }
-            node_set.insert((*tmp)->getId());
-        }
-        cycle_file << endl;
-    }
-    cycle_file << "---------------[ CYCLES END ]---------------------------------------------------" << endl;
-    cycle_file.close();
-}
-
-
-// ----------------------------------------------------------------------
-// Output the map of death context site -> count of obects dying
-void output_context_summary( string &context_death_count_filename,
-                             ExecState &exstate )
-{
-    ofstream cdeathfile(context_death_count_filename);
-    cdeathfile << "\"method1\",\"method2\",\"total_count\",\"death_count\""
-               << endl;
-    for ( auto it = exstate.begin_execPairCountMap();
-          it != exstate.end_execPairCountMap();
-          ++it ) {
-        ContextPair cpair = it->first;
-        unsigned int total = it->second;
-        unsigned int dcount;
-        auto iter = exstate.m_deathPairCountMap.find(cpair);
-        dcount = ( (iter == exstate.m_deathPairCountMap.end())
-                   ? 0
-                   : exstate.m_deathPairCountMap[cpair] );
-        Method *first = std::get<0>(cpair); 
-        Method *second = std::get<1>(cpair); 
-        string meth1_name = (first ? first->getName() : "NONAME");
-        string meth2_name = (second ? second->getName() : "NONAME");
-        cdeathfile << meth1_name << "," 
-                   << meth2_name << "," 
-                   << total << endl;
-    }
-    cdeathfile.close();
-}
-
-
-void output_reference_summary( string &reference_summary_filename,
-                               string &ref_reverse_summary_filename,
-                               string &stability_summary_filename,
-                               EdgeSummary_t &my_refsum,
-                               Object2EdgeSrcMap_t &my_obj2ref,
-                               EdgeSrc2Type_t &stability )
-{
-    ofstream edge_summary_file(reference_summary_filename);
-    ofstream reverse_summary_file(ref_reverse_summary_filename);
-    ofstream stability_summary_file(stability_summary_filename);
-    //
-    // Summarizes the objects pointed at by the reference (object Id + field Id)
-    // This is the REF-SUMMARY output file. In garbology, the ReferenceReader
-    // is responsible for reading it.
-    for ( auto it = my_refsum.begin();
-          it != my_refsum.end();
-          ++it ) {
-        // Key is an edge source (which we used to call 'ref')
-        EdgeSrc_t ref = it->first;
-        Object *obj = std::get<0>(ref); 
-        FieldId_t fieldId = std::get<1>(ref); 
-        // Value is a vector of Object pointers
-        std::vector< Object * > objlist = it->second;
-        ObjectId_t objId = (obj ? obj->getId() : 0);
-        edge_summary_file << objId << ","      // 1 - object Id
-                          << fieldId << ",";   // 2 - field Id
-        unsigned int actual_size = 0;
-        for ( auto vecit = objlist.begin();
-              vecit != objlist.end();
-              ++vecit ) {
-            if (*vecit) {
-                ++actual_size;
-            }
-        }
-        edge_summary_file << actual_size; // 3 - number of objects pointed at
-        if (actual_size > 0) {
-            for ( auto vecit = objlist.begin();
-                  vecit != objlist.end();
-                  ++vecit ) {
-                if (*vecit) {
-                    edge_summary_file << "," << (*vecit)->getId(); // 4+ - objects pointed at
-                }
-            }
-        }
-        edge_summary_file << endl;
-    }
-    //
-    // Summarizes the reverse, which is for each object (using its Id), give
-    // the references that point to it.
-    // This is the REF-REVERSE-SUMMARY output file. In garbology, the ReverseRefReader
-    // is responsible for reading it.
-    for ( auto it = my_obj2ref.begin();
-          it != my_obj2ref.end();
-          ++it ) {
-        Object *obj = it->first;
-        std::vector< EdgeSrc_t > reflist = it->second;
-        if (!obj) {
-            continue;
-        }
-        // obj is not NULL.
-        ObjectId_t objId = obj->getId();
-        reverse_summary_file << objId << ","     // 1 - object Id
-                             << reflist.size();  // 2 - number of references in lifetime
-        for ( auto vecit = reflist.begin();
-              vecit != reflist.end();
-              ++vecit ) {
-            Object *srcObj = std::get<0>(*vecit); 
-            FieldId_t fieldId = std::get<1>(*vecit); 
-            ObjectId_t srcId = (srcObj ? srcObj->getId() : 0);
-            reverse_summary_file << ",(" << srcId << "," << fieldId << ")"; // 3+ - list of incoming references
-        }
-        reverse_summary_file << endl;
-    }
-    //
-    // Summarize the stability attributes of features.
-    //     output file is   *-STABILITY-SUMMARY.csv
-    for ( auto it = stability.begin();
-          it != stability.end();
-          ++it ) {
-        EdgeSrc_t ref = it->first;
-        EdgeSrcType reftype = it->second;
-        Object *obj = std::get<0>(ref); 
-        FieldId_t fieldId = std::get<1>(ref); 
-        ObjectId_t objId = (obj ? obj->getId() : 0);
-        stability_summary_file << objId << ","            // 1 - object Id
-                               << fieldId << ","          // 2 - field Id
-                               << edgesrctype2shortstr(reftype)    // 3 - reference stability type
-                               << endl;
-    }
-    // Close the files.
-    edge_summary_file.close();
-    reverse_summary_file.close();
-    stability_summary_file.close();
-}
 
 
 void print_usage(string exec_name)
@@ -1227,6 +805,7 @@ void sim_main(int argc, char* argv[])
     FILE *f = fdopen(STDIN_FILENO, "r");
     std::deque< Record * > trace; // IN memory trace deque
     unsigned int total_objects = read_trace_file_part1(f, trace);
+    verify_trace(trace);
     // Do the Merlin algorithm.
     apply_merlin( trace );
     // TODO:
