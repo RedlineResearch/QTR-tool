@@ -1,3 +1,5 @@
+import sys
+
 # Configure the command line parameter for the pytest tests.
 def pytest_addoption(parser):
     parser.addoption( "--java_path",
