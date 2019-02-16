@@ -111,3 +111,22 @@ def test_new_call( capsys,
     out, err = capsys.readouterr()
     sys.stdout.write(out)
     sys.stderr.write(err)
+
+def test_lots_of_allocs( capsys,
+                         java_path,
+                         agent_path,
+                         tmp_path ):
+    # Either check that LotsOfAllocs.class is there.
+    # Or compile it here.
+    # LotsOfAllocs.java is in `java/`
+    used_class_list = [ "FooClass.class", ]
+    with run_java( java_path = java_path,
+                   agent_path = agent_path,
+                   tmp_path = tmp_path,
+                   main_java_class = "LotsOfAllocs",
+                   used_class_list = used_class_list ) as fp:
+        for x in fp:
+            sys.stdout.write(x.decode('utf-8'))
+    out, err = capsys.readouterr()
+    sys.stdout.write(out)
+    sys.stderr.write(err)
