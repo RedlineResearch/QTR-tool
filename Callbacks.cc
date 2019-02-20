@@ -30,10 +30,13 @@ void JNICALL onMethodEntry(jvmtiEnv *jvmti, JNIEnv *jni, jthread th, jmethodID m
         
         try {
             jclass etProxyClass = jni->FindClass("ETProxy");
+            jclass runnableClass = jni->FindClass("ETProxy.ShutdownRunnable");
             jfieldID atMain = jni->GetStaticFieldID(etProxyClass, "atMain", "Z");
             jni->SetStaticBooleanField(etProxyClass, atMain, (jboolean) true);
         } catch (exception &e) {
-            // cerr << e.what() << endl;
+            cerr << "Unable to load ETProxy and related classes." << endl;
+            cerr << e.what() << endl;
+            assert(false);
         }
         
         // reset callbacks

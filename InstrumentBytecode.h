@@ -2,6 +2,7 @@
 #define ET2_INSTRUMENTBYTECODE_H_
 
 #include "ClassTable.h"
+#include "class_list.hpp"
 #include <jvmti.h>
 #include <jni.h>
 #include <jnif.hpp>

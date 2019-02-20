@@ -1,4 +1,5 @@
 #include "InstrumentBytecode.h"
+
 // #include <ClassHierarchy.hpp>
 #include <cassert>
 #include <iostream>
@@ -176,6 +177,10 @@ static void instrumentPutField( ClassFile &cf,
 static void witnessGetField( ClassFile &cf,
                              Method &method,
                              ConstPool::Index &instrMethod );
+static void instrumentMethodInvoke( ClassFile &cf,
+                                    Method &method,
+                                    ConstPool::Index &methodIDIndex,
+                                    ConstPool::Index &instrMethod );
 
 void instrumentClass( jvmtiEnv *jvmti,
                       JNIEnv *currJni,
@@ -252,6 +257,7 @@ void instrumentClass( jvmtiEnv *jvmti,
             instrumentMultiArrayAlloc(cf, method, onAllocMultiArrayMethod);
             instrumentPutField(cf, method, onPutFieldMethod);
             witnessGetField(cf, method, witnessObjectAliveMethod);
+            instrumentMethodInvoke(cf, method, methodIDIndex, onEntryMethod);
         }
     }
 
@@ -425,20 +431,19 @@ static void instrumentObjectAlloc(ClassFile &cf, Method &method, ConstPool::Inde
     InstList &instList = method.instList();
     for (Inst *inst : instList) {
         if (inst->opcode == Opcode::NEW) {
-            // cerr << "object alloc" << endl;
             // Stack: ...
             Inst *ptr = inst->next;
             // Stack: ... | objRef
             instList.addZero(Opcode::dup, ptr);
             // Stack: ... | objRef | objRef
             u4 localVar = (method.codeAttr())->maxLocals;
-            // cerr << "method: " << method.getName() << "; max locals: " << localVar << endl;
+            // DEBUG: cerr << "method: " << method.getName() << "; max locals: " << localVar << endl;
             instList.addVar(Opcode::astore, localVar, ptr);
             // Stack: ... | objRef
             // new local var: objRef
             (method.codeAttr())->maxLocals++;
-            // TODO: ConstPool::Index allocSiteIndex = cf.addInteger(++lastNewSiteID);
-            ConstPool::Index allocSiteIndex = cf.addInteger(inst->_offset);
+            ConstPool::Index allocSiteIndex = cf.addInteger(++lastNewSiteID);
+            // TODO: ConstPool::Index allocSiteIndex = cf.addInteger(inst->_offset);
             ConstPool::Index allocatedClassIndex = inst->type()->classIndex;
             int classID = classTable.mapOrFind(string(cf.getClassName(allocatedClassIndex)));
             ConstPool::Index classIDIndex = cf.addInteger(classID);
@@ -637,5 +642,53 @@ inline static void witnessGetField(ClassFile &cf, Method &method, ConstPool::Ind
 
             instList.addInvoke(Opcode::invokestatic, instrMethod, inst);
         }
+    }
+}
+
+static string to_string(Inst &inst)
+{
+    switch (inst.kind) {
+        case KIND_ZERO: { return "ZERO"; }
+        case KIND_BIPUSH: { return "BIPUSH"; }
+        case KIND_SIPUSH: { return "SIPUSH"; }
+        case KIND_LDC: { return "LDC"; }
+        case KIND_VAR: { return "VAR"; }
+        case KIND_IINC: { return "IINC"; }
+        case KIND_JUMP: { return "JUMP"; }
+        case KIND_TABLESWITCH: { return "TABLESWITCH"; }
+        case KIND_LOOKUPSWITCH: { return "LOOKUPSWITCH"; }
+        case KIND_FIELD: { return "FIELD"; }
+        case KIND_INVOKE: { return "INVOKE"; }
+        case KIND_INVOKEINTERFACE: { return "INVOKEINTERFACE"; }
+        case KIND_INVOKEDYNAMIC: { return "INVOKEDYNAMIC"; }
+        case KIND_TYPE: { return "TYPE"; }
+        case KIND_NEWARRAY: { return "NEWARRAY"; }
+        case KIND_MULTIARRAY: { return "MULTIARRAY"; }
+        case KIND_PARSE4TODO: { return "PARSE4TODO"; }
+        case KIND_RESERVED: { return "RESERVED"; }
+        case KIND_LABEL: { return "LABEL"; }
+        case KIND_FRAME: { return "FRAME"; }
+        default:
+            assert(false);
+    }
+}
+
+inline static void instrumentMethodInvoke( ClassFile &cf,
+                                           Method &method,
+                                           ConstPool::Index &methodIDIndex,
+                                           ConstPool::Index &instrMethod )
+{
+    InstList &instList = method.instList();
+    Inst *ptr = *instList.begin();
+
+    for (Inst *inst : instList) {
+        cout << "     - " << to_string(*inst);
+        if (inst->isInvoke()) {
+            ConstPool::Index invokedMethodIndex = (inst->invoke())->methodRefIndex;
+            string class_name, method_name, methodDesc;
+            cf.getMethodRef(invokedMethodIndex, &class_name, &method_name, &methodDesc);
+            cout << " : " << invokedMethodIndex << " => " << class_name << " # " << method_name;
+        }
+        cout << endl; 
     }
 }

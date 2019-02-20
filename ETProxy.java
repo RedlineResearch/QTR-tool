@@ -1,5 +1,7 @@
+import java.lang.Runtime;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.Arrays;
+import java.lang.Thread;
 import java.io.PrintWriter;
 import java.util.concurrent.locks.ReentrantLock;
 
@@ -33,13 +35,31 @@ public class ETProxy {
     private static ReentrantLock mx = new ReentrantLock();
     private static PrintWriter pw;
 
+    public static class ShutdownRunnable implements Runnable {
+
+        // public int[] eventTypeBuffer = ETProxy.eventTypeBuffer;
+        // public int[] firstBuffer = ETProxy.firstBuffer;
+        // public int[] secondBuffer = ETProxy.secondBuffer;
+        // public int[] thirdBuffer = ETProxy.thirdBuffer;
+        // public int[] fourthBuffer = ETProxy.fourthBuffer;
+        // public int[] fifthBuffer = ETProxy.fifthBuffer;
+        // public AtomicInteger ptr = ETProxy.ptr;
+
+        public void run() {
+            ETProxy.flushBuffer();
+        }
+    };
+    private static Thread shutdownHook = new Thread(new ShutdownRunnable());
+
     static {
         try {
             pw = new PrintWriter("trace");
         } catch (Exception e) {
             System.err.println("FNF");
         }
+
     }
+
 
     // static {
     //     try {
@@ -148,29 +168,22 @@ public class ETProxy {
         mx.lock();
         try {
             while (true) {
-                if (ptr.get() < BUFMAX) {
-                    // wait on ptr to prevent overflow
-                    int currPtr;
-                    synchronized(ptr) {
-                        currPtr = ptr.getAndIncrement();
-                    }
-                    firstBuffer[currPtr] = methodID;
-                    secondBuffer[currPtr] = (receiver == null) ? 0 : System.identityHashCode(receiver);
-                    eventTypeBuffer[currPtr] = 1;
-                    timestampBuffer[currPtr] = timestamp;
-                    threadIDBuffer[currPtr] = System.identityHashCode(Thread.currentThread());
-                    break;
-                } else {
-                    synchronized(ptr) {
-                        if (ptr.get() >= BUFMAX) {
-                            flushBuffer();
-                        }
+                synchronized(ptr) {
+                    if (ptr.get() < BUFMAX) {
+                        // wait on ptr to prevent overflow
+                        int currPtr = ptr.getAndIncrement();
+                        firstBuffer[currPtr] = methodID;
+                        secondBuffer[currPtr] = (receiver == null) ? 0 : System.identityHashCode(receiver);
+                        eventTypeBuffer[currPtr] = 1;
+                        timestampBuffer[currPtr] = timestamp;
+                        threadIDBuffer[currPtr] = System.identityHashCode(Thread.currentThread());
+                        break;
+                    } else {
+                        flushBuffer();
                     }
                 }
             }
             // System.out.println("Method ID: " + methodID);
-
-            
         } finally {
             mx.unlock();
         }
@@ -195,23 +208,17 @@ public class ETProxy {
         mx.lock();
         try {
             while (true) {
-                if (ptr.get() < BUFMAX) {
-                    // wait on ptr to prevent overflow
-                    int currPtr;
-                    synchronized(ptr) {
-                        currPtr = ptr.getAndIncrement();
-                    }
-
-                    firstBuffer[currPtr] = methodID;
-                    eventTypeBuffer[currPtr] = 2;
-                    timestampBuffer[currPtr] = timestamp;
-                    threadIDBuffer[currPtr] = System.identityHashCode(Thread.currentThread());
-                    break;
-                } else {
-                    synchronized(ptr) {
-                        if (ptr.get() >= BUFMAX) {
-                            flushBuffer();
-                        }
+                synchronized(ptr) {
+                    if (ptr.get() < BUFMAX) {
+                        // wait on ptr to prevent overflow
+                        int currPtr = ptr.getAndIncrement();
+                        firstBuffer[currPtr] = methodID;
+                        eventTypeBuffer[currPtr] = 2;
+                        timestampBuffer[currPtr] = timestamp;
+                        threadIDBuffer[currPtr] = System.identityHashCode(Thread.currentThread());
+                        break;
+                    } else {
+                        flushBuffer();
                     }
                 }
             }
@@ -225,7 +232,6 @@ public class ETProxy {
     
     public static void onObjectAlloc(Object allocdObject, int allocdClassID, int allocSiteID)
     {
-
         if (!atMain) {
             return;
         }
@@ -238,35 +244,29 @@ public class ETProxy {
         mx.lock();
         try {
             while (true) {
-                if (ptr.get() < BUFMAX) {
-                    // wait on ptr to prevent overflow
-                    int currPtr;
-                    synchronized(ptr) {
-                        currPtr = ptr.getAndIncrement();
-                    }
-                    firstBuffer[currPtr] = System.identityHashCode(allocdObject);
-                    eventTypeBuffer[currPtr] = 3;
-                    secondBuffer[currPtr] = allocdClassID;
-                    thirdBuffer[currPtr] = allocSiteID;
-                    // I hope no one ever wants a 2 gigabyte (shallow size!) object
-                    // some problem here...
-                    // System.err.println("Class ID: " + allocdClassID);
-                    fourthBuffer[currPtr] = (int) getObjectSize(allocdObject);
-                    timestampBuffer[currPtr] = timestamp;
-                    threadIDBuffer[currPtr] = System.identityHashCode(Thread.currentThread());
-                    break;
-                } else {
-                    synchronized(ptr) {
-                        if (ptr.get() >= BUFMAX) {
-                            flushBuffer();
-                        }
+                synchronized(ptr) {
+                    if (ptr.get() < BUFMAX) {
+                        // wait on ptr to prevent overflow
+                        int currPtr = ptr.getAndIncrement();
+                        firstBuffer[currPtr] = System.identityHashCode(allocdObject);
+                        eventTypeBuffer[currPtr] = 3;
+                        secondBuffer[currPtr] = allocdClassID;
+                        thirdBuffer[currPtr] = allocSiteID;
+                        // I hope no one ever wants a 2 gigabyte (shallow size!) object
+                        // some problem here...
+                        // System.err.println("Class ID: " + allocdClassID);
+                        fourthBuffer[currPtr] = (int) getObjectSize(allocdObject);
+                        timestampBuffer[currPtr] = timestamp;
+                        threadIDBuffer[currPtr] = System.identityHashCode(Thread.currentThread());
+                        break;
+                    } else {
+                        flushBuffer();
                     }
                 }
             }
         } finally {
             mx.unlock();
         }
-        
         inInstrumentMethod.set(false);
     }
 
@@ -286,27 +286,21 @@ public class ETProxy {
         }
 
         mx.lock();
-
         try {
             while (true) {
-                if (ptr.get() < BUFMAX) {
-                    // wait on ptr to prevent overflow
-                    int currPtr;
-                    synchronized(ptr) {
-                        currPtr = ptr.getAndIncrement();
-                    }
-                    firstBuffer[currPtr] = System.identityHashCode(tgtObject);
-                    eventTypeBuffer[currPtr] = 7;
-                    secondBuffer[currPtr] = fieldID;
-                    timestampBuffer[currPtr] = timestamp;
-                    thirdBuffer[currPtr] = System.identityHashCode(srcObject);
-                    threadIDBuffer[currPtr] = System.identityHashCode(Thread.currentThread());
-                    break;
-                } else {
-                    synchronized(ptr) {
-                        if (ptr.get() >= BUFMAX) {
-                            flushBuffer();
-                        }
+                synchronized(ptr) {
+                    if (ptr.get() < BUFMAX) {
+                        // wait on ptr to prevent overflow
+                        int currPtr = ptr.getAndIncrement();
+                        firstBuffer[currPtr] = System.identityHashCode(tgtObject);
+                        eventTypeBuffer[currPtr] = 7;
+                        secondBuffer[currPtr] = fieldID;
+                        timestampBuffer[currPtr] = timestamp;
+                        thirdBuffer[currPtr] = System.identityHashCode(srcObject);
+                        threadIDBuffer[currPtr] = System.identityHashCode(Thread.currentThread());
+                        break;
+                    } else {
+                        flushBuffer();
                     }
                 }
             }
@@ -374,26 +368,21 @@ public class ETProxy {
 
         try {
             while (true) {
-                if (ptr.get() < BUFMAX) {
-                    // wait on ptr to prevent overflow
-                    int currPtr;
-                    synchronized(ptr) {
-                        currPtr = ptr.getAndIncrement();
-                    }
-                    firstBuffer[currPtr] = System.identityHashCode(allocdArray);
-                    eventTypeBuffer[currPtr] = 4;
-                    secondBuffer[currPtr] = allocdClassID;
-                    thirdBuffer[currPtr] = size;
-                    fourthBuffer[currPtr] = allocSiteID;
-                    fifthBuffer[currPtr] = getObjectSize(allocdArray);
-                    timestampBuffer[currPtr] = timestamp;
-                    threadIDBuffer[currPtr] = System.identityHashCode(Thread.currentThread());
-                    break;
-                } else {
-                    synchronized(ptr) {
-                        if (ptr.get() >= BUFMAX) {
-                            flushBuffer();
-                        }
+                synchronized(ptr) {
+                    if (ptr.get() < BUFMAX) {
+                        // wait on ptr to prevent overflow
+                        int currPtr = ptr.getAndIncrement();
+                        firstBuffer[currPtr] = System.identityHashCode(allocdArray);
+                        eventTypeBuffer[currPtr] = 4;
+                        secondBuffer[currPtr] = allocdClassID;
+                        thirdBuffer[currPtr] = size;
+                        fourthBuffer[currPtr] = allocSiteID;
+                        fifthBuffer[currPtr] = getObjectSize(allocdArray);
+                        timestampBuffer[currPtr] = timestamp;
+                        threadIDBuffer[currPtr] = System.identityHashCode(Thread.currentThread());
+                        break;
+                    } else {
+                        flushBuffer();
                     }
                 }
             }
@@ -518,6 +507,51 @@ public class ETProxy {
         inInstrumentMethod.set(false);
     }
     
+    public static void onInvokeMethod(Object allocdObject, int allocdClassID, int allocSiteID)
+    {
+        if (!atMain) {
+            return;
+        }
+        long timestamp = System.nanoTime();
+        if (inInstrumentMethod.get()) {
+            return;
+        } else {
+            inInstrumentMethod.set(true);
+        }
+        mx.lock();
+        try {
+            while (true) {
+                if (ptr.get() < BUFMAX) {
+                    // wait on ptr to prevent overflow
+                    int currPtr;
+                    synchronized(ptr) {
+                        currPtr = ptr.getAndIncrement();
+                    }
+                    firstBuffer[currPtr] = System.identityHashCode(allocdObject);
+                    eventTypeBuffer[currPtr] = 3;
+                    secondBuffer[currPtr] = allocdClassID;
+                    thirdBuffer[currPtr] = allocSiteID;
+                    // I hope no one ever wants a 2 gigabyte (shallow size!) object
+                    // some problem here...
+                    // System.err.println("Class ID: " + allocdClassID);
+                    fourthBuffer[currPtr] = (int) getObjectSize(allocdObject);
+                    timestampBuffer[currPtr] = timestamp;
+                    threadIDBuffer[currPtr] = System.identityHashCode(Thread.currentThread());
+                    break;
+                } else {
+                    synchronized(ptr) {
+                        if (ptr.get() >= BUFMAX) {
+                            flushBuffer();
+                        }
+                    }
+                }
+            }
+        } finally {
+            mx.unlock();
+        }
+        inInstrumentMethod.set(false);
+    }
+
     public static void flushBuffer()
     {
         mx.lock();
