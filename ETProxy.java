@@ -35,21 +35,7 @@ public class ETProxy {
     private static ReentrantLock mx = new ReentrantLock();
     private static PrintWriter pw;
 
-    // TODO: public static class ShutdownRunnable implements Runnable {
-
-    // TODO:     // public int[] eventTypeBuffer = ETProxy.eventTypeBuffer;
-    // TODO:     // public int[] firstBuffer = ETProxy.firstBuffer;
-    // TODO:     // public int[] secondBuffer = ETProxy.secondBuffer;
-    // TODO:     // public int[] thirdBuffer = ETProxy.thirdBuffer;
-    // TODO:     // public int[] fourthBuffer = ETProxy.fourthBuffer;
-    // TODO:     // public int[] fifthBuffer = ETProxy.fifthBuffer;
-    // TODO:     // public AtomicInteger ptr = ETProxy.ptr;
-
-    // TODO:     public void run() {
-    // TODO:         ETProxy.flushBuffer();
-    // TODO:     }
-    // TODO: };
-    // TODO: private static Thread shutdownHook = new Thread(new ShutdownRunnable());
+    private static Thread shutdownHook = new Thread(new ShutdownRunnable());
 
     static {
         try {
@@ -57,7 +43,7 @@ public class ETProxy {
         } catch (Exception e) {
             System.err.println("FNF");
         }
-
+        Runtime.getRuntime().addShutdownHook(shutdownHook);
     }
 
 
@@ -627,7 +613,10 @@ public class ETProxy {
                         break;
                 }
             }
-            ptr.set(0);
+            pw.flush();
+            synchronized(ptr) {
+                ptr.set(0);
+            }
         } finally {
             mx.unlock();
         }
