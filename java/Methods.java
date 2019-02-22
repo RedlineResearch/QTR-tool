@@ -3,6 +3,7 @@ class Methods {
     private static int x;
     public static void main(String args[]) {
         x = 1;
+        Method1();
     }
 
     private static void Method1() {

@@ -613,7 +613,7 @@ public class ETProxy {
                         break;
                 }
             }
-            pw.flush();
+            pw.flush(); // Flush the buffer out. Otherwise, the trace will most likely not be completely saved.
             synchronized(ptr) {
                 ptr.set(0);
             }

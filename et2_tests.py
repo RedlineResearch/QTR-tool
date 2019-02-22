@@ -5,6 +5,8 @@ import sys
 
 from shutil import copyfile
 
+from python.process_trace import process_methods
+
 # Runs java on the class using the ET2 agent.
 def run_java( java_path,
               agent_path,
@@ -92,6 +94,14 @@ def test_methods( capsys,
     out, err = capsys.readouterr()
     sys.stdout.write(out)
     sys.stderr.write(err)
+    methods_path = tmp_path.joinpath("methods.list")
+    meth_dict = process_methods(str(methods_path))
+    outfp = open("debug.txt", "wb")
+    all_methods = set([ b".".join( [ rec["class"], rec["method"] ] )
+                        for meth_id, rec in meth_dict.items() ] )
+    assert b"Methods.Method1" in all_methods
+    assert b"Methods.Method2" in all_methods
+    assert b"Methods.Method3" in all_methods
 
 def test_new_call( capsys,
                    java_path,
