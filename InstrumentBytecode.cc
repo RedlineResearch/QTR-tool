@@ -199,7 +199,9 @@ void instrumentClass( jvmtiEnv *jvmti,
 
     parser::ClassFileParser cf(class_data, class_data_len);
 
-    cout << "Parsing " << cf.getThisClassName() << " was successful" <<  endl;
+    #ifdef DEBUG
+    cerr << "Parsing " << cf.getThisClassName() << " was successful" <<  endl;
+    #endif
 
 
     classHierarchy.addClass(cf);
@@ -339,6 +341,11 @@ inline static void instrumentMethodEntry( ClassFile &cf,
 
     Inst *ptr = *instList.begin();
 
+    // doesn't quite work yet, because...circular reasoning
+    // if (method.isMain()) {
+    //     instList.addInvoke(Opcode::invokestatic, onMainMethod, ptr);
+    // }
+
     if (method.isStatic() || method.isInit()) {
         // Stack: ...
         instList.addLdc(Opcode::ldc_w, methodIDIndex, ptr);
@@ -377,10 +384,7 @@ inline static void instrumentMethodEntry( ClassFile &cf,
         instList.addLdc(Opcode::ldc_w, classIDIndex, ptr);
         // Stack: ... | thisObject | thisClassID
         instList.addInvoke(Opcode::invokestatic, witnessMethod, ptr);
-    } else if (method.isMain()) {
-        // instList.addInvoke(Opcode::invokestatic, onMainMethod, ptr);
     }
-
 }
 
 inline static void instrumentMethodExit(ClassFile &cf, Method &method, ConstPool::Index &methodIDIndex,

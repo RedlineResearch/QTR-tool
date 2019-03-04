@@ -2,7 +2,6 @@
 #include "InstrumentBytecode.h"
 #include "ETProxy_class.h"
 #include "InstrumentFlag_class.h"
-#include "ShutdownRunnable_class.h"
 #include "ObjectSize.h"
 #include <cassert>
 #include <cstring>
@@ -18,7 +17,7 @@ void JNICALL onMethodEntry(jvmtiEnv *jvmti, JNIEnv *jni, jthread th, jmethodID m
     // not safe, but I think no one has a 201 byte class name!
     jvmtiError error = jvmti->Allocate(200, &name);
     assert(!error);
-
+    
     error = jvmti->GetMethodName(method, (char**) &name, nullptr, nullptr);
     assert(!error);
 
@@ -28,11 +27,10 @@ void JNICALL onMethodEntry(jvmtiEnv *jvmti, JNIEnv *jni, jthread th, jmethodID m
 #ifdef DEBUG
         cerr << "Finally we got to main" << endl;
 #endif
-
+        
         try {
             jclass etProxyClass = jni->FindClass("ETProxy");
-            jclass runnableClass = jni->FindClass("ShutdownRunnable");
-            jclass threadClass = jni->FindClass("java/lang/Thread");
+            jclass runnableClass = jni->FindClass("ETProxy.ShutdownRunnable");
             jfieldID atMain = jni->GetStaticFieldID(etProxyClass, "atMain", "Z");
             jni->SetStaticBooleanField(etProxyClass, atMain, (jboolean) true);
         } catch (exception &e) {
@@ -40,10 +38,10 @@ void JNICALL onMethodEntry(jvmtiEnv *jvmti, JNIEnv *jni, jthread th, jmethodID m
             cerr << e.what() << endl;
             assert(false);
         }
-
+        
         // reset callbacks
         jvmtiEventCallbacks callbacks;
-
+    
         (void) memset(&callbacks, 0, sizeof(callbacks));
 
         callbacks.VMStart = &onVMStart;
@@ -51,13 +49,13 @@ void JNICALL onMethodEntry(jvmtiEnv *jvmti, JNIEnv *jni, jthread th, jmethodID m
 
         callbacks.ClassFileLoadHook = &onClassFileLoad;
         callbacks.VMDeath = &flushBuffers;
-
+    
         jvmtiError error = jvmti->SetEventCallbacks(&callbacks, (jint) sizeof(callbacks));
         assert(!error);
-
-
+        
+        
     }
-
+    
     error = jvmti->Deallocate(name);
     assert(!error);
 }
@@ -75,60 +73,53 @@ void JNICALL onVMStart(jvmtiEnv *jvmti, JNIEnv *jni)
     #ifdef DEBUG
     cerr << "JVM started" << endl;
     #endif
-
+    
     jni->DefineClass("InstrumentFlag", NULL, (jbyte *) InstrumentFlag_class, (jsize) InstrumentFlag_class_len);
     jclass etProxyClass = jni->DefineClass("ETProxy", NULL, (jbyte *) ETProxy_class, (jsize) ETProxy_class_len);
-    jclass shutdownRunnableClass = jni->DefineClass("ShutdownRunnable", NULL, (jbyte *) ShutdownRunnable_class, (jsize) ShutdownRunnable_class_len);
-
+    
     JNINativeMethod jniMethod;
 
     jniMethod.name = (char *) "getObjectSize";
     jniMethod.signature = (char *) "(Ljava/lang/Object;)I";
     jniMethod.fnPtr = (void *) jniObjectSize;
-
+    
     jint suc = jni->RegisterNatives(etProxyClass, &jniMethod, 1);
     assert(suc == 0);
 }
 
-void JNICALL onClassFileLoad( jvmtiEnv *jvmti,
-                              JNIEnv *jni,
-                              jclass class_being_redefined,
-                              jobject loader,
-                              const char *class_name,
-                              jobject protection_domain,
-                              jint class_data_len,
-                              const unsigned char *class_data,
-                              jint *new_class_data_len,
-                              unsigned char **new_class_data )
+void JNICALL onClassFileLoad(jvmtiEnv *jvmti,
+                             JNIEnv *jni,
+                             jclass class_being_redefined,
+                             jobject loader,
+                             const char *class_name,
+                             jobject protection_domain,
+                             jint class_data_len,
+                             const unsigned char *class_data,
+                             jint *new_class_data_len,
+                             unsigned char **new_class_data)
 {
     #ifdef DEBUG
     cerr << "Loading class: " << string(class_name) <<  endl;
     cerr << "id " << classTable.mapOrFind(string(class_name)) << ": " << string(class_name) << endl;
     #endif
+    
+    if (!isReady || string(class_name).find("java/util") == 0) { return; }
 
-    if ( !isReady ||
-         (string(class_name).find("java/util") == 0) ) {
-        return;
-    }
     if (class_name == nullptr) {
         // maybe should throw exception instead; don't yet know what exactly to do
-        return;
+        return; 
     }
-
+    
     if (string(class_name).find("sun") == 0) {
         return;
     }
+
     try {
 #ifdef DEBUG
         cerr << "About to instrument: " << string(class_name) << endl;
 #endif
-        instrumentClass( jvmti,
-                         jni,
-                         loader,
-                         (unsigned char *) class_data,
-                         class_data_len,
-                         new_class_data_len,
-                         new_class_data );
+        instrumentClass(jvmti, jni, loader, (unsigned char *) class_data, class_data_len,
+                        new_class_data_len, new_class_data);
 #ifdef DEBUG
         cerr << "Instrumentation of " << string(class_name) << " successful" << endl;
 #endif
@@ -139,7 +130,7 @@ void JNICALL onClassFileLoad( jvmtiEnv *jvmti,
 }
 
 static void flushMethodTable(MethodTable &methodTable, ofstream &methodDataF)
-{
+{    
     for (auto it = methodTable.begin(); it != methodTable.end(); ++it) {
         long methodID = it->first;
         string className = (it->second).first;
@@ -156,19 +147,17 @@ void JNICALL flushBuffers(jvmtiEnv *jvmti, JNIEnv *jni)
     jclass proxyClass = jni->FindClass("ETProxy");
     jmethodID flushBuffer = jni->GetStaticMethodID(proxyClass, "flushBuffer", "()V");
     jni->CallStaticVoidMethod(proxyClass, flushBuffer);
-    // Open the files
+
     ofstream methodDataF, classDataF, fieldDataF;
     methodDataF.open("methods.list");
     classDataF.open("classes.list");
     fieldDataF.open("fields.list");
+    
     // Then flush the rest of the timestamp table
     flushMethodTable(methodTable, methodDataF);
     classTable.dumpTable(classDataF);
     fieldTable.dumpTable(fieldDataF);
 
-    methodDataF.flush();
-    classDataF.flush();
-    fieldDataF.flush();
     methodDataF.close();
     classDataF.close();
     fieldDataF.close();
