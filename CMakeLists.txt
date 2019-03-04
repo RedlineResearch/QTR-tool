@@ -55,14 +55,6 @@ ADD_CUSTOM_TARGET(
     COMMENT "Generating ETProxy_class.h"
 )
 
-ADD_CUSTOM_TARGET(
-    ShutdownRunnable_class.h
-    COMMAND ${Java_JAVAC_EXECUTABLE} -classpath ${CMAKE_SOURCE_DIR} -d ${CMAKE_BINARY_DIR} ${CMAKE_SOURCE_DIR}/ShutdownRunnable.java
-    COMMAND cd ${CMAKE_BINARY_DIR} && ${XXD} -i ShutdownRunnable.class ${CMAKE_BINARY_DIR}/ShutdownRunnable_class.h 
-    DEPENDS ${CMAKE_SOURCE_DIR}/ShutdownRunnable.java
-    COMMENT "Generating ShutdownRunnable_class.h"
-)
-
 ADD_LIBRARY(et2 SHARED
     main.cc
     Callbacks.cc
@@ -76,7 +68,6 @@ TARGET_LINK_LIBRARIES(et2 jnif)
 ADD_DEPENDENCIES(et2
     InstrumentFlag_class.h
     ETProxy_class.h
-    ShutdownRunnable_class.h
 )
 
 # objectsize library
