@@ -1,6 +1,7 @@
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
+import java.lang.instrument.ClassDefinition;
 import java.lang.instrument.ClassFileTransformer;
 import java.lang.instrument.IllegalClassFormatException;
 import java.lang.instrument.Instrumentation;
@@ -15,22 +16,22 @@ public class Instrumenter {
 
     public static void premain(String args, Instrumentation inst) throws Exception {
         System.out.println("Loading Agent..");
-        inst.addTransformer(new MyTransfomer());
-        // ASM stuff:
-        ClassWriter cwriter = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
-        // FileInputStream instream = new FileInputStream(args[0]);
-        // byte[] barray;
-        // ClassReader creader = new ClassReader(instream);
-        // ClassVisitor cvisitor = new ClassAdapter(cwriter);
-        // creader.accept(cvisitor, 0);
-        // barray = cwriter.toByteArray();
-        // FileOutputStream fos = new FileOutputStream(args[1]);
-        // fos.write(barray);
-        // fos.close();
+        inst.addTransformer(new MyTransformer());
+        /*
+        ClassDefinition classDef = new ClassDefinition(klass, barray);
+        try {
+            inst.redefineClasses(classDef);
+            System.err.println("DEBUG: " + className + " done.");
+        } catch (Exception exc) {
+            System.err.println("Class not found? => " + exc.getMessage());
+        }
+        */
     }
 }
 
-class MyTransfomer implements ClassFileTransformer {
+class MyTransformer implements ClassFileTransformer {
+
+    Instrumentation inst;
 
     @Override
     public byte[] transform( ClassLoader loader,
@@ -38,9 +39,17 @@ class MyTransfomer implements ClassFileTransformer {
                              Class<?> klass,
                              ProtectionDomain domain,
                              byte[] klassFileBuffer ) throws IllegalClassFormatException {
+        // ASM stuff:
         System.out.println(className + " is about to get loaded by the ClassLoader");
+        byte[] barray;
+        ClassWriter cwriter = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
+        ClassReader creader = new ClassReader(klassFileBuffer);
+        ClassVisitor cvisitor = new ClassAdapter(cwriter);
+        creader.accept(cvisitor, 0);
+        barray = cwriter.toByteArray();
 
-        return null;
+        System.err.println(">>> END transforom.");
+        return barray;
     }
 }
 
@@ -55,9 +64,17 @@ class ClassAdapter extends ClassVisitor implements Opcodes {
                                       final String name,
                                       final String desc,
                                       final String signature,
-                                      final String[] exceptions) {
+                                      final String[] exceptions ) {
+        System.err.println("MethodVisitor::visitMethod -> " + name + " - " + signature);
         MethodVisitor mv = cv.visitMethod(access, name, desc, signature, exceptions);
-        return mv == null ? null : new MethodAdapter(mv);
+        // TODO: return ((mv == null) ? null
+        // TODO:                      : new MethodAdapter(mv));
+        if (mv == null) {
+            System.err.println("----- visitMethod returns NULL!");
+            return null;
+        } else {
+            return new MethodAdapter(mv);
+        }
     }
 }
 
@@ -69,6 +86,7 @@ class MethodAdapter extends MethodVisitor implements Opcodes {
 
     @Override
     public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean itf) {
+        System.err.println("MethodAdapter::visitMethodInsn -> " + name + " - " + desc);
         // System.err.println("CALL" + name);
         mv.visitFieldInsn(GETSTATIC, "java/lang/System", "err", "Ljava/io/PrintStream;");
         mv.visitLdcInsn("CALL " + name);
