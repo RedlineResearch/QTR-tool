@@ -17,7 +17,7 @@ public class Instrumenter {
         System.out.println("Loading Agent..");
         inst.addTransformer(new MyTransfomer());
         // ASM stuff:
-        // ClassWriter cwriter = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
+        ClassWriter cwriter = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
         // FileInputStream instream = new FileInputStream(args[0]);
         // byte[] barray;
         // ClassReader creader = new ClassReader(instream);
@@ -44,7 +44,6 @@ class MyTransfomer implements ClassFileTransformer {
     }
 }
 
-/*
 class ClassAdapter extends ClassVisitor implements Opcodes {
 
     public ClassAdapter(final ClassVisitor cv) {
@@ -84,4 +83,3 @@ class MethodAdapter extends MethodVisitor implements Opcodes {
         mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "java/io/PrintStream", "println", "(Ljava/lang/String;)V", false);
     }
 }
-*/

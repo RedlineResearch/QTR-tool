@@ -20,7 +20,6 @@ tests/
 
 # Java
 *.class
-*.jar
 
 # Packaged files
 *.tar
