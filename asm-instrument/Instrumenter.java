@@ -12,11 +12,23 @@ import org.objectweb.asm.ClassVisitor;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 
+import java.io.File;
+import java.lang.reflect.Method;
+import java.net.URL;
+import java.net.URLClassLoader;
+
 public class Instrumenter {
 
     public static void premain(String args, Instrumentation inst) throws Exception {
         System.out.println("Loading Agent..");
         inst.addTransformer(new MyTransformer());
+        URL[] urls = new URL[] { new File("./ETProxy.java").toURI().toURL() };
+        URLClassLoader classLoader = new URLClassLoader( urls,
+                                                         Instrumenter.class.getClassLoader() );
+        // TODO: Class classToLoad = Class.forName("com.MyClass", true, child);
+        // TODO: Method method = classToLoad.getDeclaredMethod("myMethod");
+        // TODO: Object instance = classToLoad.newInstance();
+        // TODO: Object result = method.invoke(instance);
         /*
         ClassDefinition classDef = new ClassDefinition(klass, barray);
         try {
