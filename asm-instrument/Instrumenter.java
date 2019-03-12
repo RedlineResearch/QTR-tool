@@ -27,22 +27,13 @@ public class Instrumenter {
     public static void premain(String args, Instrumentation inst) throws Exception {
         System.out.println("Loading Agent..");
         inst.addTransformer(new MyTransformer());
-        //  URL[] urls = new URL[] { new File("./ETProxy.class").toURI().toURL() };
-        //  URLClassLoader classLoader = new URLClassLoader( urls,
-        //                                                   Instrumenter.class.getClassLoader() );
-        //  Class proxyClass = Class.forName("ETProxy", true, classLoader);
+        URL[] urls = new URL[] { new File("./ETProxy.class").toURI().toURL() };
+        URLClassLoader classLoader = new URLClassLoader( urls,
+                                                         Instrumenter.class.getClassLoader() );
+        Class proxyClass = Class.forName("ETProxy", true, classLoader);
         // TODO: Method method = classToLoad.getDeclaredMethod("myMethod");
         // TODO: Object instance = classToLoad.newInstance();
         // TODO: Object result = method.invoke(instance);
-        /*
-        ClassDefinition classDef = new ClassDefinition(klass, barray);
-        try {
-            inst.redefineClasses(classDef);
-            System.err.println("DEBUG: " + className + " done.");
-        } catch (Exception exc) {
-            System.err.println("Class not found? => " + exc.getMessage());
-        }
-        */
     }
 }
 
@@ -62,20 +53,6 @@ class MyTransformer implements ClassFileTransformer {
             System.out.println(">>> " + className + " will not be instrumented.");
             return klassFileBuffer;
         }
-        /*
-        try {
-            // Getting the 'findLoadedClass method to call later:
-            Method findMethod = ClassLoader.class.getDeclaredMethod("findLoadedClass", new Class[] { String.class });
-            findMethod.setAccessible(true);
-            ClassLoader cloader = ClassLoader.getSystemClassLoader();
-            Object testObj = findMethod.invoke(cloader, className);
-            if (testObj != null) {
-                return null;
-            }
-        } catch (Exception exc) {
-            throw new IllegalClassFormatException(exc.getMessage());
-        }
-        */
         if (this.isLoaded(className, klass.getClassLoader())) {
             return klassFileBuffer;
         }

@@ -3,5 +3,5 @@ rm -vf ClassAdapter.class Instrumenter.class MethodAdapter.class MyTransformer.c
 echo "Compiling..."
 javac -cp ASM/asm-7.1.jar    Instrumenter.java
 echo "Creating jar..."
-jar cvmf  MANIFEST.MF instrumenter.jar  ClassAdapter.class Instrumenter.class MethodAdapter.class MyTransformer.class
+jar cvmf  MANIFEST.MF instrumenter.jar  ClassAdapter.class Instrumenter.class ETProxy.class MethodAdapter.class MyTransformer.class
 echo "DONE."
