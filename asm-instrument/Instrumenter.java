@@ -13,19 +13,24 @@ import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
 
 import java.io.File;
+import java.lang.Exception;
 import java.lang.reflect.Method;
 import java.net.URL;
 import java.net.URLClassLoader;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.WeakHashMap;
 
 public class Instrumenter {
 
     public static void premain(String args, Instrumentation inst) throws Exception {
         System.out.println("Loading Agent..");
         inst.addTransformer(new MyTransformer());
-        URL[] urls = new URL[] { new File("./ETProxy.java").toURI().toURL() };
-        URLClassLoader classLoader = new URLClassLoader( urls,
-                                                         Instrumenter.class.getClassLoader() );
-        // TODO: Class classToLoad = Class.forName("com.MyClass", true, child);
+        //  URL[] urls = new URL[] { new File("./ETProxy.class").toURI().toURL() };
+        //  URLClassLoader classLoader = new URLClassLoader( urls,
+        //                                                   Instrumenter.class.getClassLoader() );
+        //  Class proxyClass = Class.forName("ETProxy", true, classLoader);
         // TODO: Method method = classToLoad.getDeclaredMethod("myMethod");
         // TODO: Object instance = classToLoad.newInstance();
         // TODO: Object result = method.invoke(instance);
@@ -43,7 +48,7 @@ public class Instrumenter {
 
 class MyTransformer implements ClassFileTransformer {
 
-    Instrumentation inst;
+    private final Map<ClassLoader, Set<String>> classMap = new WeakHashMap<ClassLoader, Set<String>>();
 
     @Override
     public byte[] transform( ClassLoader loader,
@@ -51,6 +56,29 @@ class MyTransformer implements ClassFileTransformer {
                              Class<?> klass,
                              ProtectionDomain domain,
                              byte[] klassFileBuffer ) throws IllegalClassFormatException {
+        // Ignore the ET2 Proxy class:
+        add(loader, className);
+        if (shouldIgnore(className)) {
+            System.out.println(">>> " + className + " will not be instrumented.");
+            return klassFileBuffer;
+        }
+        /*
+        try {
+            // Getting the 'findLoadedClass method to call later:
+            Method findMethod = ClassLoader.class.getDeclaredMethod("findLoadedClass", new Class[] { String.class });
+            findMethod.setAccessible(true);
+            ClassLoader cloader = ClassLoader.getSystemClassLoader();
+            Object testObj = findMethod.invoke(cloader, className);
+            if (testObj != null) {
+                return null;
+            }
+        } catch (Exception exc) {
+            throw new IllegalClassFormatException(exc.getMessage());
+        }
+        */
+        if (this.isLoaded(className, klass.getClassLoader())) {
+            return klassFileBuffer;
+        }
         // ASM stuff:
         System.out.println(className + " is about to get loaded by the ClassLoader");
         byte[] barray;
@@ -60,8 +88,58 @@ class MyTransformer implements ClassFileTransformer {
         creader.accept(cvisitor, 0);
         barray = cwriter.toByteArray();
 
-        System.err.println(">>> END transforom.");
+        System.err.println(">>> END transform.");
         return barray;
+    }
+
+
+    private void add(Class<?> clazz) {
+        add(clazz.getClassLoader(), clazz.getName());
+    }
+
+    private void add(ClassLoader loader, String className) {
+        synchronized (classMap) {
+            System.out.println(">>> add: loaded " + className);
+            Set<String> set = classMap.get(loader);
+            if (set == null) {
+                set = new HashSet<String>();
+                classMap.put(loader, set);
+            }
+            set.add(className);
+        }
+    }
+
+    private boolean isLoaded(String className, ClassLoader loader) {
+        synchronized (classMap) {
+            Set<String> set = classMap.get(loader);
+            if (set == null) {
+                return false;
+            }
+            return set.contains(className);
+        }
+    }
+
+    public boolean isClassLoaded(String className, ClassLoader loader) {
+        if ((loader == null) || (className == null)) {
+            throw new IllegalArgumentException();
+        }
+        while (loader != null) {
+            if (this.isLoaded(className, loader)) {
+                return true;
+            }
+            loader = loader.getParent();
+        }
+        return false;
+    }
+
+
+    public boolean shouldIgnore(String className) {
+        return ( className.equals("ETProxy") ||
+                 (className.indexOf("java/lang") == 0) || // core java.lang.* classes
+                 (className.indexOf("java/io") == 0) || // java.io.* classes
+                 (className.indexOf("sun/") == 0) // sun.* classes
+                 // (className.indexOf("$") >= 0) // inner classes
+                 );
     }
 }
 

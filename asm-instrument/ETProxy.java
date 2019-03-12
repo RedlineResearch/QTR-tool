@@ -10,7 +10,7 @@ public class ETProxy {
     private static boolean atMain = false;
 
     // Thread local boolean w/ default value false
-    private static final InstrumentFlag inInstrumentMethod = new InstrumentFlag();
+    // TODO: private static final InstrumentFlag inInstrumentMethod = new InstrumentFlag();
 
     private static final int BUFMAX = 1000;
 
@@ -74,30 +74,6 @@ public class ETProxy {
     // I hope no one ever creates a 2 gigabyte object
     private static native int getObjectSize(Object obj);
 
-    // shh.. pretend I didn't do anything bad
-    // private static Unsafe unsafe = getUnsafe();
-
-    // private static Unsafe getUnsafe() {
-    //     try {
-    //         Field f = Unsafe.class.getDeclaredField("theUnsafe");
-    //         f.setAccessible(true);
-    //         return (Unsafe) f.get(null);
-    //     } catch (Exception e) {
-    //         return null;
-    //     }
-    // }
-
-    // See: https://highlyscalable.wordpress.com/2012/02/02/direct-memory-access-in-java/
-    // private static long getObjectSize(Object object) {
-    //     System.err.println(object);
-    //     return unsafe.getAddress(_normalize(unsafe.getInt(object, 4L)) + 12L);
-    // }
- 
-    // private static long _normalize(int value) {
-    //     if(value >= 0) return value;
-    //     return (~0L >>> 32) & value;
-    // }
-    
     // Adapted from JNIF test code
     private static byte[] getResourceEx(String className, ClassLoader loader) {
         java.io.InputStream is;
@@ -159,11 +135,11 @@ public class ETProxy {
         
         long timestamp = System.nanoTime();
         
-        if (inInstrumentMethod.get()) {
-            return;
-        } else {
-            inInstrumentMethod.set(true);
-        }
+        // TODO: if (inInstrumentMethod.get()) {
+        // TODO:     return;
+        // TODO: } else {
+        // TODO:     inInstrumentMethod.set(true);
+        // TODO: }
 
         mx.lock();
         try {
@@ -188,7 +164,7 @@ public class ETProxy {
             mx.unlock();
         }
 
-        inInstrumentMethod.set(false);
+        // TODO: inInstrumentMethod.set(false);
     }
 
     public static void onExit(int methodID)
@@ -199,11 +175,11 @@ public class ETProxy {
         
         long timestamp = System.nanoTime();
         
-        if (inInstrumentMethod.get()) {
-            return;
-        } else {
-            inInstrumentMethod.set(true);
-        }
+        // TODO: if (inInstrumentMethod.get()) {
+        // TODO:     return;
+        // TODO: } else {
+        // TODO:     inInstrumentMethod.set(true);
+        // TODO: }
 
         mx.lock();
         try {
@@ -227,7 +203,7 @@ public class ETProxy {
         }
         // System.out.println("Method ID: " + methodID);
 
-        inInstrumentMethod.set(false);
+        // TODO: inInstrumentMethod.set(false);
     }
     
     public static void onObjectAlloc(Object allocdObject, int allocdClassID, int allocSiteID)
@@ -236,11 +212,11 @@ public class ETProxy {
             return;
         }
         long timestamp = System.nanoTime();
-        if (inInstrumentMethod.get()) {
-            return;
-        } else {
-            inInstrumentMethod.set(true);
-        }
+        // TODO: if (inInstrumentMethod.get()) {
+        // TODO:     return;
+        // TODO: } else {
+        // TODO:     inInstrumentMethod.set(true);
+        // TODO: }
         mx.lock();
         try {
             while (true) {
@@ -267,7 +243,7 @@ public class ETProxy {
         } finally {
             mx.unlock();
         }
-        inInstrumentMethod.set(false);
+        // TODO: inInstrumentMethod.set(false);
     }
 
     public static void onPutField(Object tgtObject, Object srcObject, int fieldID)
@@ -279,11 +255,11 @@ public class ETProxy {
         
         long timestamp = System.nanoTime();
         
-        if (inInstrumentMethod.get()) {
-            return;
-        } else {
-            inInstrumentMethod.set(true);
-        }
+        // TODO: if (inInstrumentMethod.get()) {
+        // TODO:     return;
+        // TODO: } else {
+        // TODO:     inInstrumentMethod.set(true);
+        // TODO: }
 
         mx.lock();
         try {
@@ -308,43 +284,8 @@ public class ETProxy {
             mx.unlock();
         }
         
-        inInstrumentMethod.set(false);
+        // TODO: inInstrumentMethod.set(false);
     }
-
-    // TODO: Why is this commented out?
-    //
-    // public static void onPrimitiveArrayAlloc(int atype, int size, Object allocdArray)
-    // {
-    //     long timestamp = System.nanoTime();
-        
-    //     if (inInstrumentMethod.get()) {
-    //         return;
-    //     } else {
-    //         inInstrumentMethod.set(true);
-    //     }
-
-    //     while (true) {
-    //         if (ptr.get() < BUFMAX) {
-    //             // wait on ptr to prevent overflow
-    //             int currPtr = ptr.getAndIncrement();
-    //             firstBuffer[currPtr] = System.identityHashCode(allocdArray);
-    //             eventTypeBuffer[currPtr] = 5;
-    //             secondBuffer[currPtr] = atype;
-    //             thirdBuffer[currPtr] = size;
-    //             timestampBuffer[currPtr] = timestamp;
-    //             threadIDBuffer[currPtr] = System.identityHashCode(Thread.currentThread());
-    //             break;
-    //         } else {
-    //             synchronized(ptr) {
-    //                 if (ptr.get() >= BUFMAX) {
-    //                     flushBuffer();
-    //                 }
-    //             }
-    //         }
-    //     }
-        
-    //     inInstrumentMethod.set(false);
-    // }
 
     public static void onArrayAlloc( int allocdClassID,
                                      int size,
@@ -358,11 +299,11 @@ public class ETProxy {
         
         long timestamp = System.nanoTime();
         
-        if (inInstrumentMethod.get()) {
-            return;
-        } else {
-            inInstrumentMethod.set(true);
-        }
+        // TODO: if (inInstrumentMethod.get()) {
+        // TODO:     return;
+        // TODO: } else {
+        // TODO:     inInstrumentMethod.set(true);
+        // TODO: }
 
         mx.lock();
 
@@ -390,7 +331,7 @@ public class ETProxy {
             mx.unlock();
         }
         
-        inInstrumentMethod.set(false);
+        // TODO: inInstrumentMethod.set(false);
     }
 
     public static void onMultiArrayAlloc( int dims,
@@ -404,11 +345,11 @@ public class ETProxy {
         
         long timestamp = System.nanoTime();
         
-        if (inInstrumentMethod.get()) {
-            return;
-        } else {
-            inInstrumentMethod.set(true);
-        }
+        // TODO: if (inInstrumentMethod.get()) {
+        // TODO:     return;
+        // TODO: } else {
+        // TODO:     inInstrumentMethod.set(true);
+        // TODO: }
 
         mx.lock();
 
@@ -451,7 +392,7 @@ public class ETProxy {
             mx.unlock();
         }
         
-        inInstrumentMethod.set(false);
+        // TODO: inInstrumentMethod.set(false);
     }
 
     public static void witnessObjectAlive( Object aliveObject,
@@ -463,11 +404,11 @@ public class ETProxy {
         
         long timestamp = System.nanoTime();
         
-        if (inInstrumentMethod.get()) {
-            return;
-        } else {
-            inInstrumentMethod.set(true);
-        }
+        // TODO: if (inInstrumentMethod.get()) {
+        // TODO:     return;
+        // TODO: } else {
+        // TODO:     inInstrumentMethod.set(true);
+        // TODO: }
 
         mx.lock();
 
@@ -504,7 +445,7 @@ public class ETProxy {
             mx.unlock();
         }
         
-        inInstrumentMethod.set(false);
+        // TODO: inInstrumentMethod.set(false);
     }
     
     public static void onInvokeMethod(Object allocdObject, int allocdClassID, int allocSiteID)
@@ -513,11 +454,11 @@ public class ETProxy {
             return;
         }
         long timestamp = System.nanoTime();
-        if (inInstrumentMethod.get()) {
-            return;
-        } else {
-            inInstrumentMethod.set(true);
-        }
+        // TODO: if (inInstrumentMethod.get()) {
+        // TODO:     return;
+        // TODO: } else {
+        // TODO:     inInstrumentMethod.set(true);
+        // TODO: }
         mx.lock();
         try {
             while (true) {
@@ -549,7 +490,7 @@ public class ETProxy {
         } finally {
             mx.unlock();
         }
-        inInstrumentMethod.set(false);
+        // TODO: inInstrumentMethod.set(false);
     }
 
     public static void flushBuffer()
@@ -633,4 +574,39 @@ public class ETProxy {
         }
     }
     
+    // TODO: Why is this commented out?
+    //
+    // public static void onPrimitiveArrayAlloc(int atype, int size, Object allocdArray)
+    // {
+    //     long timestamp = System.nanoTime();
+        
+    //     if (inInstrumentMethod.get()) {
+    //         return;
+    //     } else {
+    //         inInstrumentMethod.set(true);
+    //     }
+
+    //     while (true) {
+    //         if (ptr.get() < BUFMAX) {
+    //             // wait on ptr to prevent overflow
+    //             int currPtr = ptr.getAndIncrement();
+    //             firstBuffer[currPtr] = System.identityHashCode(allocdArray);
+    //             eventTypeBuffer[currPtr] = 5;
+    //             secondBuffer[currPtr] = atype;
+    //             thirdBuffer[currPtr] = size;
+    //             timestampBuffer[currPtr] = timestamp;
+    //             threadIDBuffer[currPtr] = System.identityHashCode(Thread.currentThread());
+    //             break;
+    //         } else {
+    //             synchronized(ptr) {
+    //                 if (ptr.get() >= BUFMAX) {
+    //                     flushBuffer();
+    //                 }
+    //             }
+    //         }
+    //     }
+        
+    //     inInstrumentMethod.set(false);
+    // }
+
 }
