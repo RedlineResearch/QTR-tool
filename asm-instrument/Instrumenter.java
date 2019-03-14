@@ -37,6 +37,7 @@ public class Instrumenter {
         // TODO: Method method = classToLoad.getDeclaredMethod("myMethod");
         // TODO: Object instance = classToLoad.newInstance();
         // TODO: Object result = method.invoke(instance);
+        inst.removeTransformer(new MyTransformer());
     }
 }
 
@@ -57,27 +58,23 @@ class MyTransformer implements ClassFileTransformer {
                              byte[] klassFileBuffer ) throws IllegalClassFormatException {
         // Ignore the ET2 Proxy class:
         System.err.println("MyTransformer::transform -> " + className);
-        add(loader, className);
+        this.add(loader, className);
         if (shouldIgnore(className)) {
             System.out.println(">>> " + className + " will not be instrumented.");
             return null;
         }
-        // TODO: if (this.isLoaded(className, klass.getClassLoader())) {
-        // TODO:     return null;
-        // TODO: }
         // ASM stuff:
         System.out.println(className + " is about to get loaded by the ClassLoader");
         byte[] barray;
         ClassWriter cwriter = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
-        ClassReader creader = new ClassReader(klassFileBuffer);
-        // TODO: try {
-        // TODO:     creader = new ClassReader(new ByteArrayInputStream(klassFileBuffer));
-        // TODO: } catch (Exception exc) {
-        // TODO:     throw new IllegalClassFormatException(exc.getMessage());
-        // TODO: }
-        ClassVisitor cvisitor = new ClassAdapter( cwriter, 
-                                                  () -> { int value = this.methodIdNext.getThenIncrement(); return value; });
-        creader.accept(cwriter, 0);
+        ClassReader creader;
+        try {
+            creader = new ClassReader(new ByteArrayInputStream(klassFileBuffer));
+        } catch (Exception exc) {
+            throw new IllegalClassFormatException(exc.getMessage());
+        }
+        ClassVisitor cvisitor = new ClassAdapter(cwriter); 
+        creader.accept(cvisitor, 0);
         barray = cwriter.toByteArray();
 
         System.err.println(">>> END transform.");
@@ -126,25 +123,24 @@ class MyTransformer implements ClassFileTransformer {
 
 
     public boolean shouldIgnore(String className) {
-        return ( className.equals("ETProxy") ||
-                 (className.indexOf("java/lang") == 0) || // core java.lang.* classes
-                 (className.indexOf("java/io") == 0) || // java.io.* classes
-                 (className.indexOf("sun/") == 0) // sun.* classes
-                 // (className.indexOf("$") >= 0) // inner classes
+        return ( // className.equals("ETProxy") ||
+                 // (className.indexOf("java/lang") == 0) || // core java.lang.* classes
+                 // (className.indexOf("java/io") == 0) || // java.io.* classes
+                 // (className.indexOf("sun/") == 0) // sun.* classes
+                 (className.indexOf("$") >= 0) // inner classes
                  );
     }
 }
 
 class ClassAdapter extends ClassVisitor implements Opcodes {
 
-    protected final IntSupplier getNextMethodId;
+    protected static Integer nextMethodId = 1;
     protected final Map<Integer, String> methodMap = new HashMap<>();
-    protected final ClassVisitor cv;
+    protected String className;
 
-    public ClassAdapter(final ClassVisitor cv, IntSupplier getNextMethodId) {
+    public ClassAdapter(final ClassVisitor cv) {
         super(ASM7, cv);
-        this.getNextMethodId = getNextMethodId;
-        this.cv = cv;
+        this.className = "__NONE__";
     }
 
     @Override
@@ -152,7 +148,8 @@ class ClassAdapter extends ClassVisitor implements Opcodes {
                        String name, String signature,
                        String superName, String[] interfaces) {
         System.err.println("ClassAdapter::visit -> " + name + " - " + superName + " - ");
-        cv.visit(version, access, name, signature, superName, interfaces);
+        this.className = name;
+        this.cv.visit(version, access, name, signature, superName, interfaces);
     }
 
     @Override
@@ -161,10 +158,12 @@ class ClassAdapter extends ClassVisitor implements Opcodes {
                                       final String desc,
                                       final String signature,
                                       final String[] exceptions ) {
-        System.err.println("ClassAdapter::visitMethod -> " + name + " - " + signature);
+        System.err.println("ClassAdapter::visitMethod : " + this.className + "#" + name + " - " + signature + " => " + ClassAdapter.nextMethodId);
         MethodVisitor mv = cv.visitMethod(access, name, desc, signature, exceptions);
-        // TODO: return ((mv == null) ? null
-        // TODO:                      : new MethodAdapter(mv));
+        // TODO:
+        // 1. Save the method and assign a method id for it.
+        // 2. Increment the method id
+        ClassAdapter.nextMethodId++;
         if (mv == null) {
             System.err.println("----- visitMethod returns NULL!");
             return null;
