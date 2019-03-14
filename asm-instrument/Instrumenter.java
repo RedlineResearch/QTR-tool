@@ -14,6 +14,8 @@ import org.objectweb.asm.Opcodes;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.PrintWriter;
 import java.lang.Exception;
 import java.lang.reflect.Method;
 import java.net.URL;
@@ -29,7 +31,9 @@ public class Instrumenter {
 
     public static void premain(String args, Instrumentation inst) throws Exception {
         System.out.println("Loading Agent..");
-        inst.addTransformer(new MyTransformer());
+        PrintWriter pwriter = new PrintWriter(new FileOutputStream( new File("methods.list") ), true);
+        Et2Transformer optimus = new Et2Transformer(pwriter);
+        inst.addTransformer(optimus);
         // TODO: URL[] urls = new URL[] { new File("./ETProxy.class").toURI().toURL() };
         // TODO: URLClassLoader classLoader = new URLClassLoader( urls,
         // TODO:                                                  Instrumenter.class.getClassLoader() );
@@ -37,18 +41,24 @@ public class Instrumenter {
         // TODO: Method method = classToLoad.getDeclaredMethod("myMethod");
         // TODO: Object instance = classToLoad.newInstance();
         // TODO: Object result = method.invoke(instance);
-        inst.removeTransformer(new MyTransformer());
+    }
+
+    private static void writeMethodList() {
+        // for (Entry.)
     }
 }
 
-class MyTransformer implements ClassFileTransformer {
+class Et2Transformer implements ClassFileTransformer {
+
+    private final PrintWriter pwriter;
+
+    public Et2Transformer(PrintWriter pwriter) {
+        this.pwriter = pwriter;
+    }
 
     // Map to prevent duplicate loading of classes:
     private final Map<ClassLoader, Set<String>> classMap = new WeakHashMap<ClassLoader, Set<String>>();
     // Elephant Tracks 2 metadata:
-    // Map for methods:
-    public final Map<Integer, String> methodIdMap = new HashMap<>();
-    public final MyInteger methodIdNext = new MyInteger(1);
 
     @Override
     public byte[] transform( ClassLoader loader,
@@ -57,7 +67,7 @@ class MyTransformer implements ClassFileTransformer {
                              ProtectionDomain domain,
                              byte[] klassFileBuffer ) throws IllegalClassFormatException {
         // Ignore the ET2 Proxy class:
-        System.err.println("MyTransformer::transform -> " + className);
+        System.err.println("Et2Transformer::transform -> " + className);
         this.add(loader, className);
         if (shouldIgnore(className)) {
             System.out.println(">>> " + className + " will not be instrumented.");
@@ -73,7 +83,7 @@ class MyTransformer implements ClassFileTransformer {
         } catch (Exception exc) {
             throw new IllegalClassFormatException(exc.getMessage());
         }
-        ClassVisitor cvisitor = new ClassAdapter(cwriter); 
+        ClassVisitor cvisitor = new ClassAdapter(cwriter, this.pwriter); 
         creader.accept(cvisitor, 0);
         barray = cwriter.toByteArray();
 
@@ -123,10 +133,10 @@ class MyTransformer implements ClassFileTransformer {
 
 
     public boolean shouldIgnore(String className) {
-        return ( // className.equals("ETProxy") ||
-                 // (className.indexOf("java/lang") == 0) || // core java.lang.* classes
-                 // (className.indexOf("java/io") == 0) || // java.io.* classes
-                 // (className.indexOf("sun/") == 0) // sun.* classes
+        return ( className.equals("ETProxy") ||
+                 (className.indexOf("java/lang") == 0) || // core java.lang.* classes
+                 (className.indexOf("java/io") == 0) || // java.io.* classes
+                 (className.indexOf("sun/") == 0) || // sun.* classes
                  (className.indexOf("$") >= 0) // inner classes
                  );
     }
@@ -134,13 +144,15 @@ class MyTransformer implements ClassFileTransformer {
 
 class ClassAdapter extends ClassVisitor implements Opcodes {
 
-    protected static Integer nextMethodId = 1;
-    protected final Map<Integer, String> methodMap = new HashMap<>();
+    public static Integer nextMethodId = 1;
+    public final static Map<Integer, String> methodMap = new HashMap<>();
     protected String className;
+    protected PrintWriter pwriter;
 
-    public ClassAdapter(final ClassVisitor cv) {
+    public ClassAdapter(ClassVisitor cv, PrintWriter pwriter) {
         super(ASM7, cv);
         this.className = "__NONE__";
+        this.pwriter = pwriter;
     }
 
     @Override
@@ -159,17 +171,24 @@ class ClassAdapter extends ClassVisitor implements Opcodes {
                                       final String signature,
                                       final String[] exceptions ) {
         System.err.println("ClassAdapter::visitMethod : " + this.className + "#" + name + " - " + signature + " => " + ClassAdapter.nextMethodId);
+        
+        this.pwriter.println(ClassAdapter.nextMethodId + "," + this.className + "#" + name);
         MethodVisitor mv = cv.visitMethod(access, name, desc, signature, exceptions);
         // TODO:
         // 1. Save the method and assign a method id for it.
         // 2. Increment the method id
-        ClassAdapter.nextMethodId++;
+        this.addToMap(name, desc);
         if (mv == null) {
             System.err.println("----- visitMethod returns NULL!");
             return null;
         } else {
             return new MethodAdapter(mv);
         }
+    }
+
+    protected void addToMap(String methodName, String desc) {
+        ClassAdapter.methodMap.put(nextMethodId, className + "#" + methodName + "#" + desc);
+        ClassAdapter.nextMethodId++;
     }
 }
 
