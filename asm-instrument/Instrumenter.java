@@ -68,11 +68,6 @@ class Et2Transformer implements ClassFileTransformer {
                              byte[] klassFileBuffer ) throws IllegalClassFormatException {
         // Ignore the ET2 Proxy class:
         System.err.println("Et2Transformer::transform -> " + className);
-        this.add(loader, className);
-        if (shouldIgnore(className)) {
-            System.out.println(">>> " + className + " will not be instrumented.");
-            return null;
-        }
         // ASM stuff:
         System.out.println(className + " is about to get loaded by the ClassLoader");
         byte[] barray;
@@ -84,62 +79,14 @@ class Et2Transformer implements ClassFileTransformer {
             throw new IllegalClassFormatException(exc.getMessage());
         }
         ClassVisitor cvisitor = new ClassAdapter(cwriter, this.pwriter); 
-        creader.accept(cvisitor, 0);
-        barray = cwriter.toByteArray();
-
+        synchronized(creader) {
+            creader.accept(cvisitor, 0);
+            barray = cwriter.toByteArray();
+        }
         System.err.println(">>> END transform.");
         return barray;
     }
 
-
-    private void add(Class<?> clazz) {
-        add(clazz.getClassLoader(), clazz.getName());
-    }
-
-    private void add(ClassLoader loader, String className) {
-        synchronized (classMap) {
-            System.out.println(">>> add: loaded " + className);
-            Set<String> set = classMap.get(loader);
-            if (set == null) {
-                set = new HashSet<String>();
-                classMap.put(loader, set);
-            }
-            set.add(className);
-        }
-    }
-
-    private boolean isLoaded(String className, ClassLoader loader) {
-        synchronized (classMap) {
-            Set<String> set = classMap.get(loader);
-            if (set == null) {
-                return false;
-            }
-            return set.contains(className);
-        }
-    }
-
-    public boolean isClassLoaded(String className, ClassLoader loader) {
-        if ((loader == null) || (className == null)) {
-            throw new IllegalArgumentException();
-        }
-        while (loader != null) {
-            if (this.isLoaded(className, loader)) {
-                return true;
-            }
-            loader = loader.getParent();
-        }
-        return false;
-    }
-
-
-    public boolean shouldIgnore(String className) {
-        return ( className.equals("ETProxy") ||
-                 (className.indexOf("java/lang") == 0) || // core java.lang.* classes
-                 (className.indexOf("java/io") == 0) || // java.io.* classes
-                 (className.indexOf("sun/") == 0) || // sun.* classes
-                 (className.indexOf("$") >= 0) // inner classes
-                 );
-    }
 }
 
 class ClassAdapter extends ClassVisitor implements Opcodes {
