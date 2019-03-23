@@ -2,16 +2,17 @@ package veroy.research.et2.javassist;
 
 import static org.junit.Assert.assertTrue;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 /**
  * Unit test for simple App.
  */
-public class AppTest 
+public class InstrumentMethodTest 
 {
     /**
-     * Rigorous Test :-)
      */
+    @Ignore
     @Test
     public void shouldAnswerWithTrue()
     {
