@@ -24,15 +24,16 @@ import java.util.function.IntSupplier;
 import org.objectweb.asm.ClassReader;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.ClassVisitor;
+import org.objectweb.asm.Label;
 import org.objectweb.asm.MethodVisitor;
 import org.objectweb.asm.Opcodes;
-import org.objectweb.asm.commons.AnalyzerAdapter;
+import org.objectweb.asm.commons.AdviceAdapter;
 
 
 public class Instrumenter {
 
     public static void premain(String args, Instrumentation inst) throws Exception {
-        System.out.println("Loading Agent..");
+        // System.out.println("Loading Agent..");
         PrintWriter pwriter = new PrintWriter(new FileOutputStream( new File("methods.list") ), true);
         Et2Transformer optimus = new Et2Transformer(pwriter);
         inst.addTransformer(optimus);
@@ -53,6 +54,7 @@ public class Instrumenter {
 class Et2Transformer implements ClassFileTransformer {
 
     private final PrintWriter pwriter;
+    // TODO: static boolean etProxyLoaded = false;
 
     public Et2Transformer(PrintWriter pwriter) {
         this.pwriter = pwriter;
@@ -63,37 +65,41 @@ class Et2Transformer implements ClassFileTransformer {
     // Elephant Tracks 2 metadata:
 
     @Override
-    public byte[] transform( ClassLoader loader,
-                             String className,
-                             Class<?> klass,
-                             ProtectionDomain domain,
-                             byte[] klassFileBuffer ) throws IllegalClassFormatException {
-        // Ignore the ET2 Proxy class:
+    public synchronized byte[] transform( ClassLoader loader,
+                                          String className,
+                                          Class<?> klass,
+                                          ProtectionDomain domain,
+                                          byte[] klassFileBuffer ) throws IllegalClassFormatException {
         System.err.println("Et2Transformer::transform -> " + className);
         // ASM stuff:
         System.out.println(className + " is about to get loaded by the ClassLoader");
         byte[] barray;
-        ClassWriter cwriter = new ClassWriter(ClassWriter.COMPUTE_FRAMES | ClassWriter.COMPUTE_MAXS);
-        ClassReader creader;
-        try {
-            creader = new ClassReader(new ByteArrayInputStream(klassFileBuffer));
-        } catch (Exception exc) {
-            throw new IllegalClassFormatException(exc.getMessage());
-        }
-        // AnalyzerAdapter adapter = new AnalyzerAdapter(className, access, String name, String descriptor, MethodVisitor methodVisitor)
+        ClassWriter cwriter = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
+        System.err.println("              ::transform - step A");
+        ClassReader creader = new ClassReader(klassFileBuffer);
+        // TODO: try {
+        // TODO:     creader = new ClassReader(new ByteArrayInputStream(klassFileBuffer));
+        // TODO: } catch (Exception exc) {
+        // TODO:     throw new IllegalClassFormatException(exc.getMessage());
+        // TODO: }
+        System.err.println("              ::transform - step B");
         ClassVisitor cvisitor = new ClassAdapter(cwriter, this.pwriter);
-        // TODO: AnalyzerAdapter canalyzer = new AnalyzerAdapter();
-        // synchronized (this) {
-        // }
-        // synchronized(creader) {
-            creader.accept(cvisitor, ClassReader.EXPAND_FRAMES);
-            // creader.accept(cwriter, 0);
-            barray = cwriter.toByteArray();
-        // }
+        System.err.println("              ::transform - step C");
+        creader.accept(cvisitor, 0);
+        // creader.accept(cwriter, 0);
+        System.err.println("              ::transform - step D");
+        // creader.accept(cwriter, 0);
+        barray = cwriter.toByteArray();
         System.err.println(">>> END transform.");
-        return barray;
+        // return barray;
+        return klassFileBuffer;
     }
 
+    private static byte[] generateETProxyClass() {
+        byte[] barray = null;
+        ClassWriter cwriter = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
+        return barray;
+    }
 }
 
 class ClassAdapter extends ClassVisitor implements Opcodes {
@@ -107,6 +113,7 @@ class ClassAdapter extends ClassVisitor implements Opcodes {
         super(ASM7, cv);
         this.className = "__NONE__";
         this.pwriter = pwriter;
+        System.err.println("ClassAdapter::<INIT>");
     }
 
     @Override
@@ -115,7 +122,6 @@ class ClassAdapter extends ClassVisitor implements Opcodes {
                        String superName, String[] interfaces) {
         System.err.println("ClassAdapter::visit -> " + name + " - " + superName + " - ");
         this.className = name;
-        this.cv.visit(version, access, name, signature, superName, interfaces);
     }
 
     @Override
@@ -124,72 +130,59 @@ class ClassAdapter extends ClassVisitor implements Opcodes {
                                       final String desc,
                                       final String signature,
                                       final String[] exceptions ) {
-        // System.err.println("ClassAdapter::visitMethod : " + this.className + "#" + name + " - " + signature + " => " + ClassAdapter.nextMethodId);
+        System.err.println("ClassAdapter::visitMethod : " + this.className + "#" + name + " - " + signature + " => " + ClassAdapter.nextMethodId);
+        MethodVisitor mv = cv.visitMethod(access, name, desc, signature, exceptions);
 
         this.pwriter.println(ClassAdapter.nextMethodId + "," + this.className + "#" + name);
-        MethodVisitor mv = cv.visitMethod(access, name, desc, signature, exceptions);
-        // TODO:
         // 1. Save the method and assign a method id for it.
         // 2. Increment the method id
-        this.addToMap(name);
-        // if ((access & Modifier.NATIVE) != 0) {
-        //     System.err.println(">>> Method " + name + " is native, so IGNORING.");
-        //     return null;
-        // } else if (mv == null) {
+        // TODO: this.addToMap(name);
+        // AdviceAdapter methodVisitor = new ET2MethodAdapter(access, name, desc, mv);
         if (mv == null) {
             System.err.println("----- visitMethod returns NULL!");
             return null;
-        } else {
-            return new MethodAdapter(mv);
-            // TODO: return new MethodAdapter( this.className, access, name, desc, mv );
+        } 
+        else {
+             System.err.println("***** visitMethod create AdviceAdapter");
+             // return new ET2MethodAdapter(access, name, desc, mv);
+             /*
+             MethodVisitor et2Mv = new AdviceAdapter(ASM7, mv, access, name, desc) {
+                 @Override
+                 protected void onMethodEnter() {
+                     // System.err.println("ET2MethodAdapter::onMethodEnter");
+                     // TODO: Label label0 = new Label();
+                     // TODO: mv.visitLabel(label0);
+                     // TODO: mv.visitFieldInsn(GETSTATIC, "java/lang/System", "err", "Ljava/io/PrintStream;");
+                     // TODO: mv.visitLdcInsn(">>> CALL " + pubName);
+                     // TODO: mv.visitMethodInsn(INVOKEVIRTUAL, "java/io/PrintStream", "println", "(Ljava/lang/String;)V", false);
+
+                     // TODO: mv.visitIntInsn(BIPUSH, 123);
+                     // TODO: mv.visitVarInsn(ALOAD, 0);
+                     // TODO: mv.visitMethodInsn(INVOKESTATIC, "ETProxy", "onEntry", "(ILjava/lang/Object;)V", false);
+
+                     // System.err.println("RETURN" + name);
+                     // TODO mv.visitFieldInsn(Opcodes.GETSTATIC, "java/lang/System", "err", "Ljava/io/PrintStream;");
+                     // TODO mv.visitLdcInsn(">>> RETURN " + name);
+                     // TODO mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "java/io/PrintStream", "println", "(Ljava/lang/String;)V", false);
+                 }
+
+                 @Override
+                 protected void onMethodExit(int opcode) {
+                 }
+             };
+             */
         }
+        return null;
     }
 
+    /*
     protected void addToMap(String methodName) {
         ClassAdapter.methodMap.put(nextMethodId, className + "#" + methodName);
         ClassAdapter.nextMethodId++;
     }
+    */
 }
 
-class MethodAdapter extends MethodVisitor implements Opcodes {
-// TODO: class MethodAdapter extends AnalyzerAdapter implements Opcodes {
-
-    private int maxStack = 0;
-
-    public MethodAdapter(final MethodVisitor mv) {
-    // TODO: public MethodAdapter(String owner, int access, String name, String descriptor, MethodVisitor mv) {
-        super(ASM7, mv);
-        // TODO: super(owner, access, name, descriptor, mv);
-    }
-
-    @Override
-    public void visitMethodInsn(int opcode, String owner, String name, String desc, boolean itf) {
-        // TODO: Change this to do tracing.
-        System.err.println("MethodAdapter::visitMethodInsn -> " + owner + "#" + name + " - " + desc);
-        mv.visitFieldInsn(GETSTATIC, "java/lang/System", "err", "Ljava/io/PrintStream;");
-        mv.visitLdcInsn(">>> CALL " + name);
-        mv.visitMethodInsn(INVOKEVIRTUAL, "java/io/PrintStream", "println", "(Ljava/lang/String;)V", false);
-
-        // do call
-        mv.visitMethodInsn(opcode, owner, name, desc, itf);
-
-        // System.err.println("RETURN" + name);
-        mv.visitFieldInsn(Opcodes.GETSTATIC, "java/lang/System", "err", "Ljava/io/PrintStream;");
-        mv.visitLdcInsn(">>> RETURN " + name);
-        mv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "java/io/PrintStream", "println", "(Ljava/lang/String;)V", false);
-
-        this.maxStack = 4;
-    }
-
-    @Override
-    public void visitMaxs(int maxStack, int maxLocals) {
-        super.visitMaxs(5, 0);
-    }
-
-    // TODO: @Override
-    // TODO: public void visitEnd() {
-    // TODO: }
-}
 
 class MyInteger {
     private int value;

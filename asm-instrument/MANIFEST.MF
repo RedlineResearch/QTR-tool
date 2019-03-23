@@ -3,4 +3,4 @@ Agent-Class: Instrumenter
 Can-Redefine-Classes: true
 Can-Retransform-Classes: true
 Premain-Class: Instrumenter
-Boot-Class-Path: asm-7.1.jar
+Boot-Class-Path: asm-commons-7.1.jar asm-7.1.jar instrumenter.jar
