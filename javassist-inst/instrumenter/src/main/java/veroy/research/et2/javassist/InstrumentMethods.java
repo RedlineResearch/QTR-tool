@@ -37,10 +37,11 @@ public class InstrumentMethods {
             if (Modifier.isNative(method.getModifiers())) {
                 continue;
             }
+            String methodName = method.getName();
             try {
-                method.insertBefore("{ System.out.println(\"ENTER \"); }");
+                method.insertBefore("{ System.out.println(\"ENTER " + methodName + "\"); }");
                 // + targetMethod); }");
-                method.insertAfter("{ System.out.println(\"-> EXIT \"); }");
+                method.insertAfter("{ System.out.println(\"-> EXIT " + methodName + "\"); }");
                 // + targetMethod); }");
             } catch (CannotCompileException exc) {
                 System.err.println("Error compiling new code into class/method:");
