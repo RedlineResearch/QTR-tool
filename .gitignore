@@ -1,6 +1,10 @@
 .*swp
 scratch/
 tests/
+debug*txt
+target/
+*TEMP*
+dependency-reduced-pom.xml
 
 # Prerequisites
 *.d
