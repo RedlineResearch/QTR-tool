@@ -19,7 +19,7 @@ public class InstrumentMethods {
         this.newName = newName;
     }
 
-    public CtClass instrumentStart() {
+    public CtClass instrumentStart() throws CannotCompileException {
         ClassPool cp = ClassPool.getDefault();
         CtClass ctKlazz = null;
         try {
@@ -46,7 +46,7 @@ public class InstrumentMethods {
             } catch (CannotCompileException exc) {
                 System.err.println("Error compiling new code into class/method:");
                 exc.printStackTrace();
-                System.exit(2);
+                throw exc;
             }
         }
         ctKlazz.setName(newName);

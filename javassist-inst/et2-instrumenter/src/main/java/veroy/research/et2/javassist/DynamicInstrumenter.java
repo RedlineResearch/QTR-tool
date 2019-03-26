@@ -32,6 +32,8 @@ public class DynamicInstrumenter {
     public static void premain(String args, Instrumentation inst) throws Exception {
         System.out.println("Loading Agent..");
         PrintWriter pwriter = new PrintWriter(new FileOutputStream( new File("methods.list") ), true);
+        ClassPool.doPruning = true;
+        ClassPool.releaseUnmodifiedClassFile = true;
         Et2Transformer optimus = new Et2Transformer(pwriter);
         inst.addTransformer(optimus);
     }
@@ -44,6 +46,7 @@ public class DynamicInstrumenter {
 class Et2Transformer implements ClassFileTransformer {
 
     private final PrintWriter pwriter;
+    private final InstrumentFlag instFlag = new InstrumentFlag();
 
     public Et2Transformer(PrintWriter pwriter) {
         this.pwriter = pwriter;
@@ -59,7 +62,12 @@ class Et2Transformer implements ClassFileTransformer {
                              Class<?> klass,
                              ProtectionDomain domain,
                              byte[] klassFileBuffer ) throws IllegalClassFormatException {
-        // Ignore the ET2 Proxy class:
+        // Ignore the ET2 Proxy class: TODO
+        if (instFlag.get()) {
+            return klassFileBuffer;
+        } else {
+            instFlag.set(true);
+        }
         System.err.println("Et2Transformer::transform -> " + className);
         if (shouldIgnore(className)) {
             System.err.println(">>> END IGNORE: " + className);
@@ -69,19 +77,28 @@ class Et2Transformer implements ClassFileTransformer {
         System.out.println(className + " is about to get loaded by the ClassLoader");
         ByteArrayInputStream istream = new ByteArrayInputStream(klassFileBuffer);
         InstrumentMethods instMeth = new InstrumentMethods(istream, className);
-        CtClass klazz = instMeth.instrumentStart();
+        CtClass klazz = null;
+        try {
+            klazz = instMeth.instrumentStart();
+        } catch (CannotCompileException exc) {
+            instFlag.set(false);
+            return klassFileBuffer;
+        }
         System.err.println(">>> END transform.");
         try {
             byte[] barray = klazz.toBytecode();
+            instFlag.set(false);
             return barray;
         } catch (CannotCompileException | IOException exc) {
             System.err.println("Error converting class[ " + className + " ] into bytecode.");
             exc.printStackTrace();
+            instFlag.set(false);
             return klassFileBuffer;
         }
     }
 
     protected boolean shouldIgnore(String className) {
-        return (className.indexOf("java/lang") == 0);
+        return ( (className.indexOf("java/lang") == 0) ||
+                 (className.indexOf("ClassLoader") >= 0) );
     }
 }
