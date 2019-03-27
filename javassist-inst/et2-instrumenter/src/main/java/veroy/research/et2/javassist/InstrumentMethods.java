@@ -4,6 +4,7 @@ import java.io.InputStream;
 import java.io.IOException;
 import javassist.ByteArrayClassPath;
 import javassist.CannotCompileException;
+import javassist.ClassClassPath;
 import javassist.ClassPool;
 import javassist.CtClass;
 import javassist.CtMethod;
@@ -19,8 +20,9 @@ public class InstrumentMethods {
         this.newName = newName;
     }
 
-    public CtClass instrumentStart() throws CannotCompileException {
+    public CtClass instrumentStart(Class<?> klass) throws CannotCompileException {
         ClassPool cp = ClassPool.getDefault();
+        cp.insertClassPath(new ClassClassPath(klass.getClass()));
         CtClass ctKlazz = null;
         try {
             ctKlazz = cp.makeClass(instream);

@@ -79,7 +79,7 @@ class Et2Transformer implements ClassFileTransformer {
         InstrumentMethods instMeth = new InstrumentMethods(istream, className);
         CtClass klazz = null;
         try {
-            klazz = instMeth.instrumentStart();
+            klazz = instMeth.instrumentStart(klass);
         } catch (CannotCompileException exc) {
             instFlag.set(false);
             return klassFileBuffer;
@@ -97,8 +97,8 @@ class Et2Transformer implements ClassFileTransformer {
     }
 
     protected boolean shouldIgnore(String className) {
+        return (className.indexOf("ETProxy") >= 0);
         // TODO: (className.indexOf("java/lang") == 0)
-        return ( (className.indexOf("ClassLoader") >= 0) ||
-                 (className.indexOf("ETProxy") >= 0) );
+        // TODO: (className.indexOf("ClassLoader") >= 0) ||
     }
 }
