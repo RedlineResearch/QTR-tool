@@ -42,13 +42,11 @@ public class InstrumentMethods {
             }
             String methodName = method.getName();
             try {
-                // method.insertBefore("{ System.out.println(\"ENTER " + methodName + "\"); }");
                 if (Modifier.isStatic(modifiers)) {
                     method.insertBefore("{ veroy.research.et2.javassist.ETProxy.onEntry(123, (Object) null); }");
                 } else {
                     method.insertBefore("{ veroy.research.et2.javassist.ETProxy.onEntry(123, (Object) this); }");
                 }
-                // + targetMethod); }");
                 // TODO: method.insertAfter("{ System.out.println(\"-> EXIT " + methodName + "\"); }");
                 // + targetMethod); }");
             } catch (CannotCompileException exc) {

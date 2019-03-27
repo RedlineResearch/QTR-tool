@@ -87,8 +87,8 @@ class Et2Transformer implements ClassFileTransformer {
     }
 
     protected boolean shouldIgnore(String className) {
-        return (className.indexOf("ETProxy") >= 0);
-        // TODO: (className.indexOf("java/lang") == 0)
+        return ( (className.indexOf("ETProxy") >= 0) ||
+                 (className.indexOf("java/lang") == 0) );
         // TODO: (className.indexOf("ClassLoader") >= 0) ||
     }
 }
