@@ -67,22 +67,17 @@ class Et2Transformer implements ClassFileTransformer {
             return klassFileBuffer;
         }
         // Javassist stuff:
-        System.err.println(className + " is about to get loaded by the ClassLoader");
+        // System.err.println(className + " is about to get loaded by the ClassLoader");
         ByteArrayInputStream istream = new ByteArrayInputStream(klassFileBuffer);
-        System.err.println(className + " STEP A:");
         InstrumentMethods instMeth = new InstrumentMethods(istream, className);
-        System.err.println(className + " STEP B:");
         CtClass klazz = null;
         try {
-            System.err.println(className + " STEP C:");
             klazz = instMeth.instrumentStart(loader);
         } catch (CannotCompileException exc) {
-            System.err.println(className + " ERROR XXX.");
             return klassFileBuffer;
         }
         try {
             byte[] barray = klazz.toBytecode();
-            System.err.println(className + " DONE.");
             return barray;
         } catch (CannotCompileException | IOException exc) {
             System.err.println("Error converting class[ " + className + " ] into bytecode.");

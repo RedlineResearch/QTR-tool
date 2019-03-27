@@ -22,7 +22,7 @@ public class InstrumentMethods {
 
     public CtClass instrumentStart(ClassLoader loader) throws CannotCompileException {
         ClassPool cp = ClassPool.getDefault();
-        // cp.insertClassPath(new ClassClassPath(klass));
+        cp.insertClassPath(new LoaderClassPath(loader));
         CtClass ctKlazz = null;
         try {
             ctKlazz = cp.makeClass(instream);
