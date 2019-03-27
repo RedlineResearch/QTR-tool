@@ -115,6 +115,7 @@
                         </manifest>
                         <manifestEntries>
                             <Premain-Class>veroy.research.et2.javassist.DynamicInstrumenter</Premain-Class>
+                            <Boot-Class-Path>./instrumenter-1.0-SNAPSHOT-jar-with-dependencies.jar</Boot-Class-Path>
                         </manifestEntries>
                     </archive>
                 </configuration>

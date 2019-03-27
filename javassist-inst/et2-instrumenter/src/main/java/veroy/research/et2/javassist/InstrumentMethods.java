@@ -34,14 +34,20 @@ public class InstrumentMethods {
         for (int ind = 0 ; ind < methods.length; ind++) {
             CtMethod method = methods[ind];
             String targetMethod = method.getName();
-            if (shouldIgnore(method)) {
+            int modifiers = method.getModifiers();
+            if (shouldIgnore(modifiers)) {
                 continue;
             }
             String methodName = method.getName();
             try {
-                method.insertBefore("{ System.out.println(\"ENTER " + methodName + "\"); }");
+                // method.insertBefore("{ System.out.println(\"ENTER " + methodName + "\"); }");
+                if (Modifier.isStatic(modifiers)) {
+                    method.insertBefore("{ veroy.research.et2.javassist.ETProxy.onEntry(123, (Object) null); }");
+                } else {
+                    method.insertBefore("{ veroy.research.et2.javassist.ETProxy.onEntry(123, (Object) this); }");
+                }
                 // + targetMethod); }");
-                method.insertAfter("{ System.out.println(\"-> EXIT " + methodName + "\"); }");
+                // TODO: method.insertAfter("{ System.out.println(\"-> EXIT " + methodName + "\"); }");
                 // + targetMethod); }");
             } catch (CannotCompileException exc) {
                 System.err.println("Error compiling new code into class/method:");
@@ -54,8 +60,7 @@ public class InstrumentMethods {
         return ctKlazz;
     }
 
-    protected boolean shouldIgnore(CtMethod method) {
-        int modifiers = method.getModifiers();
+    protected boolean shouldIgnore(int modifiers) {
         return (Modifier.isNative(modifiers) ||
                 Modifier.isAbstract(modifiers));
     }

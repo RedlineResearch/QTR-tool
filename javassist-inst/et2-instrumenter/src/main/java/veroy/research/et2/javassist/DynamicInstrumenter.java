@@ -34,6 +34,8 @@ public class DynamicInstrumenter {
         PrintWriter pwriter = new PrintWriter(new FileOutputStream( new File("methods.list") ), true);
         ClassPool.doPruning = true;
         ClassPool.releaseUnmodifiedClassFile = true;
+        ClassPool cp = ClassPool.getDefault();
+        cp.get("veroy.research.et2.javassist.ETProxy");
         Et2Transformer optimus = new Et2Transformer(pwriter);
         inst.addTransformer(optimus);
     }
@@ -68,9 +70,7 @@ class Et2Transformer implements ClassFileTransformer {
         } else {
             instFlag.set(true);
         }
-        System.err.println("Et2Transformer::transform -> " + className);
         if (shouldIgnore(className)) {
-            System.err.println(">>> END IGNORE: " + className);
             return klassFileBuffer;
         }
         // Javassist stuff:
@@ -84,7 +84,6 @@ class Et2Transformer implements ClassFileTransformer {
             instFlag.set(false);
             return klassFileBuffer;
         }
-        System.err.println(">>> END transform.");
         try {
             byte[] barray = klazz.toBytecode();
             instFlag.set(false);
@@ -98,7 +97,8 @@ class Et2Transformer implements ClassFileTransformer {
     }
 
     protected boolean shouldIgnore(String className) {
-        return ( (className.indexOf("java/lang") == 0) ||
-                 (className.indexOf("ClassLoader") >= 0) );
+        // TODO: (className.indexOf("java/lang") == 0)
+        return ( (className.indexOf("ClassLoader") >= 0) ||
+                 (className.indexOf("ETProxy") >= 0) );
     }
 }
