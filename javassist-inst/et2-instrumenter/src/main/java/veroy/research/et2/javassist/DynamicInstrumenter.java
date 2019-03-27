@@ -48,7 +48,6 @@ public class DynamicInstrumenter {
 class Et2Transformer implements ClassFileTransformer {
 
     private final PrintWriter pwriter;
-    private final InstrumentFlag instFlag = new InstrumentFlag();
 
     public Et2Transformer(PrintWriter pwriter) {
         this.pwriter = pwriter;
@@ -64,34 +63,30 @@ class Et2Transformer implements ClassFileTransformer {
                              Class<?> klass,
                              ProtectionDomain domain,
                              byte[] klassFileBuffer ) throws IllegalClassFormatException {
-        // Ignore the ET2 Proxy class: TODO
-        if (instFlag.get()) {
-            return klassFileBuffer;
-        } else {
-            instFlag.set(true);
-        }
         if (shouldIgnore(className)) {
             return klassFileBuffer;
         }
         // Javassist stuff:
-        System.out.println(className + " is about to get loaded by the ClassLoader");
+        System.err.println(className + " is about to get loaded by the ClassLoader");
         ByteArrayInputStream istream = new ByteArrayInputStream(klassFileBuffer);
+        System.err.println(className + " STEP A:");
         InstrumentMethods instMeth = new InstrumentMethods(istream, className);
+        System.err.println(className + " STEP B:");
         CtClass klazz = null;
         try {
-            klazz = instMeth.instrumentStart(klass);
+            System.err.println(className + " STEP C:");
+            klazz = instMeth.instrumentStart(loader);
         } catch (CannotCompileException exc) {
-            instFlag.set(false);
+            System.err.println(className + " ERROR XXX.");
             return klassFileBuffer;
         }
         try {
             byte[] barray = klazz.toBytecode();
-            instFlag.set(false);
+            System.err.println(className + " DONE.");
             return barray;
         } catch (CannotCompileException | IOException exc) {
             System.err.println("Error converting class[ " + className + " ] into bytecode.");
             exc.printStackTrace();
-            instFlag.set(false);
             return klassFileBuffer;
         }
     }
