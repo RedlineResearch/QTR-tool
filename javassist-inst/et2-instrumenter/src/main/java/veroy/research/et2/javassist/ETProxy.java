@@ -9,10 +9,11 @@ import java.util.concurrent.locks.ReentrantLock;
 
 public class ETProxy {
     
-    // TODO: private static boolean atMain = false;
+    public static PrintWriter traceWriter = null;
 
     // Thread local boolean w/ default value false
     private static final InstrumentFlag inInstrumentMethod = new InstrumentFlag();
+    private static ReentrantLock mx = new ReentrantLock();
 
     /*
     private static final int BUFMAX = 1000;
@@ -37,7 +38,6 @@ public class ETProxy {
     private static int[] fourthBuffer = new int[BUFMAX];
     private static int[] fifthBuffer = new int[BUFMAX];
     private static AtomicInteger ptr = new AtomicInteger();
-    private static ReentrantLock mx = new ReentrantLock();
     private static PrintWriter pw;
 
 
@@ -55,14 +55,13 @@ public class ETProxy {
     // I hope no one ever creates a 2 gigabyte object
     // TODO: private static native int getObjectSize(Object obj);
     
-    public static void onEntry(int methodID, Object receiver)
+    public static void onEntry(int methodId, Object receiver)
     {
-        // TODO: if (!atMain) {
-        // TODO:     return;
-        // TODO: }
-        
-        // TODO: long timestamp = System.nanoTime();
-        // TODO: 
+        long timestamp = System.nanoTime();
+        ETProxy.traceWriter.println( "M " +
+                                     methodId + " " +
+                                     System.identityHashCode(receiver) + " " +
+                                     123 );
         // TODO: if (inInstrumentMethod.get()) {
         // TODO:     return;
         // TODO: } else {
