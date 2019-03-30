@@ -15,11 +15,22 @@ public class ETProxy {
     private static final InstrumentFlag inInstrumentMethod = new InstrumentFlag();
     private static ReentrantLock mx = new ReentrantLock();
 
-    /*
+
+    // Buffers:
     private static final int BUFMAX = 1000;
+    private static int[] eventTypeBuffer = new int[BUFMAX];
+    private static int[] firstBuffer = new int[BUFMAX];
+    private static int[] secondBuffer = new int[BUFMAX];
+    private static int[] thirdBuffer = new int[BUFMAX];
+    private static int[] fourthBuffer = new int[BUFMAX];
+    private static int[] fifthBuffer = new int[BUFMAX];
 
     private static long[] timestampBuffer = new long[BUFMAX];
     private static long[] threadIDBuffer = new long[BUFMAX];
+
+    private static AtomicInteger ptr = new AtomicInteger();
+    /*
+
 
     // TRACING EVENTS
     // Method entry = 1,
@@ -30,20 +41,12 @@ public class ETProxy {
     // put field = 7
     // get field = 8
 
-    private static int[] eventTypeBuffer = new int[BUFMAX];
-    
-    private static int[] firstBuffer = new int[BUFMAX];
-    private static int[] secondBuffer = new int[BUFMAX];
-    private static int[] thirdBuffer = new int[BUFMAX];
-    private static int[] fourthBuffer = new int[BUFMAX];
-    private static int[] fifthBuffer = new int[BUFMAX];
-    private static AtomicInteger ptr = new AtomicInteger();
-    private static PrintWriter pw;
+    private static PrintWriter traceWriter;
 
 
     static {
         try {
-            pw = new PrintWriter("trace");
+            traceWriter = new PrintWriter("trace");
         } catch (Exception e) {
             System.err.println("FNF");
         }
@@ -58,82 +61,59 @@ public class ETProxy {
     public static void onEntry(int methodId, Object receiver)
     {
         long timestamp = System.nanoTime();
-        ETProxy.traceWriter.println( "M " +
-                                     methodId + " " +
-                                     System.identityHashCode(receiver) + " " +
-                                     123 );
-        // TODO: if (inInstrumentMethod.get()) {
-        // TODO:     return;
-        // TODO: } else {
-        // TODO:     inInstrumentMethod.set(true);
-        // TODO: }
-
-        // TODO: mx.lock();
-        // TODO: try {
-        // TODO:     while (true) {
-        // TODO:         synchronized(ptr) {
-        // TODO:             if (ptr.get() < BUFMAX) {
-        // TODO:                 // wait on ptr to prevent overflow
-        // TODO:                 int currPtr = ptr.getAndIncrement();
-        // TODO:                 firstBuffer[currPtr] = methodID;
-        // TODO:                 secondBuffer[currPtr] = (receiver == null) ? 0 : System.identityHashCode(receiver);
-        // TODO:                 eventTypeBuffer[currPtr] = 1;
-        // TODO:                 timestampBuffer[currPtr] = timestamp;
-        // TODO:                 threadIDBuffer[currPtr] = System.identityHashCode(Thread.currentThread());
-        // TODO:                 break;
-        // TODO:             } else {
-        // TODO:                 flushBuffer();
-        // TODO:             }
-        // TODO:         }
-        // TODO:     }
-        // TODO:     // System.out.println("Method ID: " + methodID);
-        // TODO: } finally {
-        // TODO:     mx.unlock();
-        // TODO: }
-
-        // TODO: inInstrumentMethod.set(false);
-    }
-
-    /*
-    public static void onExit(int methodID)
-    {
-        if (!atMain) {
+        if (inInstrumentMethod.get()) {
             return;
+        } else {
+            inInstrumentMethod.set(true);
         }
-        
-        long timestamp = System.nanoTime();
-        
-        // TODO: if (inInstrumentMethod.get()) {
-        // TODO:     return;
-        // TODO: } else {
-        // TODO:     inInstrumentMethod.set(true);
-        // TODO: }
-
-        mx.lock();
         try {
-            while (true) {
-                synchronized(ptr) {
-                    if (ptr.get() < BUFMAX) {
-                        // wait on ptr to prevent overflow
-                        int currPtr = ptr.getAndIncrement();
-                        firstBuffer[currPtr] = methodID;
-                        eventTypeBuffer[currPtr] = 2;
-                        timestampBuffer[currPtr] = timestamp;
-                        threadIDBuffer[currPtr] = System.identityHashCode(Thread.currentThread());
-                        break;
-                    } else {
-                        flushBuffer();
-                    }
+            mx.lock();
+            synchronized(ptr) {
+                if (ptr.get() >= BUFMAX) {
+                    flushBuffer();
+                    assert(ptr.get() == 0);
                 }
+                // wait on ptr to prevent overflow
+                int currPtr = ptr.getAndIncrement();
+                firstBuffer[currPtr] = methodId;
+                secondBuffer[currPtr] = (receiver == null) ? 0 : System.identityHashCode(receiver);
+                eventTypeBuffer[currPtr] = 1; // TODO: Make into constants.
+                timestampBuffer[currPtr] = timestamp; // TODO: Not really useful
+                threadIDBuffer[currPtr] = System.identityHashCode(Thread.currentThread());
             }
         } finally {
             mx.unlock();
         }
-        // System.out.println("Method ID: " + methodID);
-
-        // TODO: inInstrumentMethod.set(false);
+        inInstrumentMethod.set(false);
     }
-    
+
+    public static void onExit(int methodId)
+    {
+        long timestamp = System.nanoTime();
+        if (inInstrumentMethod.get()) {
+            return;
+        } else {
+            inInstrumentMethod.set(true);
+        }
+        try {
+            mx.lock();
+            synchronized(ptr) {
+                if (ptr.get() >= BUFMAX) {
+                    flushBuffer();
+                    assert(ptr.get() == 0);
+                }
+                int currPtr = ptr.getAndIncrement();
+                firstBuffer[currPtr] = methodId;
+                eventTypeBuffer[currPtr] = 2;
+                timestampBuffer[currPtr] = timestamp;
+                threadIDBuffer[currPtr] = System.identityHashCode(Thread.currentThread());
+            }
+        } finally {
+            mx.unlock();
+        }
+        inInstrumentMethod.set(false);
+    }
+    /*
     public static void onObjectAlloc(Object allocdObject, int allocdClassID, int allocSiteID)
     {
         if (!atMain) {
@@ -422,23 +402,24 @@ public class ETProxy {
     }
     */
 
-    /*
     public static void flushBuffer()
     {
-        mx.lock();
+
         try {
-            for (int i = 0; i < BUFMAX; i++) {
+            mx.lock();
+            int bufSize = Math.max(ptr.get(), BUFMAX);
+            for (int i = 0; i < bufSize; i++) {
                 switch(eventTypeBuffer[i]) {
                     case 1: // method entry
                         // M <method-id> <receiver-object-id> <thread-id>
-                        pw.println( "M " +
+                        traceWriter.println( "M " +
                                     firstBuffer[i] + " " +
                                     secondBuffer[i] + " " +
                                     threadIDBuffer[i] );
                         break;
                     case 2: // method exit
                         // E <method-id> <thread-id>
-                        pw.println( "E " +
+                        traceWriter.println( "E " +
                                     firstBuffer[i] + " " +
                                     threadIDBuffer[i] );
                         break;
@@ -447,7 +428,7 @@ public class ETProxy {
                         // 1st buffer = object ID (hash)
                         // 2nd buffer = class ID
                         // 3rd buffer = allocation site (method ID)
-                        pw.println( "N " +
+                        traceWriter.println( "N " +
                                     firstBuffer[i] + " " +
                                     fourthBuffer[i] + " " +
                                     secondBuffer[i] + " " +
@@ -459,7 +440,7 @@ public class ETProxy {
                     case 5: // primitive array allocation
                         // 5 now removed so nothing should come out of it
                         // A <object-id> <size> <type-id> <site-id> <length> <thread-id>
-                        pw.println( "A " +
+                        traceWriter.println( "A " +
                                     firstBuffer[i] + " " +
                                     fifthBuffer[i] + " " +
                                     secondBuffer[i] + " " +
@@ -471,7 +452,7 @@ public class ETProxy {
                         // TODO: Conflicting documention: 2018-1112
                         // 6, arrayHash, arrayClassID, size1, size2, timestamp
                         // A <object-id> <size> <type-id> <site-id> <length> <thread-id>
-                        pw.println( "A " +
+                        traceWriter.println( "A " +
                                     firstBuffer[i] + " " +
                                     fifthBuffer[i] + " " +
                                     secondBuffer[i] + " " +
@@ -483,7 +464,7 @@ public class ETProxy {
                         // TODO: Conflicting documention: 2018-1112
                         // 7, targetObjectHash, fieldID, srcObjectHash, timestamp
                         // U <old-tgt-obj-id> <obj-id> <new-tgt-obj-id> <field-id> <thread-id>
-                        pw.println( "U " +
+                        traceWriter.println( "U " +
                                     firstBuffer[i] + " " +
                                     secondBuffer[i] + " " +
                                     thirdBuffer[i] + " " +
@@ -491,7 +472,7 @@ public class ETProxy {
                         break;
                     case 8: // witness with get field
                         // 8, aliveObjectHash, classID, timestamp
-                        pw.println( "W" + " " +
+                        traceWriter.println( "W" + " " +
                                     firstBuffer[i] + " " +
                                     secondBuffer[i] + " " +
                                     threadIDBuffer[i] );
@@ -503,6 +484,5 @@ public class ETProxy {
             mx.unlock();
         }
     }
-*/
     
 }

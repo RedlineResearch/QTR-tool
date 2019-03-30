@@ -74,10 +74,10 @@ class Et2Transformer implements ClassFileTransformer {
         // Javassist stuff:
         // System.err.println(className + " is about to get loaded by the ClassLoader");
         ByteArrayInputStream istream = new ByteArrayInputStream(klassFileBuffer);
-        InstrumentMethods instMeth = new InstrumentMethods(istream, className, methodsWriter);
+        MethodInstrumenter instMeth = new MethodInstrumenter(istream, className, methodsWriter);
         CtClass klazz = null;
         try {
-            klazz = instMeth.instrumentStart(loader);
+            klazz = instMeth.instrumentMethods(loader);
         } catch (CannotCompileException exc) {
             return klassFileBuffer;
         }
