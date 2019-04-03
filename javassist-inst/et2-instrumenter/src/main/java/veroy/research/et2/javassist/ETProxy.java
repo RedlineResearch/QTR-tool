@@ -17,13 +17,13 @@ public class ETProxy {
 
 
     // Buffers:
-    private static final int BUFMAX = 1000;
-    private static int[] eventTypeBuffer = new int[BUFMAX];
-    private static int[] firstBuffer = new int[BUFMAX];
-    private static int[] secondBuffer = new int[BUFMAX];
-    private static int[] thirdBuffer = new int[BUFMAX];
-    private static int[] fourthBuffer = new int[BUFMAX];
-    private static int[] fifthBuffer = new int[BUFMAX];
+    private static final int BUFMAX = 10000;
+    private static int[] eventTypeBuffer = new int[BUFMAX+1];
+    private static int[] firstBuffer = new int[BUFMAX+1];
+    private static int[] secondBuffer = new int[BUFMAX+1];
+    private static int[] thirdBuffer = new int[BUFMAX+1];
+    private static int[] fourthBuffer = new int[BUFMAX+1];
+    private static int[] fifthBuffer = new int[BUFMAX+1];
 
     private static long[] timestampBuffer = new long[BUFMAX];
     private static long[] threadIDBuffer = new long[BUFMAX];

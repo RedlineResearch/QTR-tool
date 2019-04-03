@@ -85,6 +85,9 @@ public class MethodInstrumenter {
     protected boolean shouldIgnore(int modifiers, String methodName) {
         return (Modifier.isNative(modifiers) ||
                 Modifier.isAbstract(modifiers) ||
-                methodName.equals("equals"));
+                methodName.equals("equals") ||
+                methodName.equals("finalize") ||
+                methodName.equals("toString") ||
+                methodName.equals("wait"));
     }
 }
