@@ -4,6 +4,7 @@ import java.io.InputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import javassist.ByteArrayClassPath;
 import javassist.CannotCompileException;
@@ -12,12 +13,15 @@ import javassist.CtClass;
 import javassist.CtMethod;
 import javassist.LoaderClassPath;
 import javassist.Modifier;
+import javassist.expr.ExprEditor;
+import javassist.expr.MethodCall;
 
 public class MethodInstrumenter {
 
     private static AtomicInteger nextMethodId = new AtomicInteger(1);
     private static ConcurrentHashMap<String, Integer> methodIdMap = new ConcurrentHashMap();
 
+    private static AtomicBoolean mainInstrumentedFlag = new AtomicBoolean(false);
     private InputStream instream;
     private String newName;
     private PrintWriter mwriter;
@@ -38,6 +42,7 @@ public class MethodInstrumenter {
     public CtClass instrumentMethods(ClassLoader loader) throws CannotCompileException {
         ClassPool cp = ClassPool.getDefault();
         cp.insertClassPath(new LoaderClassPath(loader));
+        // cp.importPackage("");
         CtClass ctKlazz = null;
         try {
             ctKlazz = cp.makeClass(instream);
@@ -56,11 +61,27 @@ public class MethodInstrumenter {
             if (shouldIgnore(modifiers, methodName)) {
                 continue;
             }
+            // DEBUG: System.err.println("XXX: " + className + " # " + methodName);
+            // Edit method body to instrument events:
+            // TODO: method.instrument( new ExprEditor() {
+            // TODO:     public void edit(MethodCall m) throws CannotCompileException {
+            // TODO:         // TODO: m.replace("{ veroy.research.et2.javassist.ETProxy.onObjectAlloc(); $_ = $proceed($$); }");
+            // TODO:         m.replace("{  $_ = $proceed($$); }");
+            // TODO:     }
+            // TODO: });
+            // Insert ENTRY and EXIT events:
             int methodId = getMethodId(className, methodName);
             try {
                 if (Modifier.isStatic(modifiers)) {
-                    method.insertBefore("{ veroy.research.et2.javassist.ETProxy.onEntry(" + methodId + ", (Object) null); }");
-                    // TODO: method.insertAfter("{ System.out.println(\"-> EXIT " + methodName + "\"); }");
+                    if (mainInstrumentedFlag.get() || !methodName.equals("main")) {
+                        method.insertBefore("{ veroy.research.et2.javassist.ETProxy.onEntry(" + methodId + ", (Object) null); }");
+                    } else {
+                        // main function:
+                        System.err.println("XXX: MAIN => " + className + " # " + methodName);
+                        method.insertBefore("{ veroy.research.et2.javassist.ETProxy.onEntry(" + methodId + ", (Object) null); }");
+                        mainInstrumentedFlag.set(true);
+                    }
+                    // TODO: if (methodName.indexOf("main") 
                 } else {
                     method.insertBefore("{ veroy.research.et2.javassist.ETProxy.onEntry(" + methodId + ", (Object) this); }");
                 }

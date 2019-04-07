@@ -58,8 +58,11 @@ public class ETProxy {
     // I hope no one ever creates a 2 gigabyte object
     // TODO: private static native int getObjectSize(Object obj);
     
-    public static void onEntry(int methodId, Object receiver)
-    {
+    public static void debugCall(String message) {
+        System.err.println("XXX: " + message);
+    }
+
+    public static void onEntry(int methodId, Object receiver) {
         long timestamp = System.nanoTime();
         if (inInstrumentMethod.get()) {
             return;
@@ -113,47 +116,44 @@ public class ETProxy {
         }
         inInstrumentMethod.set(false);
     }
-    /*
-    public static void onObjectAlloc(Object allocdObject, int allocdClassID, int allocSiteID)
-    {
-        if (!atMain) {
-            return;
-        }
-        long timestamp = System.nanoTime();
-        // TODO: if (inInstrumentMethod.get()) {
-        // TODO:     return;
-        // TODO: } else {
-        // TODO:     inInstrumentMethod.set(true);
-        // TODO: }
-        mx.lock();
-        try {
-            while (true) {
-                synchronized(ptr) {
-                    if (ptr.get() < BUFMAX) {
-                        // wait on ptr to prevent overflow
-                        int currPtr = ptr.getAndIncrement();
-                        firstBuffer[currPtr] = System.identityHashCode(allocdObject);
-                        eventTypeBuffer[currPtr] = 3;
-                        secondBuffer[currPtr] = allocdClassID;
-                        thirdBuffer[currPtr] = allocSiteID;
-                        // I hope no one ever wants a 2 gigabyte (shallow size!) object
-                        // some problem here...
-                        // System.err.println("Class ID: " + allocdClassID);
-                        fourthBuffer[currPtr] = (int) getObjectSize(allocdObject);
-                        timestampBuffer[currPtr] = timestamp;
-                        threadIDBuffer[currPtr] = System.identityHashCode(Thread.currentThread());
-                        break;
-                    } else {
-                        flushBuffer();
-                    }
-                }
-            }
-        } finally {
-            mx.unlock();
-        }
-        // TODO: inInstrumentMethod.set(false);
-    }
 
+    public static void onObjectAlloc() // TODO: Object allocdObject, int allocdClassID, int allocSiteID)
+    {
+        long timestamp = System.nanoTime();
+        if (inInstrumentMethod.get()) {
+            return;
+        } else {
+            inInstrumentMethod.set(true);
+        }
+        try {
+            // mx.lock();
+            /*
+            synchronized(ptr) {
+                if (ptr.get() >= BUFMAX) {
+                    flushBuffer();
+                    assert(ptr.get() == 0);
+                }
+                // wait on ptr to prevent overflow
+                int currPtr = ptr.getAndIncrement();
+                firstBuffer[currPtr] = System.identityHashCode(allocdObject);
+                eventTypeBuffer[currPtr] = 3; // TODO: Create a constant for this.
+                secondBuffer[currPtr] = allocdClassID;
+                thirdBuffer[currPtr] = allocSiteID;
+                // I hope no one ever wants a 2 gigabyte (shallow size!) object
+                // some problem here...
+                // System.err.println("Class ID: " + allocdClassID);
+                fourthBuffer[currPtr] = 123; // TODO: (int) getObjectSize(allocdObject);
+                timestampBuffer[currPtr] = timestamp;
+                threadIDBuffer[currPtr] = System.identityHashCode(Thread.currentThread());
+            }
+            */
+        } finally {
+            // mx.unlock();
+        }
+        inInstrumentMethod.set(false);
+    }
+            
+    /*
     public static void onPutField(Object tgtObject, Object srcObject, int fieldID)
     {
 
