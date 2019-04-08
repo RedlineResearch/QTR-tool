@@ -6,6 +6,7 @@ import java.util.Arrays;
 import java.lang.Thread;
 import java.io.PrintWriter;
 import java.util.concurrent.locks.ReentrantLock;
+import org.apache.log4j.Logger;
 
 public class ETProxy {
     
@@ -15,6 +16,7 @@ public class ETProxy {
     private static final InstrumentFlag inInstrumentMethod = new InstrumentFlag();
     private static ReentrantLock mx = new ReentrantLock();
 
+    private static Logger et2Logger = Logger.getLogger(ETProxy.class);
 
     // Buffers:
     private static final int BUFMAX = 10000;
@@ -117,7 +119,7 @@ public class ETProxy {
         inInstrumentMethod.set(false);
     }
 
-    public static void onObjectAlloc() // TODO: Object allocdObject, int allocdClassID, int allocSiteID)
+    public static void onObjectAlloc(String className) // TODO: Object allocdObject, int allocdClassID, int allocSiteID)
     {
         long timestamp = System.nanoTime();
         if (inInstrumentMethod.get()) {
@@ -416,6 +418,10 @@ public class ETProxy {
                                     firstBuffer[i] + " " +
                                     secondBuffer[i] + " " +
                                     threadIDBuffer[i] );
+                        et2Logger.info( "M " +
+                                        firstBuffer[i] + " " +
+                                        secondBuffer[i] + " " +
+                                        threadIDBuffer[i] );
                         break;
                     case 2: // method exit
                         // E <method-id> <thread-id>
