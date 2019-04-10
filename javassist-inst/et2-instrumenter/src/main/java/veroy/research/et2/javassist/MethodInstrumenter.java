@@ -9,6 +9,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import javassist.ByteArrayClassPath;
 import javassist.CannotCompileException;
 import javassist.ClassPool;
+import javassist.CtBehavior;
 import javassist.CtClass;
 import javassist.CtConstructor;
 import javassist.CtMethod;
@@ -58,58 +59,60 @@ public class MethodInstrumenter {
         String className = ctKlazz.getName();
 
         // Methods:
-        CtMethod[] methods = ctKlazz.getMethods();
+        // TODO: CtMethod[] methods = ctKlazz.getMethods();
+        CtBehavior[] methods = ctKlazz.getDeclaredBehaviors();
         for (int ind = 0 ; ind < methods.length; ind++) {
-            final CtMethod method = methods[ind];
-            String methodName = method.getName();
+            final CtBehavior method = methods[ind];
+            final String methodName = method.getName();
             int modifiers = method.getModifiers();
+            int methodId = getMethodId(className, methodName);
+
             if (shouldIgnore(modifiers, methodName)) {
                 continue;
             }
             // DEBUG: System.err.println("XXX: " + className + " # " + methodName);
-            // Edit method body to instrument events:
-            // TODO: method.instrument( new ExprEditor() {
-            // TODO:     final CtMethod innerMeth = method;
-            // TODO:     public void edit(NewExpr expr) throws CannotCompileException {
-            // TODO:         // expr.replace("{ veroy.research.et2.javassist.ETProxy.onObjectAlloc(expr.getClassName()); $_ = $proceed($$); }");
-            // TODO:         expr.replace("{  $_ = $proceed($$); }");
-            // TODO:     }
-            // TODO: });
-            // Insert ENTRY and EXIT events:
-            int methodId = getMethodId(className, methodName);
-            try {
-                if (Modifier.isStatic(modifiers)) {
-                    // TODO: if (mainInstrumentedFlag.get() || !methodName.equals("main")) {
-                    method.insertBefore("{ veroy.research.et2.javassist.ETProxy.onEntry(" + methodId + ", (Object) null); }");
-                    // TODO: } else {
-                    // TODO:     // main function:
-                    // TODO:     System.err.println("XXX: MAIN => " + className + " # " + methodName);
-                    // TODO:     method.insertBefore("{  }");
-                    // TODO:     mainInstrumentedFlag.set(true);
-                    // TODO: }
-                    // TODO: if (methodName.indexOf("main") 
-                } else {
-                    method.insertBefore("{ veroy.research.et2.javassist.ETProxy.onEntry(" + methodId + ", (Object) this); }");
+            if (method instanceof CtMethod) {
+                // Insert ENTRY and EXIT events:
+                try {
+                    if (Modifier.isStatic(modifiers)) {
+                        // TODO: if (mainInstrumentedFlag.get() || !methodName.equals("main")) {
+                        method.insertBefore("{ veroy.research.et2.javassist.ETProxy.onEntry(" + methodId + ", (Object) null); }");
+                        // TODO: } else {
+                        // TODO:     // main function:
+                        // TODO:     System.err.println("XXX: MAIN => " + className + " # " + methodName);
+                        // TODO:     method.insertBefore("{  }");
+                        // TODO:     mainInstrumentedFlag.set(true);
+                        // TODO: }
+                        // TODO: if (methodName.indexOf("main") 
+                    } else {
+                        method.insertBefore("{ veroy.research.et2.javassist.ETProxy.onEntry(" + methodId + ", (Object) this); }");
+                    }
+                } catch (CannotCompileException exc) {
+                    System.err.println("Error compiling 'insertBefore' code into class/method: " + methodName + " ==? " + methodName.equals("equals"));
+                    exc.printStackTrace();
+                    throw exc;
                 }
-            } catch (CannotCompileException exc) {
-                System.err.println("Error compiling 'insertBefore' code into class/method: " + methodName + " ==? " + methodName.equals("equals"));
-                exc.printStackTrace();
-                throw exc;
+                try {
+                    method.insertAfter("{ veroy.research.et2.javassist.ETProxy.onExit(" + methodId + "); }");
+                } catch (CannotCompileException exc) {
+                    System.err.println("Error compiling 'insertAfter' code into class/method: " + methodName);
+                    exc.printStackTrace();
+                    throw exc;
+                }
             }
-            try {
-                method.insertAfter("{ veroy.research.et2.javassist.ETProxy.onExit(" + methodId + "); }");
-            } catch (CannotCompileException exc) {
-                System.err.println("Error compiling 'insertAfter' code into class/method: " + methodName);
-                exc.printStackTrace();
-                throw exc;
+            else if (method instanceof CtConstructor) {
+                try {
+                    // (Object allocdObject, int allocdClassID, int allocSiteID)
+                    method.insertAfter("{ veroy.research.et2.javassist.ETProxy.onObjectAlloc($_, 12345, 5678); }");
+                    // TODO: method.replace("{  $_ = $proceed($$); }");
+                } catch (CannotCompileException exc) {
+                    System.err.println("Error compiling 'insertBefore' code into constructor: " + methodName);
+                    exc.printStackTrace();
+                    throw exc;
+                }
+
             }
-        }
-
-        // Constructors:
-        CtConstructor[] constructors = ctKlazz.getConstructors();
-        for (int ind = 0 ; ind < constructors.length; ind++) {
-
-        }
+    }
 
         ctKlazz.setName(newName);
 

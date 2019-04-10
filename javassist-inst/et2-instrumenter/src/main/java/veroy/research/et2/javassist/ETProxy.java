@@ -119,8 +119,7 @@ public class ETProxy {
         inInstrumentMethod.set(false);
     }
 
-    public static void onObjectAlloc(String className) // TODO: Object allocdObject, int allocdClassID, int allocSiteID)
-    {
+    public static void onObjectAlloc(Object allocdObject, int allocdClassID, int allocSiteID) {
         long timestamp = System.nanoTime();
         if (inInstrumentMethod.get()) {
             return;
@@ -128,8 +127,7 @@ public class ETProxy {
             inInstrumentMethod.set(true);
         }
         try {
-            // mx.lock();
-            /*
+            mx.lock();
             synchronized(ptr) {
                 if (ptr.get() >= BUFMAX) {
                     flushBuffer();
@@ -139,18 +137,15 @@ public class ETProxy {
                 int currPtr = ptr.getAndIncrement();
                 firstBuffer[currPtr] = System.identityHashCode(allocdObject);
                 eventTypeBuffer[currPtr] = 3; // TODO: Create a constant for this.
-                secondBuffer[currPtr] = allocdClassID;
-                thirdBuffer[currPtr] = allocSiteID;
-                // I hope no one ever wants a 2 gigabyte (shallow size!) object
-                // some problem here...
-                // System.err.println("Class ID: " + allocdClassID);
-                fourthBuffer[currPtr] = 123; // TODO: (int) getObjectSize(allocdObject);
+                secondBuffer[currPtr] = 12345; // TODO: allocID?
+                thirdBuffer[currPtr] = 3131; // TODO: allocSiteID;
+                // TODO: System.err.println("Class ID: " + allocdClassID);
+                fourthBuffer[currPtr] = 1414; // TODO: (int) getObjectSize(allocdObject);
                 timestampBuffer[currPtr] = timestamp;
                 threadIDBuffer[currPtr] = System.identityHashCode(Thread.currentThread());
             }
-            */
         } finally {
-            // mx.unlock();
+            mx.unlock();
         }
         inInstrumentMethod.set(false);
     }
