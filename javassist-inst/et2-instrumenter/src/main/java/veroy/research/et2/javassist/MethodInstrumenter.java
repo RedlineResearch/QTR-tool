@@ -59,7 +59,7 @@ public class MethodInstrumenter {
         String className = ctKlazz.getName();
 
         // Methods:
-        // TODO: CtMethod[] methods = ctKlazz.getMethods();
+        // CtMethod[] methods = ctKlazz.getMethods();
         CtBehavior[] methods = ctKlazz.getDeclaredBehaviors();
         for (int ind = 0 ; ind < methods.length; ind++) {
             final CtBehavior method = methods[ind];
@@ -72,6 +72,13 @@ public class MethodInstrumenter {
             }
             // DEBUG: System.err.println("XXX: " + className + " # " + methodName);
             if (method instanceof CtMethod) {
+                method.instrument(
+                        new ExprEditor() {
+                            public void edit(NewExpr expr) throws CannotCompileException {
+                                expr.replace("{ $_ = $proceed($$); veroy.research.et2.javassist.ETProxy.onObjectAlloc($_, 12345, 5678); }");
+                            }
+                        }
+                );
                 // Insert ENTRY and EXIT events:
                 try {
                     if (Modifier.isStatic(modifiers)) {
@@ -99,21 +106,20 @@ public class MethodInstrumenter {
                     exc.printStackTrace();
                     throw exc;
                 }
-            }
-            else if (method instanceof CtConstructor) {
-                try {
-                    // (Object allocdObject, int allocdClassID, int allocSiteID)
-                    method.insertAfter("{ veroy.research.et2.javassist.ETProxy.onObjectAlloc($_, 12345, 5678); }");
-                    // TODO: method.replace("{  $_ = $proceed($$); }");
-                } catch (CannotCompileException exc) {
-                    System.err.println("Error compiling 'insertBefore' code into constructor: " + methodName);
-                    exc.printStackTrace();
-                    throw exc;
-                }
+            } // TODO: else if (method instanceof CtConstructor) {
+                // TODO:     try {
+                // TODO:         // (Object allocdObject, int allocdClassID, int allocSiteID)
+                // TODO:         method.insertAfter("{ veroy.research.et2.javassist.ETProxy.onObjectAlloc($_, 12345, 5678); }");
+                // TODO:         // TODO: method.replace("{  $_ = $proceed($$); }");
+                // TODO:     } catch (CannotCompileException exc) {
+                // TODO:         System.err.println("Error compiling 'insertBefore' code into constructor: " + methodName);
+                // TODO:         exc.printStackTrace();
+                // TODO:         throw exc;
+                // TODO:     }
 
-            }
-    }
-
+                // TODO:
+            // TODO: }
+        }
         ctKlazz.setName(newName);
 
         return ctKlazz;

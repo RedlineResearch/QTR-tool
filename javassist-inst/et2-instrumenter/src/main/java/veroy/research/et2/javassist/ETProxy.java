@@ -135,6 +135,7 @@ public class ETProxy {
                 }
                 // wait on ptr to prevent overflow
                 int currPtr = ptr.getAndIncrement();
+                // TODO:System.err.println("XXX: " + )
                 firstBuffer[currPtr] = System.identityHashCode(allocdObject);
                 eventTypeBuffer[currPtr] = 3; // TODO: Create a constant for this.
                 secondBuffer[currPtr] = 12345; // TODO: allocID?
