@@ -1,22 +1,25 @@
 package veroy.research.et2.javassist;
 
+import java.lang.instrument.Instrumentation;
 import java.lang.Runtime;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.Arrays;
 import java.lang.Thread;
 import java.io.PrintWriter;
 import java.util.concurrent.locks.ReentrantLock;
-import org.apache.log4j.Logger;
+// TODO: import org.apache.log4j.Logger;
+
 
 public class ETProxy {
     
     public static PrintWriter traceWriter = null;
+    public static Instrumentation inst;
 
     // Thread local boolean w/ default value false
     private static final InstrumentFlag inInstrumentMethod = new InstrumentFlag();
     private static ReentrantLock mx = new ReentrantLock();
 
-    private static Logger et2Logger = Logger.getLogger(ETProxy.class);
+    // TODO: private static Logger et2Logger = Logger.getLogger(ETProxy.class);
 
     // Buffers:
     private static final int BUFMAX = 10000;
@@ -71,8 +74,8 @@ public class ETProxy {
         } else {
             inInstrumentMethod.set(true);
         }
+        mx.lock();
         try {
-            mx.lock();
             synchronized(ptr) {
                 if (ptr.get() >= BUFMAX) {
                     flushBuffer();
@@ -100,8 +103,8 @@ public class ETProxy {
         } else {
             inInstrumentMethod.set(true);
         }
+        mx.lock();
         try {
-            mx.lock();
             synchronized(ptr) {
                 if (ptr.get() >= BUFMAX) {
                     flushBuffer();
@@ -126,8 +129,8 @@ public class ETProxy {
         } else {
             inInstrumentMethod.set(true);
         }
+        mx.lock();
         try {
-            mx.lock();
             synchronized(ptr) {
                 if (ptr.get() >= BUFMAX) {
                     flushBuffer();
@@ -135,13 +138,13 @@ public class ETProxy {
                 }
                 // wait on ptr to prevent overflow
                 int currPtr = ptr.getAndIncrement();
-                // TODO:System.err.println("XXX: " + )
                 firstBuffer[currPtr] = System.identityHashCode(allocdObject);
                 eventTypeBuffer[currPtr] = 3; // TODO: Create a constant for this.
-                secondBuffer[currPtr] = 12345; // TODO: allocID?
-                thirdBuffer[currPtr] = 3131; // TODO: allocSiteID;
-                // TODO: System.err.println("Class ID: " + allocdClassID);
-                fourthBuffer[currPtr] = 1414; // TODO: (int) getObjectSize(allocdObject);
+                secondBuffer[currPtr] = allocdClassID;
+                thirdBuffer[currPtr] = allocSiteID;
+                Long objectSize = inst.getObjectSize(allocdObject);
+                fourthBuffer[currPtr] = (objectSize <= Long.valueOf(Integer.MAX_VALUE) ? objectSize.intValue() 
+                                                                                       : Integer.MAX_VALUE);
                 timestampBuffer[currPtr] = timestamp;
                 threadIDBuffer[currPtr] = System.identityHashCode(Thread.currentThread());
             }
@@ -414,10 +417,10 @@ public class ETProxy {
                                     firstBuffer[i] + " " +
                                     secondBuffer[i] + " " +
                                     threadIDBuffer[i] );
-                        et2Logger.info( "M " +
-                                        firstBuffer[i] + " " +
-                                        secondBuffer[i] + " " +
-                                        threadIDBuffer[i] );
+                        // TODO: et2Logger.info( "M " +
+                        // TODO:                 firstBuffer[i] + " " +
+                        // TODO:                 secondBuffer[i] + " " +
+                        // TODO:                 threadIDBuffer[i] );
                         break;
                     case 2: // method exit
                         // E <method-id> <thread-id>
@@ -435,7 +438,7 @@ public class ETProxy {
                                     fourthBuffer[i] + " " +
                                     secondBuffer[i] + " " +
                                     thirdBuffer[i] + " "
-                                    + 0 + " "
+                                    + 0 + " " // Always zero because this isn't an array.
                                     + threadIDBuffer[i] );
                         break;
                     case 4: // object array allocation

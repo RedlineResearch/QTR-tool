@@ -18,10 +18,15 @@ import javassist.Modifier;
 import javassist.expr.ExprEditor;
 import javassist.expr.NewExpr;
 
+
 public class MethodInstrumenter {
 
     private static AtomicInteger nextMethodId = new AtomicInteger(1);
+    private static AtomicInteger nextClassId = new AtomicInteger(1);
+    private static AtomicInteger nextAllocSiteId = new AtomicInteger(1);
     private static ConcurrentHashMap<String, Integer> methodIdMap = new ConcurrentHashMap();
+    private static ConcurrentHashMap<String, Integer> classIdMap = new ConcurrentHashMap();
+    private static ConcurrentHashMap<String, Integer> allocSiteIdMap = new ConcurrentHashMap();
 
     private static AtomicBoolean mainInstrumentedFlag = new AtomicBoolean(false);
     private InputStream instream;
@@ -34,7 +39,20 @@ public class MethodInstrumenter {
         this.mwriter = methodsWriter;
 
         ClassPool cp = ClassPool.getDefault();
-        cp.importPackage("org.apache.log4j");
+        // TODO: cp.importPackage("org.apache.log4j");
+    }
+
+    protected int getAllocSiteId(String className, Integer byteCodeIndex) {
+        String key = className + "#" + byteCodeIndex.toString();
+        allocSiteIdMap.computeIfAbsent(key, k -> nextAllocSiteId.getAndAdd(1));
+        Integer result = allocSiteIdMap.get(key);
+        return ((result != null) ? (Integer) result : -1);
+    }
+
+    protected int getClassId(String className) {
+        classIdMap.computeIfAbsent(className, k -> nextClassId.getAndAdd(1));
+        Integer result = classIdMap.get(className);
+        return ((result != null) ? (Integer) result : -1);
     }
 
     protected int getMethodId(String className, String methodName) {
@@ -64,33 +82,28 @@ public class MethodInstrumenter {
         for (int ind = 0 ; ind < methods.length; ind++) {
             final CtBehavior method = methods[ind];
             final String methodName = method.getName();
-            int modifiers = method.getModifiers();
-            int methodId = getMethodId(className, methodName);
+            final int modifiers = method.getModifiers();
+            final int methodId = getMethodId(className, methodName);
+            final int classId = getClassId(className);
 
             if (shouldIgnore(modifiers, methodName)) {
                 continue;
             }
-            // DEBUG: System.err.println("XXX: " + className + " # " + methodName);
             if (method instanceof CtMethod) {
                 method.instrument(
                         new ExprEditor() {
+                            // Instrument new expressions:
                             public void edit(NewExpr expr) throws CannotCompileException {
-                                expr.replace("{ $_ = $proceed($$); veroy.research.et2.javassist.ETProxy.onObjectAlloc($_, 12345, 5678); }");
+                                final int allocSiteId = getAllocSiteId(className, expr.indexOfBytecode());
+                                expr.replace( "{ $_ = $proceed($$); veroy.research.et2.javassist.ETProxy.onObjectAlloc($_, " +
+                                              classId + ", " + allocSiteId + "); }");
                             }
                         }
                 );
                 // Insert ENTRY and EXIT events:
                 try {
                     if (Modifier.isStatic(modifiers)) {
-                        // TODO: if (mainInstrumentedFlag.get() || !methodName.equals("main")) {
                         method.insertBefore("{ veroy.research.et2.javassist.ETProxy.onEntry(" + methodId + ", (Object) null); }");
-                        // TODO: } else {
-                        // TODO:     // main function:
-                        // TODO:     System.err.println("XXX: MAIN => " + className + " # " + methodName);
-                        // TODO:     method.insertBefore("{  }");
-                        // TODO:     mainInstrumentedFlag.set(true);
-                        // TODO: }
-                        // TODO: if (methodName.indexOf("main") 
                     } else {
                         method.insertBefore("{ veroy.research.et2.javassist.ETProxy.onEntry(" + methodId + ", (Object) this); }");
                     }
@@ -106,19 +119,7 @@ public class MethodInstrumenter {
                     exc.printStackTrace();
                     throw exc;
                 }
-            } // TODO: else if (method instanceof CtConstructor) {
-                // TODO:     try {
-                // TODO:         // (Object allocdObject, int allocdClassID, int allocSiteID)
-                // TODO:         method.insertAfter("{ veroy.research.et2.javassist.ETProxy.onObjectAlloc($_, 12345, 5678); }");
-                // TODO:         // TODO: method.replace("{  $_ = $proceed($$); }");
-                // TODO:     } catch (CannotCompileException exc) {
-                // TODO:         System.err.println("Error compiling 'insertBefore' code into constructor: " + methodName);
-                // TODO:         exc.printStackTrace();
-                // TODO:         throw exc;
-                // TODO:     }
-
-                // TODO:
-            // TODO: }
+            }
         }
         ctKlazz.setName(newName);
 

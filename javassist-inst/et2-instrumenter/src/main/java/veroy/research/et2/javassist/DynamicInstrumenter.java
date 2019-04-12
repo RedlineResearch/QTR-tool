@@ -35,6 +35,7 @@ public class DynamicInstrumenter {
         PrintWriter traceWriter = new PrintWriter(new FileOutputStream( new File("trace") ), true);
         PrintWriter methodsWriter = new PrintWriter(new FileOutputStream( new File("methods.list") ), true);
         ETProxy.traceWriter = traceWriter;
+        ETProxy.inst = inst;
         ClassPool.doPruning = true;
         ClassPool.releaseUnmodifiedClassFile = true;
         ClassPool cp = ClassPool.getDefault();
