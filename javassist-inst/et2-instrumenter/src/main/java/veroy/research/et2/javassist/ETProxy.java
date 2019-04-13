@@ -136,7 +136,6 @@ public class ETProxy {
                     flushBuffer();
                     assert(ptr.get() == 0);
                 }
-                // wait on ptr to prevent overflow
                 int currPtr = ptr.getAndIncrement();
                 firstBuffer[currPtr] = System.identityHashCode(allocdObject);
                 eventTypeBuffer[currPtr] = 3; // TODO: Create a constant for this.
@@ -154,48 +153,42 @@ public class ETProxy {
         inInstrumentMethod.set(false);
     }
             
-    /*
-    public static void onPutField(Object tgtObject, Object srcObject, int fieldID)
+    // ET1 looked like this:
+    //       U <old-target> <object> <new-target> <field> <thread>
+    // ET2 is now:
+    //       U targetObjectHash fieldId srcObjectHash threadId?
+    //       0         1           2          3           4
+    public static void onPutField(Object tgtObject, Object srcObject, int fieldId)
     {
-
-        if (!atMain) {
-            return;
-        }
-        
         long timestamp = System.nanoTime();
-        
-        // TODO: if (inInstrumentMethod.get()) {
-        // TODO:     return;
-        // TODO: } else {
-        // TODO:     inInstrumentMethod.set(true);
-        // TODO: }
-
+        if (inInstrumentMethod.get()) {
+            return;
+        } else {
+            inInstrumentMethod.set(true);
+        }
         mx.lock();
         try {
-            while (true) {
-                synchronized(ptr) {
-                    if (ptr.get() < BUFMAX) {
-                        // wait on ptr to prevent overflow
-                        int currPtr = ptr.getAndIncrement();
-                        firstBuffer[currPtr] = System.identityHashCode(tgtObject);
-                        eventTypeBuffer[currPtr] = 7;
-                        secondBuffer[currPtr] = fieldID;
-                        timestampBuffer[currPtr] = timestamp;
-                        thirdBuffer[currPtr] = System.identityHashCode(srcObject);
-                        threadIDBuffer[currPtr] = System.identityHashCode(Thread.currentThread());
-                        break;
-                    } else {
-                        flushBuffer();
-                    }
+            synchronized(ptr) {
+                if (ptr.get() >= BUFMAX) {
+                    flushBuffer();
+                    assert(ptr.get() == 0);
+                } else {
+                    int currPtr = ptr.getAndIncrement();
+                    eventTypeBuffer[currPtr] = 7;
+                    firstBuffer[currPtr] = System.identityHashCode(tgtObject);
+                    secondBuffer[currPtr] = fieldId;
+                    thirdBuffer[currPtr] = System.identityHashCode(srcObject);
+                    timestampBuffer[currPtr] = timestamp;
+                    threadIDBuffer[currPtr] = System.identityHashCode(Thread.currentThread());
                 }
             }
         } finally {
             mx.unlock();
         }
-        
-        // TODO: inInstrumentMethod.set(false);
+        inInstrumentMethod.set(false);
     }
 
+    /*
     public static void onArrayAlloc( int allocdClassID,
                                      int size,
                                      Object allocdArray,

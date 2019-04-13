@@ -8,6 +8,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import javassist.ByteArrayClassPath;
 import javassist.CannotCompileException;
+import javassist.NotFoundException;
 import javassist.ClassPool;
 import javassist.CtBehavior;
 import javassist.CtClass;
@@ -16,16 +17,18 @@ import javassist.CtMethod;
 import javassist.LoaderClassPath;
 import javassist.Modifier;
 import javassist.expr.ExprEditor;
+import javassist.expr.FieldAccess;
 import javassist.expr.NewExpr;
-
 
 public class MethodInstrumenter {
 
-    private static AtomicInteger nextMethodId = new AtomicInteger(1);
-    private static AtomicInteger nextClassId = new AtomicInteger(1);
     private static AtomicInteger nextAllocSiteId = new AtomicInteger(1);
+    private static AtomicInteger nextClassId = new AtomicInteger(1);
+    private static AtomicInteger nextFieldId = new AtomicInteger(1);
+    private static AtomicInteger nextMethodId = new AtomicInteger(1);
     private static ConcurrentHashMap<String, Integer> methodIdMap = new ConcurrentHashMap();
     private static ConcurrentHashMap<String, Integer> classIdMap = new ConcurrentHashMap();
+    private static ConcurrentHashMap<String, Integer> fieldIdMap = new ConcurrentHashMap();
     private static ConcurrentHashMap<String, Integer> allocSiteIdMap = new ConcurrentHashMap();
 
     private static AtomicBoolean mainInstrumentedFlag = new AtomicBoolean(false);
@@ -62,6 +65,13 @@ public class MethodInstrumenter {
         return ((result != null) ? (Integer) result : -1);
     }
 
+    protected int getFieldId(String className, String fieldName) {
+        String key = className + "#" + fieldName;
+        fieldIdMap.computeIfAbsent(key, k -> nextFieldId.getAndAdd(1));
+        Integer result = fieldIdMap.get(key);
+        return ((result != null) ? (Integer) result : -1);
+    }
+
     public CtClass instrumentMethods(ClassLoader loader) throws CannotCompileException {
         ClassPool cp = ClassPool.getDefault();
         cp.insertClassPath(new LoaderClassPath(loader));
@@ -74,7 +84,7 @@ public class MethodInstrumenter {
             System.exit(1);
         }
 
-        String className = ctKlazz.getName();
+        final String className = ctKlazz.getName();
 
         // Methods:
         // CtMethod[] methods = ctKlazz.getMethods();
@@ -97,6 +107,16 @@ public class MethodInstrumenter {
                                 final int allocSiteId = getAllocSiteId(className, expr.indexOfBytecode());
                                 expr.replace( "{ $_ = $proceed($$); veroy.research.et2.javassist.ETProxy.onObjectAlloc($_, " +
                                               classId + ", " + allocSiteId + "); }");
+                            }
+
+                            public void edit(FieldAccess expr) throws CannotCompileException {
+                                try {
+                                    final String fieldName = expr.getField().getName();
+                                    if (expr.isWriter()) {
+                                        expr.replace( "{ veroy.research.et2.javassist.ETProxy.onPutField($1, $0, " + getFieldId(className, fieldName) + "); $_ = $proceed($$); }" );
+                                    }
+                                } catch (NotFoundException exc) {
+                                }
                             }
                         }
                 );
