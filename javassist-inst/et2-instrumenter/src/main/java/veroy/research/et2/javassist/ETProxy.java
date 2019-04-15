@@ -1,10 +1,11 @@
 package veroy.research.et2.javassist;
 
-import java.lang.instrument.Instrumentation;
 import java.lang.Runtime;
+import java.lang.Thread;
+import java.lang.instrument.Instrumentation;
+import java.lang.reflect.Array;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.Arrays;
-import java.lang.Thread;
 import java.io.PrintWriter;
 import java.util.concurrent.locks.ReentrantLock;
 // TODO: import org.apache.log4j.Logger;
@@ -27,7 +28,7 @@ public class ETProxy {
     private static int[] firstBuffer = new int[BUFMAX+1];
     private static int[] secondBuffer = new int[BUFMAX+1];
     private static int[] thirdBuffer = new int[BUFMAX+1];
-    private static int[] fourthBuffer = new int[BUFMAX+1];
+    private static long[] fourthBuffer = new long[BUFMAX+1];
     private static int[] fifthBuffer = new int[BUFMAX+1];
 
     private static long[] timestampBuffer = new long[BUFMAX];
@@ -122,7 +123,7 @@ public class ETProxy {
         inInstrumentMethod.set(false);
     }
 
-    public static void onObjectAlloc(Object allocdObject, int allocdClassID, int allocSiteID) {
+    public static void onObjectAlloc(Object obj, int allocdClassID, int allocSiteID) {
         long timestamp = System.nanoTime();
         if (inInstrumentMethod.get()) {
             return;
@@ -137,13 +138,11 @@ public class ETProxy {
                     assert(ptr.get() == 0);
                 }
                 int currPtr = ptr.getAndIncrement();
-                firstBuffer[currPtr] = System.identityHashCode(allocdObject);
+                firstBuffer[currPtr] = System.identityHashCode(obj);
                 eventTypeBuffer[currPtr] = 3; // TODO: Create a constant for this.
                 secondBuffer[currPtr] = allocdClassID;
                 thirdBuffer[currPtr] = allocSiteID;
-                Long objectSize = inst.getObjectSize(allocdObject);
-                fourthBuffer[currPtr] = (objectSize <= Long.valueOf(Integer.MAX_VALUE) ? objectSize.intValue() 
-                                                                                       : Integer.MAX_VALUE);
+                fourthBuffer[currPtr] = inst.getObjectSize(obj);
                 timestampBuffer[currPtr] = timestamp;
                 threadIDBuffer[currPtr] = System.identityHashCode(Thread.currentThread());
             }
@@ -156,9 +155,9 @@ public class ETProxy {
     // ET1 looked like this:
     //       U <old-target> <object> <new-target> <field> <thread>
     // ET2 is now:
-    //       U targetObjectHash fieldId srcObjectHash threadId?
-    //       0         1           2          3           4
-    public static void onPutField(Object tgtObject, Object srcObject, int fieldId)
+    //       U  srcObjectHash targetObjectHash fieldId threadId?
+    //       0         1           2              3       4
+    public static void onPutField(Object tgtObject, Object object, int fieldId)
     {
         long timestamp = System.nanoTime();
         if (inInstrumentMethod.get()) {
@@ -177,7 +176,46 @@ public class ETProxy {
                     eventTypeBuffer[currPtr] = 7;
                     firstBuffer[currPtr] = System.identityHashCode(tgtObject);
                     secondBuffer[currPtr] = fieldId;
-                    thirdBuffer[currPtr] = System.identityHashCode(srcObject);
+                    thirdBuffer[currPtr] = System.identityHashCode(object);
+                    timestampBuffer[currPtr] = timestamp;
+                    threadIDBuffer[currPtr] = System.identityHashCode(Thread.currentThread());
+                }
+            }
+        } finally {
+            mx.unlock();
+        }
+        inInstrumentMethod.set(false);
+    }
+
+    public static void onArrayAlloc( Object arrayObj,
+                                     int typeId,
+                                     int allocSiteId )
+    {
+        long timestamp = System.nanoTime();
+        if (inInstrumentMethod.get()) {
+            return;
+        } else {
+            inInstrumentMethod.set(true);
+        }
+
+        mx.lock();
+        try {
+            synchronized(ptr) {
+                if (ptr.get() >= BUFMAX) {
+                    flushBuffer();
+                    assert(ptr.get() == 0);
+                } else {
+                    int currPtr = ptr.getAndIncrement();
+                    eventTypeBuffer[currPtr] = 4;
+                    firstBuffer[currPtr] = System.identityHashCode(arrayObj);
+                    secondBuffer[currPtr] = typeId;
+                    try {
+                        thirdBuffer[currPtr] = Array.getLength(arrayObj);
+                    } catch (IllegalArgumentException exc) {
+                        thirdBuffer[currPtr] = 0;
+                    }
+                    fourthBuffer[currPtr] = inst.getObjectSize(arrayObj);
+                    fifthBuffer[currPtr] = allocSiteId;
                     timestampBuffer[currPtr] = timestamp;
                     threadIDBuffer[currPtr] = System.identityHashCode(Thread.currentThread());
                 }
@@ -189,53 +227,6 @@ public class ETProxy {
     }
 
     /*
-    public static void onArrayAlloc( int allocdClassID,
-                                     int size,
-                                     Object allocdArray,
-                                     int allocSiteID )
-    {
-
-        if (!atMain) {
-            return;
-        }
-        
-        long timestamp = System.nanoTime();
-        
-        // TODO: if (inInstrumentMethod.get()) {
-        // TODO:     return;
-        // TODO: } else {
-        // TODO:     inInstrumentMethod.set(true);
-        // TODO: }
-
-        mx.lock();
-
-        try {
-            while (true) {
-                synchronized(ptr) {
-                    if (ptr.get() < BUFMAX) {
-                        // wait on ptr to prevent overflow
-                        int currPtr = ptr.getAndIncrement();
-                        firstBuffer[currPtr] = System.identityHashCode(allocdArray);
-                        eventTypeBuffer[currPtr] = 4;
-                        secondBuffer[currPtr] = allocdClassID;
-                        thirdBuffer[currPtr] = size;
-                        fourthBuffer[currPtr] = allocSiteID;
-                        fifthBuffer[currPtr] = getObjectSize(allocdArray);
-                        timestampBuffer[currPtr] = timestamp;
-                        threadIDBuffer[currPtr] = System.identityHashCode(Thread.currentThread());
-                        break;
-                    } else {
-                        flushBuffer();
-                    }
-                }
-            }
-        } finally {
-            mx.unlock();
-        }
-        
-        // TODO: inInstrumentMethod.set(false);
-    }
-
     public static void onMultiArrayAlloc( int dims,
                                           int allocdClassID,
                                           Object[] allocdArray,
@@ -267,7 +258,7 @@ public class ETProxy {
                     eventTypeBuffer[currPtr] = 6;
                     secondBuffer[currPtr] = allocdClassID;
                     thirdBuffer[currPtr] = allocdArray.length;
-                    fourthBuffer[currPtr] = allocSiteID;
+                    // TODO: fourthBuffer[currPtr] = allocSiteID;
                     fifthBuffer[currPtr] = getObjectSize(allocdArray);
                     timestampBuffer[currPtr] = timestamp;
                     threadIDBuffer[currPtr] = System.identityHashCode(Thread.currentThread());
@@ -403,7 +394,7 @@ public class ETProxy {
             mx.lock();
             int bufSize = Math.max(ptr.get(), BUFMAX);
             for (int i = 0; i < bufSize; i++) {
-                switch(eventTypeBuffer[i]) {
+                switch (eventTypeBuffer[i]) {
                     case 1: // method entry
                         // M <method-id> <receiver-object-id> <thread-id>
                         traceWriter.println( "M " +
@@ -439,12 +430,12 @@ public class ETProxy {
                         // 5 now removed so nothing should come out of it
                         // A <object-id> <size> <type-id> <site-id> <length> <thread-id>
                         traceWriter.println( "A " +
-                                    firstBuffer[i] + " " +
-                                    fifthBuffer[i] + " " +
-                                    secondBuffer[i] + " " +
-                                    fourthBuffer[i] + " " +
-                                    thirdBuffer[i] + " " +
-                                    threadIDBuffer[i] );
+                                    firstBuffer[i] + " " + // objectId
+                                    fourthBuffer[i] + " " + // size
+                                    secondBuffer[i] + " " + // typedId
+                                    fifthBuffer[i] + " " + // siteId
+                                    thirdBuffer[i] + " " + // length
+                                    threadIDBuffer[i] ); // threadId
                         break;
                     case 6: // 2D array allocation
                         // TODO: Conflicting documention: 2018-1112
@@ -461,12 +452,12 @@ public class ETProxy {
                     case 7: // object update
                         // TODO: Conflicting documention: 2018-1112
                         // 7, targetObjectHash, fieldID, srcObjectHash, timestamp
-                        // U <old-tgt-obj-id> <obj-id> <new-tgt-obj-id> <field-id> <thread-id>
+                        // U <obj-id> <new-tgt-obj-id> <field-id> <thread-id>
                         traceWriter.println( "U " +
-                                    firstBuffer[i] + " " +
-                                    secondBuffer[i] + " " +
-                                    thirdBuffer[i] + " " +
-                                    threadIDBuffer[i] );
+                                    thirdBuffer[i] + " " + // objId
+                                    firstBuffer[i] + " " + // newTgtObjId
+                                    secondBuffer[i] + " " + // fieldId
+                                    threadIDBuffer[i] ); // threadId
                         break;
                     case 8: // witness with get field
                         // 8, aliveObjectHash, classID, timestamp
@@ -475,6 +466,8 @@ public class ETProxy {
                                     secondBuffer[i] + " " +
                                     threadIDBuffer[i] );
                         break;
+                    default:
+                        throw new IllegalStateException("Unexpected event: " + eventTypeBuffer[i]);
                 }
             }
             ptr.set(0);

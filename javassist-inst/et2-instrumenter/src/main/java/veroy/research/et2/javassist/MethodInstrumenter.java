@@ -18,6 +18,7 @@ import javassist.LoaderClassPath;
 import javassist.Modifier;
 import javassist.expr.ExprEditor;
 import javassist.expr.FieldAccess;
+import javassist.expr.NewArray;
 import javassist.expr.NewExpr;
 
 public class MethodInstrumenter {
@@ -109,6 +110,19 @@ public class MethodInstrumenter {
                                               classId + ", " + allocSiteId + "); }");
                             }
 
+                            // Instrument new array expressions:
+                            public void edit(NewArray expr) throws CannotCompileException {
+                                try {
+                                    final int allocSiteId = getAllocSiteId(className, expr.indexOfBytecode());
+                                    expr.replace( "{ $_ = $proceed($$); veroy.research.et2.javassist.ETProxy.onArrayAlloc( $_," +
+                                                  classId + ", " + allocSiteId + "); }");
+                                } catch (CannotCompileException exc) {
+                                    System.err.println("XXX: Unable on to compile call to onArrayAlloc - " + exc.getMessage());
+                                    throw exc;
+                                }
+                            }
+
+                            // Instrument field updates:
                             public void edit(FieldAccess expr) throws CannotCompileException {
                                 try {
                                     final String fieldName = expr.getField().getName();
