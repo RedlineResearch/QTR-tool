@@ -3,6 +3,7 @@ package veroy.research.et2.javassist;
 import java.io.InputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -35,15 +36,23 @@ public class MethodInstrumenter {
     private static AtomicBoolean mainInstrumentedFlag = new AtomicBoolean(false);
     private InputStream instream;
     private String newName;
-    private PrintWriter mwriter;
+    private static PrintWriter methodsWriter;
+    private static PrintWriter fieldsWriter;
+    private static PrintWriter classWriter;
 
-    public MethodInstrumenter(InputStream instream, String newName, PrintWriter methodsWriter) {
+    public MethodInstrumenter(InputStream instream, String newName) {
         this.instream = instream;
         this.newName = newName;
-        this.mwriter = methodsWriter;
-
         ClassPool cp = ClassPool.getDefault();
         // TODO: cp.importPackage("org.apache.log4j");
+    }
+
+    public static void setPrintWriters( PrintWriter methodsWriter,
+                                        PrintWriter fieldsWriter,
+                                        PrintWriter classWriter) {
+        MethodInstrumenter.methodsWriter = methodsWriter;
+        MethodInstrumenter.fieldsWriter = fieldsWriter;
+        MethodInstrumenter.classWriter = classWriter;
     }
 
     protected int getAllocSiteId(String className, Integer byteCodeIndex) {
@@ -167,5 +176,19 @@ public class MethodInstrumenter {
                 methodName.equals("finalize") ||
                 methodName.equals("toString") ||
                 methodName.equals("wait"));
+    }
+
+    public static void writeMapsToFile() {
+        writeMap(methodIdMap, methodsWriter);
+        writeMap(fieldIdMap, fieldsWriter);
+        writeMap(classIdMap, classWriter);
+    }
+
+    public static void writeMap(ConcurrentHashMap<String, Integer> map, PrintWriter writer) {
+        for (Map.Entry<String, Integer> entry : map.entrySet()) {
+            String key = (String) entry.getKey();
+            Integer value = (Integer) entry.getValue();
+            writer.println(key + "," + value.toString());
+        }
     }
 }

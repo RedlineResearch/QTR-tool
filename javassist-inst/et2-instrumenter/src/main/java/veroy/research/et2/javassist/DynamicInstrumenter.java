@@ -32,16 +32,28 @@ public class DynamicInstrumenter {
 
     public static void premain(String args, Instrumentation inst) throws Exception {
         System.out.println("Loading Agent..");
-        PrintWriter traceWriter = new PrintWriter(new FileOutputStream( new File("trace") ), true);
         PrintWriter methodsWriter = new PrintWriter(new FileOutputStream( new File("methods.list") ), true);
+        PrintWriter fieldsWriter = new PrintWriter(new FileOutputStream( new File("fields.list") ), true);
+        PrintWriter classWriter = new PrintWriter(new FileOutputStream( new File("classs.list") ), true);
+        MethodInstrumenter.setPrintWriters( methodsWriter,
+                                            fieldsWriter,
+                                            classWriter );
+        PrintWriter traceWriter = new PrintWriter(new FileOutputStream( new File("trace") ), true);
         ETProxy.traceWriter = traceWriter;
         ETProxy.inst = inst;
         ClassPool.doPruning = true;
         ClassPool.releaseUnmodifiedClassFile = true;
         ClassPool cp = ClassPool.getDefault();
         cp.get("veroy.research.et2.javassist.ETProxy");
-        Et2Transformer optimus = new Et2Transformer(traceWriter, methodsWriter);
+        Et2Transformer optimus = new Et2Transformer(traceWriter);
         inst.addTransformer(optimus);
+        Runtime.getRuntime()
+               .addShutdownHook( new Thread() { 
+                                     public void run() {
+                                         System.err.println("SHUTDOWN running.");
+                                         MethodInstrumenter.writeMapsToFile();
+                                     }
+               });
     }
 
     private static void writeMethodList() {
@@ -52,11 +64,9 @@ public class DynamicInstrumenter {
 class Et2Transformer implements ClassFileTransformer {
 
     private final PrintWriter traceWriter;
-    private final PrintWriter methodsWriter;
 
-    public Et2Transformer(PrintWriter traceWriter, PrintWriter methodsWriter) {
+    public Et2Transformer(PrintWriter traceWriter) {
         this.traceWriter = traceWriter;
-        this.methodsWriter = methodsWriter;
     }
 
     // Map to prevent duplicate loading of classes:
@@ -75,7 +85,7 @@ class Et2Transformer implements ClassFileTransformer {
         // Javassist stuff:
         // System.err.println(className + " is about to get loaded by the ClassLoader");
         ByteArrayInputStream istream = new ByteArrayInputStream(klassFileBuffer);
-        MethodInstrumenter instMeth = new MethodInstrumenter(istream, className, methodsWriter);
+        MethodInstrumenter instMeth = new MethodInstrumenter(istream, className);
         CtClass klazz = null;
         try {
             klazz = instMeth.instrumentMethods(loader);
