@@ -1,87 +1,57 @@
-# Elephant Tracks 2 (JVM Frontend)
+# Elephant Tracks 3
 
 A rewritten version of the garbage collection tracing tool for Java programs,
 Elephant Tracks, developed by the RedLine Research Group @ Tufts University
-Department of Computer Science.
+Department of Computer Science.  ET3 is written from scratch in order to
+improve the performance of Elephant Tracks and for compatibility with the
+HotSpot JVM.
+
+### How we got here
+* [Elephant Tracks 1](http://www.cs.tufts.edu/research/redline/elephantTracks/) is a JVMTI
+  agent written in C++. There were compatibility issues as ET1 could only run with Java 1.6.
+  This limited the number of applications it could run with.
+* Elephant Tracks 2 - An early prototype for ET2 was created by the native instrumentation library
+  [JNIF](http://sape.inf.usi.ch/jnif) by [Ray Qi](https://www.xuanruiqi.com/) was up and running
+  but we couldn't successfully run the [DaCapo benchmarks](http://dacapobench.sourceforge.net/)
+  with it.
+* Elephant Tracks 3 (the latest version) uses Javassist which uses the [ASM library](https://asm.ow2.io/)
+  underneath.
 
 ## Improvements
-ET2 is written from scratch in order to improve the performance of Elephant Tracks
-and for compatibility with the HotSpot JVM. Instead of using the ASM library for
-instrumentation (and forking Java processes to do so) and relying on the JNI to
-write instrumentation methods, ET2 uses the native instrumentation library
-[JNIF](http://sape.inf.usi.ch/jnif) and write all instrumentation methods in Java.
+Instead of using the [JNIF] library for instrumentation through the JVMTI interface,
+ET3 uses the [Javassist library](http://www.javassist.org/) through the [Java agent instrumentation](https://docs.oracle.com/javase/8/docs/api/java/lang/instrument/package-summary.html). Javassist is itself based on on the [ASM bytecode rewriting library](https://asm.ow2.io/).
+The instrumentation methods in ET2 that were written in Java are reused for ET3 with some modifications.
 
-Moreover, instead of creating and tracing object graphs at runtime as the current
-implementation of Elephant Tracks does, ET2 generates data that allows the object
-graphs to be generated post-mortem.
+The important idea behind ET2 and ET3 is that instead of creating and tracing object graphs at runtime
+(as ET1 does), ET3 generates data that allows the object graphs to be generated offline after the
+program ends.
 
-The short-term performance goal is a 1/3 performance boost compared to the current
-implementation of Elephant Tracks. In the long term, we aspire to increase the
-performance of Elephant Tracks by 7-10 times.
-
-## Using ET2
-`java -agentlib:et2 [Class]`, all other Java options (including `-jar`)
-*should* work as usual.
-
-## Required JNIF Modification
-One must modify the JNIF file `src-libjnif/parser.cpp` and go into the `AttrsParser::parse`
-method to prevent the parsing of LineNumberTable, LocalVariableTable and LocalVariableTypeTable, or
-use our fork of JNIF.
+## Using ET3
 
 ## Requirements
-   * gcc
-   * JNIF, available from [here](https://github.com/ElephantTracksProject/jnif).
-   * Oracle JDK 8 or IBM J9 JDK.
-   * Linux. Only tested with RHEL and Ubuntu; not tested with other distributions or
-     operating systems.
-   * cmake 3.9 or greater
+* [Java 8](https://openjdk.java.net/install/)
+* [Javassist](http://www.javassist.org/) 3.25.0-GA
+* For the trace analysis programs:
+   * gcc/g++ or clang++ (TODO: Which versions did we use?)
+   * [cmake 3.9 or greater](https://cmake.org/download/)
 
-## Building the *Elephant Tracks 2 agent* with `cmake`
-   * [cmake](https://cmake.org/) is many things, but most importantly it's a Makefile generator.
-   * Steps to building with `cmake`:
-       * Create a `BUILD` directory anywhere.
-           * `mkdir /path/to/et2-agent/BUILD`
-       * Run `cmake` on `CMakeLists.txt`
-           * `cmake /path/to/et2-java/
-                  -DLIBJNIF=/path/to/jnif/src-libjnif
-                  -DJAVA_HOME=/path/to/java
-                  -DBOOST_ROOT=/path/to/boost_1.66`
-       * This generates a `Makefile` in `/path/to/BUILD`
-           * `cd /path/to/BUILD && make`
+### Build using Maven
+* `mvn clean compile package`
+* Look for the jar file `instrumenter-1.0-SNAPSHOT-jar-with-dependencies.jar` and copy to working directory.
 
-## Building the *Elephant Tracks 2 simulator* with `cmake`
-   * Steps to building with `cmake`:
-       * Create a `BUILD` directory anywhere.
-           * `mkdir /path/to/et2-simulator/BUILD`
-       * Run `cmake` on `CMakeLists.txt`
-           * `cmake /path/to/et2-simulator
-       * This generates a `Makefile` in `/path/to/et2-simulator/BUILD`
-           * `cd /path/to/et2-simulator/BUILD && make`
+### Running your jar with the ET3 Java agent
+* `java -javaagent:./instrumenter-1.0-SNAPSHOT-jar-with-dependencies.jar  -jar YouProgram.jar`
+* To run a selected DaCapo benchmark:
+    * `java -javaagent:./instrumenter-1.0-SNAPSHOT-jar-with-dependencies.jar  -jar dacapo-9.12-bach.jar --no-validation -t 8 avrora`
+        * Earlier prototypes of ET3 had issues when running with largish values for
+          thread number (`-t`). Currently the issues seem to have disappeared but
+          are not guaranteed to be bug-free. Please let us know if you run into any
+          problems running with large number of threads.
+        * The `--no-validation` is currently required as DaCapo complains loudly if left out. This is because we do bytecode rewriting which causes DaCapo to declare our run as invalid.
 
-## Running tests
-   * The tests are run using [pytest](https://docs.pytest.org/en/latest/).
-       * See the [et2_tests.py](https://github.com/ElephantTracksProject/et2-java/blob/master/et2_tests.py) for details.
-   * Use the following command:
-       * `python3.4  -m pytest et2_tests.py --java_path /etc/alternatives/java_sdk_1.8.0/bin/java --agent_path /data/rveroy/pulsrc/et2-java/BUILD  --rootdir .`
-       * Add `-v` to the end of the command to get verbose testing.
-   * Modify `--java_path` and `--agent_path` to fit your setup.
-   * The `--rootdir` option specifies where the pytest cache is placed.
+### Current Status
 
-## Building with the Makefile in source (DEPRECATED)
-   * Ensure `JAVA_HOME` is set correctly
-   * Set the variables in `Makefile.inc`
-   * `make`
-   * Note: this is deprecated. Please see how to build with cmake.
-
-## Testing (the old way)
-   * `make test`
-   * `java -agentlib:et2 Hello`
-   * `java -agentlib:et2 BinarySearchTree`
-
-## Current Status
-ET2/JVM runs correctly (sometimes) and without thrown exceptions on Oracle Java 8 if bytecode verification is disabled,
-but it seems to sometimes fail bytecode verification at the moment. Currently we are not exactly sure what is
-wrong with it.
+* ET3 can run the DaCapo benchmarks if run with the `--no-validation` option.
 
 ## Licensing
 See the "LICENSE" file.
