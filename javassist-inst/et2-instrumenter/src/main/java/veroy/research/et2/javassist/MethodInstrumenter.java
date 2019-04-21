@@ -32,6 +32,7 @@ public class MethodInstrumenter {
     private static ConcurrentHashMap<String, Integer> classIdMap = new ConcurrentHashMap();
     private static ConcurrentHashMap<String, Integer> fieldIdMap = new ConcurrentHashMap();
     private static ConcurrentHashMap<String, Integer> allocSiteIdMap = new ConcurrentHashMap();
+    private static ConcurrentHashMap<Integer, Integer> witnessTimeMap = new ConcurrentHashMap();
 
     private static AtomicBoolean mainInstrumentedFlag = new AtomicBoolean(false);
     private InputStream instream;
@@ -137,10 +138,13 @@ public class MethodInstrumenter {
                                     final String fieldName = expr.getField().getName();
                                     if (expr.isWriter()) {
                                         expr.replace( "{ veroy.research.et2.javassist.ETProxy.onPutField($1, $0, " + getFieldId(className, fieldName) + "); $_ = $proceed($$); }" );
+                                    } else {
+                                        expr.replace( "{ veroy.research.et2.javassist.ETProxy.witnessObjectAliveVer2($0, " + classId + "); $_ = $proceed($$); }" );
                                     }
                                 } catch (NotFoundException exc) {
                                 }
                             }
+
                         }
                 );
                 // Insert ENTRY and EXIT events:

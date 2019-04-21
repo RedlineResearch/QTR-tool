@@ -34,7 +34,7 @@ public class DynamicInstrumenter {
         System.out.println("Loading Agent..");
         PrintWriter methodsWriter = new PrintWriter(new FileOutputStream( new File("methods.list") ), true);
         PrintWriter fieldsWriter = new PrintWriter(new FileOutputStream( new File("fields.list") ), true);
-        PrintWriter classWriter = new PrintWriter(new FileOutputStream( new File("classs.list") ), true);
+        PrintWriter classWriter = new PrintWriter(new FileOutputStream( new File("class.list") ), true);
         MethodInstrumenter.setPrintWriters( methodsWriter,
                                             fieldsWriter,
                                             classWriter );

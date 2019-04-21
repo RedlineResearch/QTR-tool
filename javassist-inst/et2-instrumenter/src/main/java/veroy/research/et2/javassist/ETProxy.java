@@ -1,13 +1,17 @@
 package veroy.research.et2.javassist;
 
+import java.io.PrintWriter;
 import java.lang.Runtime;
 import java.lang.Thread;
 import java.lang.instrument.Instrumentation;
 import java.lang.reflect.Array;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.Arrays;
-import java.io.PrintWriter;
+import java.util.Map;
+import java.util.Collections;
 import java.util.concurrent.locks.ReentrantLock;
+import org.apache.commons.collections4.map.LRUMap;
+import org.apache.commons.lang3.tuple.Pair;
 // TODO: import org.apache.log4j.Logger;
 
 
@@ -31,8 +35,10 @@ public class ETProxy {
     private static long[] fourthBuffer = new long[BUFMAX+1];
     private static int[] fifthBuffer = new int[BUFMAX+1];
 
-    private static long[] timestampBuffer = new long[BUFMAX];
-    private static long[] threadIDBuffer = new long[BUFMAX];
+    private static long[] timestampBuffer = new long[BUFMAX+1];
+    private static long[] threadIDBuffer = new long[BUFMAX+1];
+
+    private static Map<Integer, Pair<Long, Integer>>  witnessMap = Collections.synchronizedMap(new LRUMap<Integer, Pair<Long, Integer>>(BUFMAX));
 
     private static AtomicInteger ptr = new AtomicInteger();
     /*
@@ -171,15 +177,14 @@ public class ETProxy {
                 if (ptr.get() >= BUFMAX) {
                     flushBuffer();
                     assert(ptr.get() == 0);
-                } else {
-                    int currPtr = ptr.getAndIncrement();
-                    eventTypeBuffer[currPtr] = 7;
-                    firstBuffer[currPtr] = System.identityHashCode(tgtObject);
-                    secondBuffer[currPtr] = fieldId;
-                    thirdBuffer[currPtr] = System.identityHashCode(object);
-                    timestampBuffer[currPtr] = timestamp;
-                    threadIDBuffer[currPtr] = System.identityHashCode(Thread.currentThread());
                 }
+                int currPtr = ptr.getAndIncrement();
+                eventTypeBuffer[currPtr] = 7;
+                firstBuffer[currPtr] = System.identityHashCode(tgtObject);
+                secondBuffer[currPtr] = fieldId;
+                thirdBuffer[currPtr] = System.identityHashCode(object);
+                timestampBuffer[currPtr] = timestamp;
+                threadIDBuffer[currPtr] = System.identityHashCode(Thread.currentThread());
             }
         } finally {
             mx.unlock();
@@ -204,21 +209,20 @@ public class ETProxy {
                 if (ptr.get() >= BUFMAX) {
                     flushBuffer();
                     assert(ptr.get() == 0);
-                } else {
-                    int currPtr = ptr.getAndIncrement();
-                    eventTypeBuffer[currPtr] = 4;
-                    firstBuffer[currPtr] = System.identityHashCode(arrayObj);
-                    secondBuffer[currPtr] = typeId;
-                    try {
-                        thirdBuffer[currPtr] = Array.getLength(arrayObj);
-                    } catch (IllegalArgumentException exc) {
-                        thirdBuffer[currPtr] = 0;
-                    }
-                    fourthBuffer[currPtr] = inst.getObjectSize(arrayObj);
-                    fifthBuffer[currPtr] = allocSiteId;
-                    timestampBuffer[currPtr] = timestamp;
-                    threadIDBuffer[currPtr] = System.identityHashCode(Thread.currentThread());
                 }
+                int currPtr = ptr.getAndIncrement();
+                eventTypeBuffer[currPtr] = 4;
+                firstBuffer[currPtr] = System.identityHashCode(arrayObj);
+                secondBuffer[currPtr] = typeId;
+                try {
+                    thirdBuffer[currPtr] = Array.getLength(arrayObj);
+                } catch (IllegalArgumentException exc) {
+                    thirdBuffer[currPtr] = 0;
+                }
+                fourthBuffer[currPtr] = inst.getObjectSize(arrayObj);
+                fifthBuffer[currPtr] = allocSiteId;
+                timestampBuffer[currPtr] = timestamp;
+                threadIDBuffer[currPtr] = System.identityHashCode(Thread.currentThread());
             }
         } finally {
             mx.unlock();
@@ -226,6 +230,53 @@ public class ETProxy {
         inInstrumentMethod.set(false);
     }
 
+    public static void witnessObjectAlive( Object aliveObject,
+                                           int classID ) {
+        long timestamp = System.nanoTime();
+        if (inInstrumentMethod.get()) {
+            return;
+        } else {
+            inInstrumentMethod.set(true);
+        }
+
+        mx.lock();
+        try {
+            synchronized(ptr) {
+                if (ptr.get() >= BUFMAX) {
+                    flushBuffer();
+                    assert(ptr.get() == 0);
+                }
+                int currPtr = ptr.getAndIncrement();
+                firstBuffer[currPtr] = System.identityHashCode(aliveObject);
+                eventTypeBuffer[currPtr] = 8;
+                secondBuffer[currPtr] = classID;
+                timestampBuffer[currPtr] = timestamp;
+                threadIDBuffer[currPtr] = System.identityHashCode(Thread.currentThread());
+            }
+        } finally {
+            mx.unlock();
+        }
+        inInstrumentMethod.set(false);
+    }
+    
+    public static void witnessObjectAliveVer2( Object aliveObject,
+                                               int classId ) {
+        long timestamp = System.nanoTime();
+        if (inInstrumentMethod.get()) {
+            return;
+        } else {
+            inInstrumentMethod.set(true);
+        }
+        mx.lock();
+        try {
+            witnessMap.put(System.identityHashCode(aliveObject), Pair.of(timestamp, classId));
+            // eventTypeBuffer[currPtr] = 8;
+            // TODO: threadIDBuffer[currPtr] = System.identityHashCode(Thread.currentThread());
+        } finally {
+            mx.unlock();
+        }
+        inInstrumentMethod.set(false);
+    }
     /*
     public static void onMultiArrayAlloc( int dims,
                                           int allocdClassID,
@@ -288,59 +339,6 @@ public class ETProxy {
         // TODO: inInstrumentMethod.set(false);
     }
 
-    public static void witnessObjectAlive( Object aliveObject,
-                                           int classID )
-    {
-        if (!atMain) {
-            return;
-        }
-        
-        long timestamp = System.nanoTime();
-        
-        // TODO: if (inInstrumentMethod.get()) {
-        // TODO:     return;
-        // TODO: } else {
-        // TODO:     inInstrumentMethod.set(true);
-        // TODO: }
-
-        mx.lock();
-
-        try {
-            while (true) {
-                if (ptr.get() < BUFMAX) {
-                    // wait on ptr to prevent overflow
-                    int currPtr;
-                    synchronized(ptr) {
-                        currPtr = ptr.getAndIncrement();
-                    }
-
-                    // System.err.println("Seems like problem is here...");
-                    // System.err.println("Class being instrumented here (ID): " + classID);
-
-                    firstBuffer[currPtr] = System.identityHashCode(aliveObject);
-
-                    // System.err.println("gets here");
-                    eventTypeBuffer[currPtr] = 8;
-                    secondBuffer[currPtr] = classID;
-                    timestampBuffer[currPtr] = timestamp;
-
-                    threadIDBuffer[currPtr] = System.identityHashCode(Thread.currentThread());
-                    break;
-                } else {
-                    synchronized(ptr) {
-                        if (ptr.get() >= BUFMAX) {
-                            flushBuffer();
-                        }
-                    }
-                }
-            }
-        } finally {
-            mx.unlock();
-        }
-        
-        // TODO: inInstrumentMethod.set(false);
-    }
-    
     public static void onInvokeMethod(Object allocdObject, int allocdClassID, int allocSiteID)
     {
         if (!atMain) {
