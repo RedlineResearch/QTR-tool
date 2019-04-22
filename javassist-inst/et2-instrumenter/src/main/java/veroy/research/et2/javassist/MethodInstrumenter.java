@@ -198,6 +198,7 @@ public class MethodInstrumenter {
     }
 
     public static void writeWitnessMap(Map<Integer, Pair<Long, Integer>> map, PrintWriter writer) {
+        ETProxy.inInstrumentMethod.set(true);
         for (Map.Entry<Integer, Pair<Long, Integer>> entry : map.entrySet()) {
             Integer key = (Integer) entry.getKey();
             Pair<Long, Integer> value = (Pair<Long, Integer>) entry.getValue();

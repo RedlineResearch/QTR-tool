@@ -46,12 +46,14 @@ public class DynamicInstrumenter {
         ClassPool.releaseUnmodifiedClassFile = true;
         ClassPool cp = ClassPool.getDefault();
         cp.get("veroy.research.et2.javassist.ETProxy");
-        Et2Transformer optimus = new Et2Transformer(traceWriter);
+        final Et2Transformer optimus = new Et2Transformer(traceWriter);
         inst.addTransformer(optimus);
         Runtime.getRuntime()
                .addShutdownHook( new Thread() { 
                                      public void run() {
                                          System.err.println("SHUTDOWN running.");
+                                         inst.removeTransformer(optimus);
+                                         ETProxy.inInstrumentMethod.set(true);
                                          MethodInstrumenter.writeMapsToFile(witnessWriter);
                                      }
                });

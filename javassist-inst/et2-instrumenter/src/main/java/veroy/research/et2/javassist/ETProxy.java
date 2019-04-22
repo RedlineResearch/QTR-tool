@@ -21,7 +21,7 @@ public class ETProxy {
     public static Instrumentation inst;
 
     // Thread local boolean w/ default value false
-    private static final InstrumentFlag inInstrumentMethod = new InstrumentFlag();
+    public static final InstrumentFlag inInstrumentMethod = new InstrumentFlag();
     private static ReentrantLock mx = new ReentrantLock();
 
     // TODO: private static Logger et2Logger = Logger.getLogger(ETProxy.class);
