@@ -32,9 +32,10 @@ public class DynamicInstrumenter {
 
     public static void premain(String args, Instrumentation inst) throws Exception {
         System.out.println("Loading Agent..");
-        PrintWriter methodsWriter = new PrintWriter(new FileOutputStream( new File("methods.list") ), true);
-        PrintWriter fieldsWriter = new PrintWriter(new FileOutputStream( new File("fields.list") ), true);
-        PrintWriter classWriter = new PrintWriter(new FileOutputStream( new File("class.list") ), true);
+        final PrintWriter methodsWriter = new PrintWriter(new FileOutputStream( new File("methods.list") ), true);
+        final PrintWriter fieldsWriter = new PrintWriter(new FileOutputStream( new File("fields.list") ), true);
+        final PrintWriter classWriter = new PrintWriter(new FileOutputStream( new File("class.list") ), true);
+        final PrintWriter witnessWriter = new PrintWriter(new FileOutputStream( new File("witness.list") ), true);
         MethodInstrumenter.setPrintWriters( methodsWriter,
                                             fieldsWriter,
                                             classWriter );
@@ -51,7 +52,7 @@ public class DynamicInstrumenter {
                .addShutdownHook( new Thread() { 
                                      public void run() {
                                          System.err.println("SHUTDOWN running.");
-                                         MethodInstrumenter.writeMapsToFile();
+                                         MethodInstrumenter.writeMapsToFile(witnessWriter);
                                      }
                });
     }

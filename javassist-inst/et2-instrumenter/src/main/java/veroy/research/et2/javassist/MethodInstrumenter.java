@@ -21,6 +21,7 @@ import javassist.expr.ExprEditor;
 import javassist.expr.FieldAccess;
 import javassist.expr.NewArray;
 import javassist.expr.NewExpr;
+import org.apache.commons.lang3.tuple.Pair;
 
 public class MethodInstrumenter {
 
@@ -32,7 +33,6 @@ public class MethodInstrumenter {
     private static ConcurrentHashMap<String, Integer> classIdMap = new ConcurrentHashMap();
     private static ConcurrentHashMap<String, Integer> fieldIdMap = new ConcurrentHashMap();
     private static ConcurrentHashMap<String, Integer> allocSiteIdMap = new ConcurrentHashMap();
-    private static ConcurrentHashMap<Integer, Integer> witnessTimeMap = new ConcurrentHashMap();
 
     private static AtomicBoolean mainInstrumentedFlag = new AtomicBoolean(false);
     private InputStream instream;
@@ -182,17 +182,28 @@ public class MethodInstrumenter {
                 methodName.equals("wait"));
     }
 
-    public static void writeMapsToFile() {
+    public static void writeMapsToFile(PrintWriter witnessWriter) {
         writeMap(methodIdMap, methodsWriter);
         writeMap(fieldIdMap, fieldsWriter);
         writeMap(classIdMap, classWriter);
+        writeWitnessMap(ETProxy.witnessMap, witnessWriter);
     }
 
-    public static void writeMap(ConcurrentHashMap<String, Integer> map, PrintWriter writer) {
+    public static void writeMap(Map<String, Integer> map, PrintWriter writer) {
         for (Map.Entry<String, Integer> entry : map.entrySet()) {
             String key = (String) entry.getKey();
             Integer value = (Integer) entry.getValue();
             writer.println(key + "," + value.toString());
+        }
+    }
+
+    public static void writeWitnessMap(Map<Integer, Pair<Long, Integer>> map, PrintWriter writer) {
+        for (Map.Entry<Integer, Pair<Long, Integer>> entry : map.entrySet()) {
+            Integer key = (Integer) entry.getKey();
+            Pair<Long, Integer> value = (Pair<Long, Integer>) entry.getValue();
+            Long classId = (Long) value.getLeft();
+            Integer timestamp = (Integer) value.getRight();
+            writer.println(key + "," + classId.toString() + "," + timestamp.toString());
         }
     }
 }

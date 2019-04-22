@@ -16,7 +16,7 @@ import org.apache.commons.lang3.tuple.Pair;
 
 
 public class ETProxy {
-    
+
     public static PrintWriter traceWriter = null;
     public static Instrumentation inst;
 
@@ -38,7 +38,7 @@ public class ETProxy {
     private static long[] timestampBuffer = new long[BUFMAX+1];
     private static long[] threadIDBuffer = new long[BUFMAX+1];
 
-    private static Map<Integer, Pair<Long, Integer>>  witnessMap = Collections.synchronizedMap(new LRUMap<Integer, Pair<Long, Integer>>(BUFMAX));
+    public static Map<Integer, Pair<Long, Integer>>  witnessMap = Collections.synchronizedMap(new EtLRUMap<Integer, Pair<Long, Integer>>());
 
     private static AtomicInteger ptr = new AtomicInteger();
     /*
@@ -66,10 +66,10 @@ public class ETProxy {
 
     */
 
-    
+
     // I hope no one ever creates a 2 gigabyte object
     // TODO: private static native int getObjectSize(Object obj);
-    
+
     public static void debugCall(String message) {
         System.err.println("XXX: " + message);
     }
@@ -157,7 +157,7 @@ public class ETProxy {
         }
         inInstrumentMethod.set(false);
     }
-            
+
     // ET1 looked like this:
     //       U <old-target> <object> <new-target> <field> <thread>
     // ET2 is now:
@@ -230,35 +230,6 @@ public class ETProxy {
         inInstrumentMethod.set(false);
     }
 
-    public static void witnessObjectAlive( Object aliveObject,
-                                           int classID ) {
-        long timestamp = System.nanoTime();
-        if (inInstrumentMethod.get()) {
-            return;
-        } else {
-            inInstrumentMethod.set(true);
-        }
-
-        mx.lock();
-        try {
-            synchronized(ptr) {
-                if (ptr.get() >= BUFMAX) {
-                    flushBuffer();
-                    assert(ptr.get() == 0);
-                }
-                int currPtr = ptr.getAndIncrement();
-                firstBuffer[currPtr] = System.identityHashCode(aliveObject);
-                eventTypeBuffer[currPtr] = 8;
-                secondBuffer[currPtr] = classID;
-                timestampBuffer[currPtr] = timestamp;
-                threadIDBuffer[currPtr] = System.identityHashCode(Thread.currentThread());
-            }
-        } finally {
-            mx.unlock();
-        }
-        inInstrumentMethod.set(false);
-    }
-    
     public static void witnessObjectAliveVer2( Object aliveObject,
                                                int classId ) {
         long timestamp = System.nanoTime();
@@ -272,6 +243,7 @@ public class ETProxy {
             witnessMap.put(System.identityHashCode(aliveObject), Pair.of(timestamp, classId));
             // eventTypeBuffer[currPtr] = 8;
             // TODO: threadIDBuffer[currPtr] = System.identityHashCode(Thread.currentThread());
+            // TODO: Override 'remoteLRU' method to save the timestamp.
         } finally {
             mx.unlock();
         }
@@ -286,9 +258,9 @@ public class ETProxy {
         if (!atMain) {
             return;
         }
-        
+
         long timestamp = System.nanoTime();
-        
+
         // TODO: if (inInstrumentMethod.get()) {
         // TODO:     return;
         // TODO: } else {
@@ -335,7 +307,7 @@ public class ETProxy {
         } finally {
             mx.unlock();
         }
-        
+
         // TODO: inInstrumentMethod.set(false);
     }
 
@@ -473,5 +445,14 @@ public class ETProxy {
             mx.unlock();
         }
     }
-    
+
+    private static class EtLRUMap<K, V> extends LRUMap<K, V> {
+        public EtLRUMap() {
+            super();
+        }
+
+        // TODO: Sublcass 'removeLRU'.
+    }
+
 }
+
