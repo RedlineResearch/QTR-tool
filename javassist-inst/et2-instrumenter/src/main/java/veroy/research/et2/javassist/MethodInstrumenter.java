@@ -202,9 +202,9 @@ public class MethodInstrumenter {
         for (Map.Entry<Integer, Pair<Long, Integer>> entry : map.entrySet()) {
             Integer key = (Integer) entry.getKey();
             Pair<Long, Integer> value = (Pair<Long, Integer>) entry.getValue();
-            Long classId = (Long) value.getLeft();
-            Integer timestamp = (Integer) value.getRight();
-            writer.println(key + "," + classId.toString() + "," + timestamp.toString());
+            Long timestamp = (Long) value.getLeft();
+            Integer classId  = (Integer) value.getRight();
+            writer.println(key + "," + timestamp.toString() + "," + classId.toString());
         }
     }
 }
