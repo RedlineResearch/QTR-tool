@@ -7,10 +7,12 @@ import java.lang.instrument.Instrumentation;
 import java.lang.reflect.Array;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Collections;
 import java.util.concurrent.locks.ReentrantLock;
-import org.apache.commons.collections4.map.LRUMap;
+// TODO: import org.apache.commons.collections4.map.LRUMap;
 import org.apache.commons.lang3.tuple.Pair;
 // TODO: import org.apache.log4j.Logger;
 
@@ -38,37 +40,19 @@ public class ETProxy {
     private static long[] timestampBuffer = new long[BUFMAX+1];
     private static long[] threadIDBuffer = new long[BUFMAX+1];
 
-    public static Map<Integer, Pair<Long, Integer>>  witnessMap = Collections.synchronizedMap(new EtLRUMap<Integer, Pair<Long, Integer>>());
+    public static Map<Integer, Pair<Long, Integer>>  witnessMap = Collections.synchronizedMap(new HashMap<Integer, Pair<Long, Integer>>());
 
     private static AtomicInteger ptr = new AtomicInteger();
-    /*
-
 
     // TRACING EVENTS
-    // Method entry = 1,
-    // method exit = 2,
-    // object allocation = 3
-    // object array allocation = 4
-    // 2D array allocation = 6,
-    // put field = 7
-    // get field = 8
+    //     Method entry = 1,
+    //     method exit = 2,
+    //     object allocation = 3
+    //     object array allocation = 4
+    //     2D array allocation = 6,
+    //     put field = 7
+    //     get field = 8
 
-    private static PrintWriter traceWriter;
-
-
-    static {
-        try {
-            traceWriter = new PrintWriter("trace");
-        } catch (Exception e) {
-            System.err.println("FNF");
-        }
-    }
-
-    */
-
-
-    // I hope no one ever creates a 2 gigabyte object
-    // TODO: private static native int getObjectSize(Object obj);
 
     public static void debugCall(String message) {
         System.err.println("XXX: " + message);
@@ -88,7 +72,6 @@ public class ETProxy {
                     flushBuffer();
                     assert(ptr.get() == 0);
                 }
-                // wait on ptr to prevent overflow
                 int currPtr = ptr.getAndIncrement();
                 firstBuffer[currPtr] = methodId;
                 secondBuffer[currPtr] = (receiver == null) ? 0 : System.identityHashCode(receiver);
@@ -194,7 +177,8 @@ public class ETProxy {
 
     public static void onArrayAlloc( Object arrayObj,
                                      int typeId,
-                                     int allocSiteId )
+                                     int allocSiteId,
+                                     int[] dims )
     {
         long timestamp = System.nanoTime();
         if (inInstrumentMethod.get()) {
@@ -446,6 +430,7 @@ public class ETProxy {
         }
     }
 
+    /* TODO:
     private static class EtLRUMap<K, V> extends LRUMap<K, V> {
         public EtLRUMap() {
             super();
@@ -453,6 +438,7 @@ public class ETProxy {
 
         // TODO: Sublcass 'removeLRU'.
     }
+    */
 
 }
 

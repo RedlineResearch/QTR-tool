@@ -125,9 +125,9 @@ public class MethodInstrumenter {
                                 try {
                                     final int allocSiteId = getAllocSiteId(className, expr.indexOfBytecode());
                                     expr.replace( "{ $_ = $proceed($$); veroy.research.et2.javassist.ETProxy.onArrayAlloc( $_," +
-                                                  classId + ", " + allocSiteId + "); }");
+                                                  classId + ", " + allocSiteId + ", " + generateNewArrayReplacement(expr) + "); }");
                                 } catch (CannotCompileException exc) {
-                                    System.err.println("XXX: Unable on to compile call to onArrayAlloc - " + exc.getMessage());
+                                    System.err.println("Unable on to compile call to onArrayAlloc - " + exc.getMessage());
                                     throw exc;
                                 }
                             }
@@ -171,6 +171,17 @@ public class MethodInstrumenter {
         ctKlazz.setName(newName);
 
         return ctKlazz;
+    }
+
+    protected String generateNewArrayReplacement(NewArray expr) {
+        String result = "new int[]{";
+        int numDims = expr.getCreatedDimensions();
+        result = result + "$1";
+        for (int ind = 1; ind < numDims; ind++) {
+            result = result + ", $" + (ind + 1);
+        }
+        result = result + "}";
+        return result;
     }
 
     protected boolean shouldIgnore(int modifiers, String methodName) {
