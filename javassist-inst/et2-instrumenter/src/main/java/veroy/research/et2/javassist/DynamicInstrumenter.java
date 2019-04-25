@@ -46,8 +46,6 @@ public class DynamicInstrumenter {
         ClassPool.releaseUnmodifiedClassFile = true;
         ClassPool cp = ClassPool.getDefault();
         cp.get("veroy.research.et2.javassist.ETProxy");
-        cp.get("java.util.ArrayList");
-        cp.get("java.util.Arrays");
         final Et2Transformer optimus = new Et2Transformer(traceWriter);
         inst.addTransformer(optimus);
         Runtime.getRuntime()

@@ -40,6 +40,8 @@ public class ETProxy {
     private static long[] timestampBuffer = new long[BUFMAX+1];
     private static long[] threadIDBuffer = new long[BUFMAX+1];
 
+    private static String[] dimsBuffer = new String[BUFMAX+1];
+
     public static Map<Integer, Pair<Long, Integer>>  witnessMap = Collections.synchronizedMap(new HashMap<Integer, Pair<Long, Integer>>());
 
     private static AtomicInteger ptr = new AtomicInteger();
@@ -49,6 +51,7 @@ public class ETProxy {
     //     method exit = 2,
     //     object allocation = 3
     //     object array allocation = 4
+    final static int ARRAY_ALLOC_EVENT = 4;
     //     2D array allocation = 6,
     //     put field = 7
     //     get field = 8
@@ -175,6 +178,13 @@ public class ETProxy {
         inInstrumentMethod.set(false);
     }
 
+    public static void saveDimsToBuffer(int currPtr, int[] dims) {
+        String[] dimsStr = Arrays.stream(dims)
+                                 .mapToObj(String::valueOf)
+                                 .toArray(String[]::new);
+        dimsBuffer[currPtr] = Integer.toString(dims.length) + "," + String.join(",", dimsStr);
+    }
+
     public static void onArrayAlloc( Object arrayObj,
                                      int typeId,
                                      int allocSiteId,
@@ -195,7 +205,7 @@ public class ETProxy {
                     assert(ptr.get() == 0);
                 }
                 int currPtr = ptr.getAndIncrement();
-                eventTypeBuffer[currPtr] = 4;
+                eventTypeBuffer[currPtr] = ARRAY_ALLOC_EVENT;
                 firstBuffer[currPtr] = System.identityHashCode(arrayObj);
                 secondBuffer[currPtr] = typeId;
                 try {
@@ -207,6 +217,7 @@ public class ETProxy {
                 fifthBuffer[currPtr] = allocSiteId;
                 timestampBuffer[currPtr] = timestamp;
                 threadIDBuffer[currPtr] = System.identityHashCode(Thread.currentThread());
+                saveDimsToBuffer(currPtr, dims);
             }
         } finally {
             mx.unlock();
@@ -379,7 +390,7 @@ public class ETProxy {
                                     + 0 + " " // Always zero because this isn't an array.
                                     + threadIDBuffer[i] );
                         break;
-                    case 4: // object array allocation
+                    case ARRAY_ALLOC_EVENT: // object array allocation
                     case 5: // primitive array allocation
                         // 5 now removed so nothing should come out of it
                         // A <object-id> <size> <type-id> <site-id> <length> <thread-id>
@@ -389,7 +400,8 @@ public class ETProxy {
                                     secondBuffer[i] + " " + // typedId
                                     fifthBuffer[i] + " " + // siteId
                                     thirdBuffer[i] + " " + // length
-                                    threadIDBuffer[i] ); // threadId
+                                    threadIDBuffer[i] + " " + // threadId
+                                    dimsBuffer[i] ); // dimensions
                         break;
                     case 6: // 2D array allocation
                         // TODO: Conflicting documention: 2018-1112
@@ -423,6 +435,7 @@ public class ETProxy {
                     default:
                         throw new IllegalStateException("Unexpected event: " + eventTypeBuffer[i]);
                 }
+                dimsBuffer[i] = "";
             }
             ptr.set(0);
         } finally {

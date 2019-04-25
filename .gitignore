@@ -58,3 +58,5 @@ version.cpp
 __pycache__
 venv
 
+# Some non-build testing directores
+OTHERS
