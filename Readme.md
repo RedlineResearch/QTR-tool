@@ -14,7 +14,7 @@ HotSpot JVM.
   [JNIF](http://sape.inf.usi.ch/jnif) by [Ray Qi](https://www.xuanruiqi.com/) was up and running
   but we couldn't successfully run the [DaCapo benchmarks](http://dacapobench.sourceforge.net/)
   with it.
-* QTR Tool uses Javassist which uses the [Javassist library](http://www.javassist.org/) underneath.
+* QTR Tool is implemented as a Java agent using which uses the [Javassist library](http://www.javassist.org/) underneath.
 
 ## Improvements
 Instead of using the [JNIF] library for instrumentation through the JVMTI interface,
