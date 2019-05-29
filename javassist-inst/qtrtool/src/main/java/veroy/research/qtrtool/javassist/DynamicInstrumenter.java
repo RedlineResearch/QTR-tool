@@ -26,7 +26,7 @@ import javassist.CtClass;
 import javassist.CtMethod;
 import javassist.Modifier;
 
-import veroy.research.qtrtool.javassist.ETProxy;
+import veroy.research.qtrtool.javassist.QTRProxy;
 
 public class DynamicInstrumenter {
 
@@ -40,12 +40,12 @@ public class DynamicInstrumenter {
                                             fieldsWriter,
                                             classWriter );
         PrintWriter traceWriter = new PrintWriter(new FileOutputStream( new File("trace") ), true);
-        ETProxy.traceWriter = traceWriter;
-        ETProxy.inst = inst;
+        QTRProxy.traceWriter = traceWriter;
+        QTRProxy.inst = inst;
         ClassPool.doPruning = true;
         ClassPool.releaseUnmodifiedClassFile = true;
         ClassPool cp = ClassPool.getDefault();
-        cp.get("veroy.research.qtrtool.javassist.ETProxy");
+        cp.get("veroy.research.qtrtool.javassist.QTRProxy");
         final QtrToolTransformer optimus = new QtrToolTransformer(traceWriter);
         inst.addTransformer(optimus);
         Runtime.getRuntime()
@@ -53,7 +53,7 @@ public class DynamicInstrumenter {
                                      public void run() {
                                          System.err.println("SHUTDOWN running.");
                                          inst.removeTransformer(optimus);
-                                         ETProxy.inInstrumentMethod.set(true);
+                                         QTRProxy.inInstrumentMethod.set(true);
                                          MethodInstrumenter.writeMapsToFile(witnessWriter);
                                      }
                });
@@ -106,7 +106,7 @@ class QtrToolTransformer implements ClassFileTransformer {
     }
 
     protected boolean shouldIgnore(String className) {
-        return ( (className.indexOf("ETProxy") >= 0) ||
+        return ( (className.indexOf("QTRProxy") >= 0) ||
                  (className.indexOf("java/lang") == 0) );
         // TODO: (className.indexOf("ClassLoader") >= 0) ||
     }

@@ -116,7 +116,7 @@ public class MethodInstrumenter {
                             // Instrument new expressions:
                             public void edit(NewExpr expr) throws CannotCompileException {
                                 final int allocSiteId = getAllocSiteId(className, expr.indexOfBytecode());
-                                expr.replace( "{ $_ = $proceed($$); veroy.research.qtrtool.javassist.ETProxy.onObjectAlloc($_, " +
+                                expr.replace( "{ $_ = $proceed($$); veroy.research.qtrtool.javassist.QTRProxy.onObjectAlloc($_, " +
                                               classId + ", " + allocSiteId + "); }");
                             }
 
@@ -124,7 +124,7 @@ public class MethodInstrumenter {
                             public void edit(NewArray expr) throws CannotCompileException {
                                 try {
                                     final int allocSiteId = getAllocSiteId(className, expr.indexOfBytecode());
-                                    expr.replace( "{ $_ = $proceed($$); veroy.research.qtrtool.javassist.ETProxy.onArrayAlloc( $_," +
+                                    expr.replace( "{ $_ = $proceed($$); veroy.research.qtrtool.javassist.QTRProxy.onArrayAlloc( $_," +
                                                   classId + ", " + allocSiteId + ", " + generateNewArrayReplacement(expr) + "); }");
                                 } catch (CannotCompileException exc) {
                                     System.err.println("Unable on to compile call to onArrayAlloc - " + exc.getMessage());
@@ -137,9 +137,9 @@ public class MethodInstrumenter {
                                 try {
                                     final String fieldName = expr.getField().getName();
                                     if (expr.isWriter()) {
-                                        expr.replace( "{ veroy.research.qtrtool.javassist.ETProxy.onPutField($1, $0, " + getFieldId(className, fieldName) + "); $_ = $proceed($$); }" );
+                                        expr.replace( "{ veroy.research.qtrtool.javassist.QTRProxy.onPutField($1, $0, " + getFieldId(className, fieldName) + "); $_ = $proceed($$); }" );
                                     } else {
-                                        expr.replace( "{ veroy.research.qtrtool.javassist.ETProxy.witnessObjectAliveVer2($0, " + classId + "); $_ = $proceed($$); }" );
+                                        expr.replace( "{ veroy.research.qtrtool.javassist.QTRProxy.witnessObjectAliveVer2($0, " + classId + "); $_ = $proceed($$); }" );
                                     }
                                 } catch (NotFoundException exc) {
                                 }
@@ -150,9 +150,9 @@ public class MethodInstrumenter {
                 // Insert ENTRY and EXIT events:
                 try {
                     if (Modifier.isStatic(modifiers)) {
-                        method.insertBefore("{ veroy.research.qtrtool.javassist.ETProxy.onEntry(" + methodId + ", (Object) null); }");
+                        method.insertBefore("{ veroy.research.qtrtool.javassist.QTRProxy.onEntry(" + methodId + ", (Object) null); }");
                     } else {
-                        method.insertBefore("{ veroy.research.qtrtool.javassist.ETProxy.onEntry(" + methodId + ", (Object) this); }");
+                        method.insertBefore("{ veroy.research.qtrtool.javassist.QTRProxy.onEntry(" + methodId + ", (Object) this); }");
                     }
                 } catch (CannotCompileException exc) {
                     System.err.println("Error compiling 'insertBefore' code into class/method: " + methodName + " ==? " + methodName.equals("equals"));
@@ -160,7 +160,7 @@ public class MethodInstrumenter {
                     throw exc;
                 }
                 try {
-                    method.insertAfter("{ veroy.research.qtrtool.javassist.ETProxy.onExit(" + methodId + "); }");
+                    method.insertAfter("{ veroy.research.qtrtool.javassist.QTRProxy.onExit(" + methodId + "); }");
                 } catch (CannotCompileException exc) {
                     System.err.println("Error compiling 'insertAfter' code into class/method: " + methodName);
                     exc.printStackTrace();
@@ -197,7 +197,7 @@ public class MethodInstrumenter {
         writeMap(methodIdMap, methodsWriter);
         writeMap(fieldIdMap, fieldsWriter);
         writeMap(classIdMap, classWriter);
-        writeWitnessMap(ETProxy.witnessMap, witnessWriter);
+        writeWitnessMap(QTRProxy.witnessMap, witnessWriter);
     }
 
     public static void writeMap(Map<String, Integer> map, PrintWriter writer) {
@@ -209,7 +209,7 @@ public class MethodInstrumenter {
     }
 
     public static void writeWitnessMap(Map<Integer, Pair<Long, Integer>> map, PrintWriter writer) {
-        ETProxy.inInstrumentMethod.set(true);
+        QTRProxy.inInstrumentMethod.set(true);
         for (Map.Entry<Integer, Pair<Long, Integer>> entry : map.entrySet()) {
             Integer key = (Integer) entry.getKey();
             Pair<Long, Integer> value = (Pair<Long, Integer>) entry.getValue();

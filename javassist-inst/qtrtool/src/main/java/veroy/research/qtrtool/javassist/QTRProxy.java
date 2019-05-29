@@ -17,7 +17,7 @@ import org.apache.commons.lang3.tuple.Pair;
 // TODO: import org.apache.log4j.Logger;
 
 
-public class ETProxy {
+public class QTRProxy {
 
     public static PrintWriter traceWriter = null;
     public static Instrumentation inst;
@@ -26,7 +26,7 @@ public class ETProxy {
     public static final InstrumentFlag inInstrumentMethod = new InstrumentFlag();
     private static ReentrantLock mx = new ReentrantLock();
 
-    // TODO: private static Logger qtrtoolLogger = Logger.getLogger(ETProxy.class);
+    // TODO: private static Logger qtrtoolLogger = Logger.getLogger(QTRProxy.class);
 
     // Buffers:
     private static final int BUFMAX = 10000;
