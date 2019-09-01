@@ -35,7 +35,7 @@ program ends.
    * [cmake 3.9 or greater](https://cmake.org/download/)
 
 ### Build using Maven
-* `cd javassist-inst/QTR-tool
+* `cd javassist-inst/QTR-tool`
 * `mvn clean compile package`
 * Look for the jar file `instrumenter-1.0-SNAPSHOT-jar-with-dependencies.jar` and copy to working directory.
 
