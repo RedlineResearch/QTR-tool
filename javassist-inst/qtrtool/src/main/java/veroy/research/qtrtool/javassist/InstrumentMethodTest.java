@@ -12,9 +12,16 @@ public class InstrumentMethodTest
 {
     /**
      */
-    @Ignore
     @Test
     public void shouldAnswerWithTrue()
+    {
+        assertTrue( true );
+    }
+
+    /**
+     */
+    @Test
+    public void shouldInstrumentString()
     {
         assertTrue( true );
     }
