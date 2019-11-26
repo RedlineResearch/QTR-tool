@@ -91,6 +91,7 @@ class QtrToolTransformer implements ClassFileTransformer {
         MethodInstrumenter instMeth = new MethodInstrumenter(istream, className);
         CtClass klazz = null;
         try {
+            System.err.println("Instrumenting: " + className);
             klazz = instMeth.instrumentMethods(loader);
         } catch (CannotCompileException exc) {
             return klassFileBuffer;
