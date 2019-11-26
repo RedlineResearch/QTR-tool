@@ -86,12 +86,12 @@ class QtrToolTransformer implements ClassFileTransformer {
             return klassFileBuffer;
         }
         // Javassist stuff:
-        // System.err.println(className + " is about to get loaded by the ClassLoader");
+        System.err.println(className + " is about to get loaded by the ClassLoader");
         ByteArrayInputStream istream = new ByteArrayInputStream(klassFileBuffer);
         MethodInstrumenter instMeth = new MethodInstrumenter(istream, className);
         CtClass klazz = null;
         try {
-            System.err.println("Instrumenting: " + className);
+            System.err.println(" -- Instrumenting: " + className);
             klazz = instMeth.instrumentMethods(loader);
         } catch (CannotCompileException exc) {
             return klassFileBuffer;
