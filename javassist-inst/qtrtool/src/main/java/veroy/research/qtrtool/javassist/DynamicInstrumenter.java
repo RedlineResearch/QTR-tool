@@ -13,8 +13,10 @@ import java.lang.instrument.IllegalClassFormatException;
 import java.lang.instrument.Instrumentation;
 import java.lang.reflect.Method;
 import java.security.ProtectionDomain;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.WeakHashMap;
@@ -57,6 +59,14 @@ public class DynamicInstrumenter {
                                          MethodInstrumenter.writeMapsToFile(witnessWriter);
                                      }
                });
+        // TODO:
+        Class[] classes = inst.getAllLoadedClasses();
+        List<Class> candidates = new ArrayList<Class>();
+        for (Class c : classes) {
+            if (inst.isModifiableClass(c) && inst.isRetransformClassesSupported()){
+                candidates.add(c);
+            }
+        }
     }
 
     private static void writeMethodList() {
