@@ -64,12 +64,12 @@ public class DynamicInstrumenter {
         List<Class> candidates = new ArrayList<Class>();
         for (Class c : classes) {
             System.err.print("XXX: " + c.getCanonicalName() + " -- ");
-            if (inst.isModifiableClass(c) {
+            if (inst.isModifiableClass(c)) {
                 System.err.print("modifiable ");
                 if (inst.isRetransformClassesSupported()){
                    System.err.print(" retransformable");
                 }
-                System.println("");
+                System.err.println("");
                 candidates.add(c);
             }
         }
