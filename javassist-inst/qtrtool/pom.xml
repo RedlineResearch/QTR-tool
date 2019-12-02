@@ -131,6 +131,7 @@
                         </manifest>
                         <manifestEntries>
                             <Premain-Class>veroy.research.qtrtool.javassist.DynamicInstrumenter</Premain-Class>
+                            <Can-Retransform-Classes>true</Can-Retransform-Classes>
                             <Boot-Class-Path>./instrumenter-1.0-SNAPSHOT-jar-with-dependencies.jar</Boot-Class-Path>
                         </manifestEntries>
                     </archive>
