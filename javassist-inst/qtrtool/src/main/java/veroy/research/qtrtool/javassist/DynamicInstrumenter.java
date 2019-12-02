@@ -63,7 +63,13 @@ public class DynamicInstrumenter {
         Class[] classes = inst.getAllLoadedClasses();
         List<Class> candidates = new ArrayList<Class>();
         for (Class c : classes) {
-            if (inst.isModifiableClass(c) && inst.isRetransformClassesSupported()){
+            System.err.print("XXX: " + c.getCanonicalName() + " -- ");
+            if (inst.isModifiableClass(c) {
+                System.err.print("modifiable ");
+                if (inst.isRetransformClassesSupported()){
+                   System.err.print(" retransformable");
+                }
+                System.println("");
                 candidates.add(c);
             }
         }
