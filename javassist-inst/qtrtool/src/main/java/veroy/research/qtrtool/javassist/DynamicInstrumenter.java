@@ -121,7 +121,8 @@ class QtrToolTransformer implements ClassFileTransformer {
     }
 
     protected boolean shouldIgnore(String className) {
-        return ( (className.indexOf("QTRProxy") >= 0) ||
+        return ( (className.indexOf("null") == 0) ||
+                 (className.indexOf("QTRProxy") >= 0) ||
                  (className.indexOf("javassist") == 0) ||
                  (className.indexOf("veroy.research.qtrtool.javassist") == 0) );
     }
