@@ -66,7 +66,7 @@ public class DynamicInstrumenter {
         for (Class klass : classes) {
             // DEBUG: System.err.print("XXX: " + c.getCanonicalName() + " -- ");
             String className = klass.getCanonicalName();
-            if (inst.isModifiableClass(klass) && !shouldIgnore(className)) {
+            if (inst.isModifiableClass(klass) && !optimus.shouldIgnore(className)) {
                 System.err.println("Adding ");
                 candidates.add(klass);
             }
