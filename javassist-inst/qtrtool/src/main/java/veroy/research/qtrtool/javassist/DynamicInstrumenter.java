@@ -34,6 +34,7 @@ public class DynamicInstrumenter {
 
     public static void premain(String args, Instrumentation inst) throws Exception {
         System.out.println("Loading Agent..");
+        assert(inst.isRetransformClassesSupported());
         final PrintWriter methodsWriter = new PrintWriter(new FileOutputStream( new File("methods.list") ), true);
         final PrintWriter fieldsWriter = new PrintWriter(new FileOutputStream( new File("fields.list") ), true);
         final PrintWriter classWriter = new PrintWriter(new FileOutputStream( new File("class.list") ), true);
@@ -62,15 +63,12 @@ public class DynamicInstrumenter {
         // TODO:
         Class[] classes = inst.getAllLoadedClasses();
         List<Class> candidates = new ArrayList<Class>();
-        for (Class c : classes) {
+        for (Class klass : classes) {
             // DEBUG: System.err.print("XXX: " + c.getCanonicalName() + " -- ");
-            if (inst.isModifiableClass(c)) {
-                System.err.print("modifiable ");
-                if (inst.isRetransformClassesSupported()){
-                   System.err.print(" retransformable");
-                }
-                System.err.println("");
-                candidates.add(c);
+            String className = klass.getCanonicalName();
+            if (inst.isModifiableClass(klass) && !shouldIgnore(className)) {
+                System.err.println("Adding ");
+                candidates.add(klass);
             }
         }
     }
@@ -123,8 +121,8 @@ class QtrToolTransformer implements ClassFileTransformer {
     }
 
     protected boolean shouldIgnore(String className) {
-        return (className.indexOf("QTRProxy") >= 0);
-        //         (className.indexOf("java/lang") == 0) );
-        // TODO: (className.indexOf("ClassLoader") >= 0) ||
+        return ( (className.indexOf("QTRProxy") >= 0) ||
+                 (className.indexOf("javassist") == 0) ||
+                 (className.indexOf("veroy.research.qtrtool.javassist") == 0) );
     }
 }
