@@ -20,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.WeakHashMap;
+import java.util.concurrent.ConcurrentHashMap;
 
 import javassist.ByteArrayClassPath;
 import javassist.CannotCompileException;
@@ -31,6 +32,8 @@ import javassist.Modifier;
 import veroy.research.qtrtool.javassist.QTRProxy;
 
 public class DynamicInstrumenter {
+
+    final static ConcurrentHashMap<String, Boolean> doneClasses = new ConcurrentHashMap<>();
 
     public static void premain(String args, Instrumentation inst) throws Exception {
         System.out.println("Loading Agent..");
@@ -60,7 +63,7 @@ public class DynamicInstrumenter {
                                          MethodInstrumenter.writeMapsToFile(witnessWriter);
                                      }
                });
-        // TODO:
+        // TODO: ????
         Class[] classes = inst.getAllLoadedClasses();
         List<Class> candidates = new ArrayList<Class>();
         for (Class klass : classes) {
@@ -70,6 +73,9 @@ public class DynamicInstrumenter {
                 System.err.println("Adding " + className + ".");
                 candidates.add(klass);
             }
+        }
+        for (Class klass : candidates) {
+            doneClasses.put(klass.getCanonicalName(), Boolean.TRUE);
         }
     }
 
