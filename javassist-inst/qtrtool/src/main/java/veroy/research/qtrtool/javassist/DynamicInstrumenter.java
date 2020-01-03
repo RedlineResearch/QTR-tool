@@ -73,6 +73,7 @@ public class DynamicInstrumenter {
                  !optimus.shouldIgnore(className) &&
                  !doneClasses.contains(klassName) ) {
                     System.err.println("Adding " + className + ".");
+                    // TODO: Remove candidates. No need?
                     candidates.add(klass);
             } else {
                 if (doneClasses.contains(klassName)) {
@@ -81,14 +82,6 @@ public class DynamicInstrumenter {
                     System.err.println("XX-Unmodifiable: " + className + ".");
                 }
             }
-        }
-        for (Class klass : candidates) {
-                // Check to see if already done:
-                // Alredy transformed.
-            } else {
-                // Transform and add to the doneClasses.
-            }
-            doneClasses.put(klass.getCanonicalName(), Boolean.TRUE);
         }
     }
 
