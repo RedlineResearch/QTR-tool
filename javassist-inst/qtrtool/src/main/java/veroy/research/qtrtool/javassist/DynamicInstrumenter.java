@@ -63,18 +63,30 @@ public class DynamicInstrumenter {
                                          MethodInstrumenter.writeMapsToFile(witnessWriter);
                                      }
                });
-        // TODO: ????
+        // Get all loaded classes:
         Class[] classes = inst.getAllLoadedClasses();
-        List<Class> candidates = new ArrayList<Class>();
+        List<Class> candidates = new ArrayList<>();
         for (Class klass : classes) {
             // DEBUG: System.err.print("XXX: " + c.getCanonicalName() + " -- ");
             String className = klass.getCanonicalName();
-            if (inst.isModifiableClass(klass) && !optimus.shouldIgnore(className)) {
-                System.err.println("Adding " + className + ".");
-                candidates.add(klass);
+            if ( inst.isModifiableClass(klass) &&
+                 !optimus.shouldIgnore(className) &&
+                 !doneClasses.contains(klassName) ) {
+                    System.err.println("Adding " + className + ".");
+                    candidates.add(klass);
+                } else {
+                    System.err.println("XX-DONE: " + className + ".");
+                }
+            } else {
+                System.err.println("XX-Unmodifiable: " + className + ".");
             }
         }
         for (Class klass : candidates) {
+                // Check to see if already done:
+                // Alredy transformed.
+            } else {
+                // Transform and add to the doneClasses.
+            }
             doneClasses.put(klass.getCanonicalName(), Boolean.TRUE);
         }
     }
