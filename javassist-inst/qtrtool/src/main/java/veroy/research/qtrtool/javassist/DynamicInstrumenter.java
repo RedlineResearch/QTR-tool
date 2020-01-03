@@ -76,11 +76,11 @@ public class DynamicInstrumenter {
                     // TODO: Remove candidates. No need?
                     candidates.add(klass);
             } else {
-                if (doneClasses.contains(klassName)) {
-                    System.err.println("XX-DONE: " + klassName + ".");
-                } else {
+                // if (doneClasses.contains(klassName)) {
+                //     System.err.println("XX-DONE: " + klassName + ".");
+                // } else {
                     System.err.println("XX-Unmodifiable: " + klassName + ".");
-                }
+                // }
             }
         }
     }
