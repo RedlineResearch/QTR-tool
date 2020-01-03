@@ -111,19 +111,23 @@ class QtrToolTransformer implements ClassFileTransformer {
         if (shouldIgnore(className)) {
             return klassFileBuffer;
         }
+        System.err.println(" -- TRANSFORM: A - " + className);
         // Javassist stuff:
         System.err.println(className + " is about to get loaded by the ClassLoader");
         ByteArrayInputStream istream = new ByteArrayInputStream(klassFileBuffer);
         MethodInstrumenter instMeth = new MethodInstrumenter(istream, className);
         CtClass klazz = null;
+        System.err.println(" -- TRANSFORM: B - " + className);
         try {
             System.err.println(" -- Instrumenting: " + className);
             klazz = instMeth.instrumentMethods(loader);
         } catch (CannotCompileException exc) {
             return klassFileBuffer;
         }
+        System.err.println(" -- TRANSFORM: C - " + className);
         try {
             byte[] barray = klazz.toBytecode();
+            System.err.println(" -- TRANSFORM: D - " + className);
             return barray;
         } catch (CannotCompileException | IOException exc) {
             System.err.println("Error converting class[ " + className + " ] into bytecode.");
