@@ -60,3 +60,8 @@ venv
 
 # Some non-build testing directores
 OTHERS
+
+# Visual Code files
+.classpath
+.project
+.settings
