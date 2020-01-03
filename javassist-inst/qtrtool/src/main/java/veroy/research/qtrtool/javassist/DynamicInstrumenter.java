@@ -74,11 +74,12 @@ public class DynamicInstrumenter {
                  !doneClasses.contains(klassName) ) {
                     System.err.println("Adding " + className + ".");
                     candidates.add(klass);
-                } else {
-                    System.err.println("XX-DONE: " + className + ".");
-                }
             } else {
-                System.err.println("XX-Unmodifiable: " + className + ".");
+                if (doneClasses.contains(klassName)) {
+                    System.err.println("XX-DONE: " + className + ".");
+                } else {
+                    System.err.println("XX-Unmodifiable: " + className + ".");
+                }
             }
         }
         for (Class klass : candidates) {
