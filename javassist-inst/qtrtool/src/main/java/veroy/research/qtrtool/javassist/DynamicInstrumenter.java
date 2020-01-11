@@ -134,40 +134,6 @@ class QtrToolTransformer implements ClassFileTransformer {
         }
     }
 
-    // Overrides?
-    // TODO:
-    // * function signature probably not the same.
-    public byte[] retransform( ClassLoader loader,
-                               String className,
-                               Class<?> klass,
-                               ProtectionDomain domain,
-                               byte[] klassFileBuffer ) throws IllegalClassFormatException {
-        if (shouldIgnore(className)) {
-            return klassFileBuffer;
-        }
-        // TODO: Also check if already done.
-        // Javassist stuff:
-        System.err.println(className + " is about to get retransformed.");
-        // TODO: Only good if there's an actual klassFileBuffer
-        ByteArrayInputStream istream = new ByteArrayInputStream(klassFileBuffer);
-        MethodInstrumenter instMeth = new MethodInstrumenter(istream, className);
-        CtClass klazz = null;
-        try {
-            System.err.println(" -- Instrumenting: " + className);
-            klazz = instMeth.instrumentMethods(loader);
-        } catch (CannotCompileException exc) {
-            return klassFileBuffer;
-        }
-        try {
-            byte[] barray = klazz.toBytecode();
-            return barray;
-        } catch (CannotCompileException | IOException exc) {
-            System.err.println("Error retransforming class[ " + className + " ] into bytecode.");
-            exc.printStackTrace();
-            return klassFileBuffer;
-        }
-    }
-
     protected boolean shouldIgnore(String className) {
         return ( (className == null) ||
                  (className.indexOf("QTRProxy") >= 0) ||
