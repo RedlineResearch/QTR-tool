@@ -67,8 +67,7 @@ public class DynamicInstrumenter {
         Class[] classes = inst.getAllLoadedClasses();
         List<Class> candidates = new ArrayList<>();
         for (Class klass : classes) {
-            // DEBUG: System.err.print("XXX: " + c.getCanonicalName() + " -- ");
-            // String klassName = klass.getCanonicalName();
+            // TODO: Delete? -- String klassName = klass.getCanonicalName();
             String klassName = klass.getName();
             System.err.println("XXX NAME: " + klassName);
             if ( inst.isModifiableClass(klass) &&
