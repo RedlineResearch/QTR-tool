@@ -67,22 +67,20 @@ public class DynamicInstrumenter {
         Class[] classes = inst.getAllLoadedClasses();
         List<Class> candidates = new ArrayList<>();
         for (Class klass : classes) {
-            // DEBUG: System.err.print("XXX: " + c.getCanonicalName() + " -- ");
-            // String klassName = klass.getCanonicalName();
             String klassName = klass.getName();
-            System.err.println("XXX NAME: " + klassName);
+            // DEBUG: System.err.println(">>> NAME: " + klassName);
             if ( inst.isModifiableClass(klass) &&
-                 !optimus.shouldIgnore(klassName) &&
-                 !doneClasses.contains(klassName) ) {
-                    System.err.println("Adding " + klassName + ".");
-                    // TODO: Remove candidates. No need?
+                 !optimus.shouldIgnore(klassName)) {
+                System.err.println("     Adding " + klassName + ".");
+                // TODO: Remove candidates. No need?
+                if (!doneClasses.contains(klassName)) {
                     candidates.add(klass);
+                }
+                // DEBUG: else {
+                // DEBUG:     System.err.println(String.format("XXX Attempt to add %s multiple times.", klassName));
+                // DEBUG: }
             } else {
-                // if (doneClasses.contains(klassName)) {
-                //     System.err.println("XX-DONE: " + klassName + ".");
-                // } else {
-                    System.err.println("XX-Unmodifiable: " + klassName + ".");
-                // }
+                System.err.println("<<<-Unmodifiable: " + klassName + ".");
             }
         }
     }
