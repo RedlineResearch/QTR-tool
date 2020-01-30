@@ -88,7 +88,10 @@ public class DynamicInstrumenter {
             for (int i = 0; i < candidates.size(); i++) {
                 candidatesArr[i] = candidates.get(i);
             }
+            ClassFileTransformer autobot = new QtrToolTransformer(traceWriter);
+            inst.addTransformer(autobot, true);
             inst.retransformClasses(candidatesArr);
+            inst.removeTransformer(autobot);
         }
     }
 
