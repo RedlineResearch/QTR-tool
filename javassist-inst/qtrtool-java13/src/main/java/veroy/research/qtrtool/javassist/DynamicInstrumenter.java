@@ -83,6 +83,13 @@ public class DynamicInstrumenter {
                 System.err.println("<<<-Unmodifiable: " + klassName + ".");
             }
         }
+        if (candidates.size() > 0) {
+            Class[] candidatesArr = new Class[candidates.size()];
+            for (int i = 0; i < candidates.size(); i++) {
+                candidatesArr[i] = candidates.get(i);
+            }
+            inst.retransformClasses(candidatesArr);
+        }
     }
 
     private static void writeMethodList() {
