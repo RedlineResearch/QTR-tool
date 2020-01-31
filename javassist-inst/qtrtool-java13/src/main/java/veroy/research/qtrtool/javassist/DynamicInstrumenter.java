@@ -66,32 +66,33 @@ public class DynamicInstrumenter {
         // Get all loaded classes:
         Class[] classes = inst.getAllLoadedClasses();
         List<Class> candidates = new ArrayList<>();
+        int i = 0;
         for (Class klass : classes) {
             String klassName = klass.getName();
             // DEBUG: System.err.println(">>> NAME: " + klassName);
             if ( inst.isModifiableClass(klass) &&
-                 !optimus.shouldIgnore(klassName)) {
-                System.err.println("     Adding " + klassName + ".");
-                // TODO: Remove candidates. No need?
-                if (!doneClasses.contains(klassName)) {
-                    candidates.add(klass);
-                }
-                // DEBUG: else {
-                // DEBUG:     System.err.println(String.format("XXX Attempt to add %s multiple times.", klassName));
-                // DEBUG: }
+                 !optimus.shouldIgnore(klassName) ) {
+                // if (i < 9) {
+                    System.err.println("     Adding " + klassName + ": " + inst.isModifiableClass(klass));
+                    // TODO: Remove candidates. No need?
+                    // i += 1;
+                    if (!doneClasses.contains(klassName)) {
+                        candidates.add(klass);
+                    }
+                // }
             } else {
                 System.err.println("<<<-Unmodifiable: " + klassName + ".");
             }
         }
         if (candidates.size() > 0) {
             Class[] candidatesArr = new Class[candidates.size()];
-            for (int i = 0; i < candidates.size(); i++) {
+            for (i = 0; i < candidates.size(); i++) {
                 candidatesArr[i] = candidates.get(i);
             }
-            ClassFileTransformer autobot = new QtrToolTransformer(traceWriter);
-            inst.addTransformer(autobot, true);
+            // TODO: ClassFileTransformer autobot = new QtrToolTransformer(traceWriter);
+            // inst.addTransformer(autobot, true);
             inst.retransformClasses(candidatesArr);
-            inst.removeTransformer(autobot);
+            // inst.removeTransformer(autobot);
         }
     }
 
@@ -146,6 +147,7 @@ class QtrToolTransformer implements ClassFileTransformer {
         return ( (className == null) ||
                  (className.indexOf("QTRProxy") >= 0) ||
                  (className.indexOf("javassist") == 0) ||
-                 (className.indexOf("veroy.research.qtrtool.javassist") == 0) );
+                 (className.indexOf("veroy.research.qtrtool.javassist") == 0) ||
+                 (className.indexOf("java.lang.invoke.LambdaForm") == 0) );
     }
 }
