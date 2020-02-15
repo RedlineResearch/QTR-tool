@@ -7,13 +7,11 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
-import javassist.ByteArrayClassPath;
 import javassist.CannotCompileException;
 import javassist.NotFoundException;
 import javassist.ClassPool;
 import javassist.CtBehavior;
 import javassist.CtClass;
-import javassist.CtConstructor;
 import javassist.CtMethod;
 import javassist.LoaderClassPath;
 import javassist.Modifier;
@@ -98,7 +96,6 @@ public class MethodInstrumenter {
         final String className = ctKlazz.getName();
 
         // Methods:
-        // CtMethod[] methods = ctKlazz.getMethods();
         CtBehavior[] methods = ctKlazz.getDeclaredBehaviors();
         for (int ind = 0 ; ind < methods.length; ind++) {
             final CtBehavior method = methods[ind];
