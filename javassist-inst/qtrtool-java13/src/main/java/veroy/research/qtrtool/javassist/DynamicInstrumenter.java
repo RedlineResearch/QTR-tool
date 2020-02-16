@@ -35,64 +35,52 @@ public class DynamicInstrumenter {
 
     final static ConcurrentHashMap<String, Boolean> doneClasses = new ConcurrentHashMap<>();
 
-    public static void premain(String args, Instrumentation inst) throws Exception {
+    public static void premain(final String args, final Instrumentation inst) throws Exception {
         System.out.println("Loading Agent..");
-        assert(inst.isRetransformClassesSupported());
-        final PrintWriter methodsWriter = new PrintWriter(new FileOutputStream( new File("methods.list") ), true);
-        final PrintWriter fieldsWriter = new PrintWriter(new FileOutputStream( new File("fields.list") ), true);
-        final PrintWriter classWriter = new PrintWriter(new FileOutputStream( new File("class.list") ), true);
-        final PrintWriter witnessWriter = new PrintWriter(new FileOutputStream( new File("witness.list") ), true);
-        MethodInstrumenter.setPrintWriters( methodsWriter,
-                                            fieldsWriter,
-                                            classWriter );
-        PrintWriter traceWriter = new PrintWriter(new FileOutputStream( new File("trace") ), true);
+        assert (inst.isRetransformClassesSupported());
+        final PrintWriter methodsWriter = new PrintWriter(new FileOutputStream(new File("methods.list")), true);
+        final PrintWriter fieldsWriter = new PrintWriter(new FileOutputStream(new File("fields.list")), true);
+        final PrintWriter classWriter = new PrintWriter(new FileOutputStream(new File("class.list")), true);
+        final PrintWriter witnessWriter = new PrintWriter(new FileOutputStream(new File("witness.list")), true);
+        MethodInstrumenter.setPrintWriters(methodsWriter, fieldsWriter, classWriter);
+        final PrintWriter traceWriter = new PrintWriter(new FileOutputStream(new File("trace")), true);
         QTRProxy.traceWriter = traceWriter;
         QTRProxy.inst = inst;
         ClassPool.doPruning = true;
         ClassPool.releaseUnmodifiedClassFile = true;
-        ClassPool cp = ClassPool.getDefault();
+        final ClassPool cp = ClassPool.getDefault();
         cp.get("veroy.research.qtrtool.javassist.QTRProxy");
         final QtrToolTransformer optimus = new QtrToolTransformer(traceWriter);
         inst.addTransformer(optimus);
-        Runtime.getRuntime()
-               .addShutdownHook( new Thread() { 
-                                     public void run() {
-                                         System.err.println("SHUTDOWN running.");
-                                         inst.removeTransformer(optimus);
-                                         QTRProxy.inInstrumentMethod.set(true);
-                                         MethodInstrumenter.writeMapsToFile(witnessWriter);
-                                     }
-               });
+        Runtime.getRuntime().addShutdownHook(new Thread() {
+            public void run() {
+                System.err.println("SHUTDOWN running.");
+                inst.removeTransformer(optimus);
+                QTRProxy.inInstrumentMethod.set(true);
+                MethodInstrumenter.writeMapsToFile(witnessWriter);
+            }
+        });
         // Get all loaded classes:
-        Class[] classes = inst.getAllLoadedClasses();
-        List<Class> candidates = new ArrayList<>();
+        final Class[] classes = inst.getAllLoadedClasses();
+        final List<Class> candidates = new ArrayList<>();
         int i = 0;
-        for (Class klass : classes) {
-            String klassName = klass.getName();
-            // DEBUG: System.err.println(">>> NAME: " + klassName);
-            if ( inst.isModifiableClass(klass) &&
-                 !optimus.shouldIgnore(klassName) ) {
-                // if (i < 9) {
-                    System.err.println("     Adding " + klassName + ": " + inst.isModifiableClass(klass));
-                    // TODO: Remove candidates. No need?
-                    // i += 1;
-                    if (!doneClasses.contains(klassName)) {
-                        candidates.add(klass);
-                    }
-                // }
+        for (final Class klass : classes) {
+            final String klassName = klass.getName();
+            if (inst.isModifiableClass(klass) && !optimus.shouldIgnore(klassName)) {
+                System.err.println("     Adding " + klassName + ": " + inst.isModifiableClass(klass));
+                if (!doneClasses.contains(klassName)) {
+                    candidates.add(klass);
+                }
             } else {
                 System.err.println("<<<-Unmodifiable: " + klassName + ".");
             }
         }
         if (candidates.size() > 0) {
-            Class[] candidatesArr = new Class[candidates.size()];
+            final Class[] candidatesArr = new Class[candidates.size()];
             for (i = 0; i < candidates.size(); i++) {
                 candidatesArr[i] = candidates.get(i);
             }
-            // TODO: ClassFileTransformer autobot = new QtrToolTransformer(traceWriter);
-            // inst.addTransformer(autobot, true);
             inst.retransformClasses(candidatesArr);
-            // inst.removeTransformer(autobot);
         }
     }
 
@@ -105,7 +93,7 @@ class QtrToolTransformer implements ClassFileTransformer {
 
     private final PrintWriter traceWriter;
 
-    public QtrToolTransformer(PrintWriter traceWriter) {
+    public QtrToolTransformer(final PrintWriter traceWriter) {
         this.traceWriter = traceWriter;
     }
 
@@ -114,27 +102,24 @@ class QtrToolTransformer implements ClassFileTransformer {
     // Elephant Tracks 2 metadata:
 
     @Override
-    public byte[] transform( ClassLoader loader,
-                             String className,
-                             Class<?> klass,
-                             ProtectionDomain domain,
-                             byte[] klassFileBuffer ) throws IllegalClassFormatException {
+    public byte[] transform(final ClassLoader loader, final String className, final Class<?> klass,
+            final ProtectionDomain domain, final byte[] klassFileBuffer) throws IllegalClassFormatException {
         if (shouldIgnore(className)) {
             return klassFileBuffer;
         }
         // Javassist stuff:
         System.err.println(className + " is about to get loaded by the ClassLoader");
-        ByteArrayInputStream istream = new ByteArrayInputStream(klassFileBuffer);
-        MethodInstrumenter instMeth = new MethodInstrumenter(istream, className);
+        final ByteArrayInputStream istream = new ByteArrayInputStream(klassFileBuffer);
+        final MethodInstrumenter instMeth = new MethodInstrumenter(istream, className);
         CtClass klazz = null;
         try {
             System.err.println(" -- Instrumenting: " + className);
             klazz = instMeth.instrumentMethods(loader);
-        } catch (CannotCompileException exc) {
+        } catch (final CannotCompileException exc) {
             return klassFileBuffer;
         }
         try {
-            byte[] barray = klazz.toBytecode();
+            final byte[] barray = klazz.toBytecode();
             return barray;
         } catch (CannotCompileException | IOException exc) {
             System.err.println("Error converting class[ " + className + " ] into bytecode.");
@@ -143,7 +128,7 @@ class QtrToolTransformer implements ClassFileTransformer {
         }
     }
 
-    protected boolean shouldIgnore(String className) {
+    protected boolean shouldIgnore(final String className) {
         return ( (className == null) ||
                  (className.indexOf("QTRProxy") >= 0) ||
                  (className.indexOf("javassist") == 0) ||
