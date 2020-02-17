@@ -98,7 +98,7 @@ public class DynamicInstrumenter {
                  (className.indexOf("jdk.internal") == 0) ||
                  (className.indexOf("sun.reflect") == 0) ||
                  (className.indexOf("java.lang.J9VMInternals") == 0) ||
-                 (className.indexOf("com.ibm.oti.vm") == 0)
+                 (className.indexOf("com.ibm.oti") == 0)
                  );
     }
 }
@@ -152,7 +152,7 @@ class QtrToolTransformer implements ClassFileTransformer {
                  (className.indexOf("jdk/internal") == 0) ||
                  (className.indexOf("sun/reflect") == 0) ||
                  (className.indexOf("java/lang/J9VMInternals") == 0) ||
-                 (className.indexOf("com/ibm/oti/vm") == 0)
+                 (className.indexOf("com/ibm/oti") == 0)
                  );
     }
 }
