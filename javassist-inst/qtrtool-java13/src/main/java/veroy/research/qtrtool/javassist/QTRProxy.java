@@ -433,7 +433,12 @@ public class QTRProxy {
                                     threadIDBuffer[i] );
                         break;
                     default:
-                        throw new IllegalStateException("Unexpected event: " + eventTypeBuffer[i]);
+                        traceWriter.format( "Unexpected event %d: [%d, %d] thread: %d",
+                                            eventTypeBuffer[i],
+                                            firstBuffer[i],
+                                            secondBuffer[i],
+                                            threadIDBuffer[i] );
+                        // TODO: throw new IllegalStateException("Unexpected event: " + eventTypeBuffer[i]);
                 }
                 dimsBuffer[i] = "";
             }
