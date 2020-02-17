@@ -89,7 +89,7 @@ public class DynamicInstrumenter {
         // for (Entry.)
     }
 
-    protected boolean shouldIgnore(final String className) {
+    protected static boolean shouldIgnore(final String className) {
         return ( (className == null) ||
                  (className.indexOf("QTRProxy") >= 0) ||
                  (className.indexOf("javassist") == 0) ||
