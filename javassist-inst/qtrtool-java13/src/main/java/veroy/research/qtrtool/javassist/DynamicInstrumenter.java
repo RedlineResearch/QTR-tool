@@ -67,7 +67,7 @@ public class DynamicInstrumenter {
         int i = 0;
         for (final Class klass : classes) {
             final String klassName = klass.getName();
-            if (inst.isModifiableClass(klass) && !optimus.shouldIgnore(klassName)) {
+            if (inst.isModifiableClass(klass) && !DynamicInstrumenter.shouldIgnore(klassName)) {
                 System.err.println("     Adding " + klassName + ": " + inst.isModifiableClass(klass));
                 if (!doneClasses.contains(klassName)) {
                     candidates.add(klass);
@@ -88,6 +88,16 @@ public class DynamicInstrumenter {
     private static void writeMethodList() {
         // for (Entry.)
     }
+
+    protected boolean shouldIgnore(final String className) {
+        return ( (className == null) ||
+                 (className.indexOf("QTRProxy") >= 0) ||
+                 (className.indexOf("javassist") == 0) ||
+                 (className.indexOf("veroy.research.qtrtool.javassist") == 0) ||
+                 (className.indexOf("java.lang.invoke.LambdaForm") == 0) ||
+                 (className.indexOf("jdk.internal") == 0)
+                 );
+    }
 }
 
 class QtrToolTransformer implements ClassFileTransformer {
@@ -105,7 +115,7 @@ class QtrToolTransformer implements ClassFileTransformer {
     @Override
     public byte[] transform(final ClassLoader loader, final String className, final Class<?> klass,
             final ProtectionDomain domain, final byte[] klassFileBuffer) throws IllegalClassFormatException {
-        if (shouldIgnore(className)) {
+        if (this.shouldIgnore(className)) {
             return klassFileBuffer;
         }
         // Javassist stuff:
@@ -129,13 +139,14 @@ class QtrToolTransformer implements ClassFileTransformer {
         }
     }
 
+    // TODO: The classes are the same but the representation sometimes uses '.' or a '/'
     protected boolean shouldIgnore(final String className) {
         return ( (className == null) ||
                  (className.indexOf("QTRProxy") >= 0) ||
                  (className.indexOf("javassist") == 0) ||
-                 (className.indexOf("veroy.research.qtrtool.javassist") == 0) ||
-                 (className.indexOf("java.lang.invoke.LambdaForm") == 0) ||
-                 (className.indexOf("jdk.internal") == 0)
+                 (className.indexOf("veroy/research/qtrtool/javassist") == 0) ||
+                 (className.indexOf("java/lang/invoke/LambdaForm") == 0) ||
+                 (className.indexOf("jdk/internal") == 0)
                  );
     }
 }
