@@ -357,7 +357,7 @@ public class QTRProxy {
 
         try {
             mx.lock();
-            int bufSize = Math.max(ptr.get(), BUFMAX);
+            int bufSize = Math.min(ptr.get(), BUFMAX);
             for (int i = 0; i < bufSize; i++) {
                 switch (eventTypeBuffer[i]) {
                     case 1: // method entry
