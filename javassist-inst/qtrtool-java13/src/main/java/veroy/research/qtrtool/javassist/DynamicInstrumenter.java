@@ -134,6 +134,8 @@ class QtrToolTransformer implements ClassFileTransformer {
                  (className.indexOf("QTRProxy") >= 0) ||
                  (className.indexOf("javassist") == 0) ||
                  (className.indexOf("veroy.research.qtrtool.javassist") == 0) ||
-                 (className.indexOf("java.lang.invoke.LambdaForm") == 0) );
+                 (className.indexOf("java.lang.invoke.LambdaForm") == 0) ||
+                 (className.indexof("jdk.internal") == 0)
+                 );
     }
 }
