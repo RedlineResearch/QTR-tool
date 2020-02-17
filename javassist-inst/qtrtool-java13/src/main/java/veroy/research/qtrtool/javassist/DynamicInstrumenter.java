@@ -57,6 +57,7 @@ public class DynamicInstrumenter {
                 System.err.println("SHUTDOWN running.");
                 inst.removeTransformer(optimus);
                 QTRProxy.inInstrumentMethod.set(true);
+                QTRProxy.flushBuffer();
                 MethodInstrumenter.writeMapsToFile(witnessWriter);
             }
         });
