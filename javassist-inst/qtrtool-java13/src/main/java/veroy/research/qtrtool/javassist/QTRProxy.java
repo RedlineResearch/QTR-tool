@@ -47,14 +47,13 @@ public class QTRProxy {
     private static AtomicInteger ptr = new AtomicInteger();
 
     // TRACING EVENTS
-    //     Method entry = 1,
-    //     method exit = 2,
-    //     object allocation = 3
-    //     object array allocation = 4
+    final static int METHOD_ENTRY_EVENT = 1;
+    final static int METHOD_EXIT_EVENT = 2;
+    final static int OBJECT_ALLOCATION_EVENT = 3;
     final static int ARRAY_ALLOC_EVENT = 4;
-    //     2D array allocation = 6,
-    //     put field = 7
-    //     get field = 8
+    final static int ARRAY_2D_ALLOC_EVENT = 6;
+    final static int PUT_FIELD_EVENT = 7;
+    final static int GET_FIELD_EVENT = 8;
 
 
     public static void debugCall(String message) {
@@ -78,7 +77,7 @@ public class QTRProxy {
                 int currPtr = ptr.getAndIncrement();
                 firstBuffer[currPtr] = methodId;
                 secondBuffer[currPtr] = (receiver == null) ? 0 : System.identityHashCode(receiver);
-                eventTypeBuffer[currPtr] = 1; // TODO: Make into constants.
+                eventTypeBuffer[currPtr] = METHOD_ENTRY_EVENT;
                 timestampBuffer[currPtr] = timestamp; // TODO: Not really useful
                 threadIDBuffer[currPtr] = System.identityHashCode(Thread.currentThread());
             }
@@ -105,7 +104,7 @@ public class QTRProxy {
                 }
                 int currPtr = ptr.getAndIncrement();
                 firstBuffer[currPtr] = methodId;
-                eventTypeBuffer[currPtr] = 2;
+                eventTypeBuffer[currPtr] = METHOD_EXIT_EVENT;
                 timestampBuffer[currPtr] = timestamp;
                 threadIDBuffer[currPtr] = System.identityHashCode(Thread.currentThread());
             }
@@ -131,7 +130,7 @@ public class QTRProxy {
                 }
                 int currPtr = ptr.getAndIncrement();
                 firstBuffer[currPtr] = System.identityHashCode(obj);
-                eventTypeBuffer[currPtr] = 3; // TODO: Create a constant for this.
+                eventTypeBuffer[currPtr] = OBJECT_ALLOCATION_EVENT;
                 secondBuffer[currPtr] = allocdClassID;
                 thirdBuffer[currPtr] = allocSiteID;
                 fourthBuffer[currPtr] = inst.getObjectSize(obj);
@@ -273,7 +272,7 @@ public class QTRProxy {
                         currPtr = ptr.getAndIncrement();
                     }
                     firstBuffer[currPtr] = System.identityHashCode(allocdArray);
-                    eventTypeBuffer[currPtr] = 6;
+                    eventTypeBuffer[currPtr] = ARRAY_2D_ALLOC_EVENT;
                     secondBuffer[currPtr] = allocdClassID;
                     thirdBuffer[currPtr] = allocdArray.length;
                     // TODO: fourthBuffer[currPtr] = allocSiteID;
@@ -360,7 +359,7 @@ public class QTRProxy {
             int bufSize = Math.min(ptr.get(), BUFMAX);
             for (int i = 0; i < bufSize; i++) {
                 switch (eventTypeBuffer[i]) {
-                    case 1: // method entry
+                    case METHOD_ENTRY_EVENT: // method entry
                         // M <method-id> <receiver-object-id> <thread-id>
                         traceWriter.println( "M " +
                                              firstBuffer[i] + " " +
@@ -371,13 +370,13 @@ public class QTRProxy {
                         // TODO:                 secondBuffer[i] + " " +
                         // TODO:                 Long.toUnsignedString(threadIDBuffer[i]) );
                         break;
-                    case 2: // method exit
+                    case METHOD_EXIT_EVENT: // method exit
                         // E <method-id> <thread-id>
                         traceWriter.println( "E " +
                                              firstBuffer[i] + " " +
                                              Long.toUnsignedString(threadIDBuffer[i]) );
                         break;
-                    case 3: // object allocation
+                    case OBJECT_ALLOCATION_EVENT: // object allocation
                         // N <object-id> <size> <type-id> <site-id> <length (0)> <thread-id>
                         // 1st buffer = object ID (hash)
                         // 2nd buffer = class ID
@@ -403,7 +402,7 @@ public class QTRProxy {
                                              Long.toUnsignedString(threadIDBuffer[i]) + " " + // threadId
                                              dimsBuffer[i] ); // dimensions
                         break;
-                    case 6: // 2D array allocation
+                    case ARRAY_2D_ALLOC_EVENT: // 2D array allocation
                         // TODO: Conflicting documention: 2018-1112
                         // 6, arrayHash, arrayClassID, size1, size2, timestamp
                         // A <object-id> <size> <type-id> <site-id> <length> <thread-id>
@@ -415,7 +414,7 @@ public class QTRProxy {
                                              thirdBuffer[i] + " " +
                                              Long.toUnsignedString(threadIDBuffer[i]) );
                         break;
-                    case 7: // object update
+                    case PUT_FIELD_EVENT: // object update
                         // TODO: Conflicting documention: 2018-1112
                         // 7, targetObjectHash, fieldID, srcObjectHash, timestamp
                         // U <obj-id> <new-tgt-obj-id> <field-id> <thread-id>
@@ -425,7 +424,7 @@ public class QTRProxy {
                                              secondBuffer[i] + " " + // fieldId
                                              Long.toUnsignedString(threadIDBuffer[i]) ); // threadId
                         break;
-                    case 8: // witness with get field
+                    case GET_FIELD_EVENT: // witness with get field
                         // 8, aliveObjectHash, classID, timestamp
                         traceWriter.println( "W" + " " +
                                              firstBuffer[i] + " " +
