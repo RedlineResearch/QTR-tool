@@ -43,7 +43,7 @@ public class QTRProxy {
     private static final String[] dimsBuffer = new String[BUFMAX+1];
 
     public static final Map<Integer, Pair<Long, Integer>> witnessMap = Collections.synchronizedMap(new HashMap<Integer, Pair<Long, Integer>>());
-    public static final Map<Long, Integer> threadIdMap = Collections.synchronizedMap(new HashMap<Long, Integer>());
+    public static final Map<Integer, Integer> threadIdMap = Collections.synchronizedMap(new HashMap<Long, Integer>());
     private static AtomicInteger nextThreadId = new AtomicInteger(1);
 
     private static AtomicInteger ptr = new AtomicInteger();
