@@ -30,19 +30,20 @@ public class QTRProxy {
 
     // Buffers:
     private static final int BUFMAX = 10000;
-    private static int[] eventTypeBuffer = new int[BUFMAX+1];
-    private static int[] firstBuffer = new int[BUFMAX+1];
-    private static int[] secondBuffer = new int[BUFMAX+1];
-    private static int[] thirdBuffer = new int[BUFMAX+1];
-    private static long[] fourthBuffer = new long[BUFMAX+1];
-    private static int[] fifthBuffer = new int[BUFMAX+1];
+    private static final int[] eventTypeBuffer = new int[BUFMAX+1];
+    private static final int[] firstBuffer = new int[BUFMAX+1];
+    private static final int[] secondBuffer = new int[BUFMAX+1];
+    private static final int[] thirdBuffer = new int[BUFMAX+1];
+    private static final long[] fourthBuffer = new long[BUFMAX+1];
+    private static final int[] fifthBuffer = new int[BUFMAX+1];
 
-    private static long[] timestampBuffer = new long[BUFMAX+1];
-    private static long[] threadIDBuffer = new long[BUFMAX+1];
+    private static final long[] timestampBuffer = new long[BUFMAX+1];
+    private static final long[] threadIDBuffer = new long[BUFMAX+1];
 
-    private static String[] dimsBuffer = new String[BUFMAX+1];
+    private static final String[] dimsBuffer = new String[BUFMAX+1];
 
-    public static Map<Integer, Pair<Long, Integer>>  witnessMap = Collections.synchronizedMap(new HashMap<Integer, Pair<Long, Integer>>());
+    public static final Map<Integer, Pair<Long, Integer>> witnessMap = Collections.synchronizedMap(new HashMap<Integer, Pair<Long, Integer>>());
+    public static final Map<Long, Integer> threadIdMap = Collections.synchronizedMap(new HashMap<Long, Integer>);
 
     private static AtomicInteger ptr = new AtomicInteger();
 

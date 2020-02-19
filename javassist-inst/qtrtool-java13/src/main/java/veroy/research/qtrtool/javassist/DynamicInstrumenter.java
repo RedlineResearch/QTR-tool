@@ -54,7 +54,7 @@ public class DynamicInstrumenter {
         inst.addTransformer(optimus);
         Runtime.getRuntime().addShutdownHook(new Thread() {
             public void run() {
-                System.err.println("SHUTDOWN running.");
+                // DEBUG: System.err.println("SHUTDOWN running.");
                 inst.removeTransformer(optimus);
                 QTRProxy.inInstrumentMethod.set(true);
                 QTRProxy.flushBuffer();
@@ -68,13 +68,14 @@ public class DynamicInstrumenter {
         for (final Class klass : classes) {
             final String klassName = klass.getName();
             if (inst.isModifiableClass(klass) && !DynamicInstrumenter.shouldIgnore(klassName)) {
-                System.err.println("     Adding " + klassName + ": " + inst.isModifiableClass(klass));
+                // DEBUG: System.err.println("     Adding " + klassName + ": " + inst.isModifiableClass(klass));
                 if (!doneClasses.contains(klassName)) {
                     candidates.add(klass);
                 }
-            } else {
-                System.err.println("<<<-Unmodifiable: " + klassName + ".");
             }
+            // DEBUG: else {
+            // DEBUG:     System.err.println("<<<-Unmodifiable: " + klassName + ".");
+            // DEBUG: }
         }
         if (candidates.size() > 0) {
             final Class[] candidatesArr = new Class[candidates.size()];
@@ -124,12 +125,12 @@ class QtrToolTransformer implements ClassFileTransformer {
             return klassFileBuffer;
         }
         // Javassist stuff:
-        System.err.println(className + " is about to get loaded by the ClassLoader");
+        // DEBUG: System.err.println(className + " is about to get loaded by the ClassLoader");
         final ByteArrayInputStream istream = new ByteArrayInputStream(klassFileBuffer);
         final MethodInstrumenter instMeth = new MethodInstrumenter(istream, className);
         CtClass klazz = null;
         try {
-            System.err.println(" -- Instrumenting: " + className);
+            // DEBUG: System.err.println(" -- Instrumenting: " + className);
             klazz = instMeth.instrumentMethods(loader);
         } catch (final CannotCompileException exc) {
             return klassFileBuffer;
