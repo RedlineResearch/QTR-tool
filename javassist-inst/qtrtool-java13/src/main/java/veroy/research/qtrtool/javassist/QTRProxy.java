@@ -44,6 +44,7 @@ public class QTRProxy {
 
     public static final Map<Integer, Pair<Long, Integer>> witnessMap = Collections.synchronizedMap(new HashMap<Integer, Pair<Long, Integer>>());
     public static final Map<Long, Integer> threadIdMap = Collections.synchronizedMap(new HashMap<Long, Integer>());
+    private static AtomicInteger nextThreadId = new AtomicInteger(1);
 
     private static AtomicInteger ptr = new AtomicInteger();
 
@@ -448,15 +449,8 @@ public class QTRProxy {
         }
     }
 
-    /* TODO:
-    private static class EtLRUMap<K, V> extends LRUMap<K, V> {
-        public EtLRUMap() {
-            super();
-        }
+    protected int getThreadId(Long objHashCode) {
 
-        // TODO: Sublcass 'removeLRU'.
     }
-    */
-
 }
 
