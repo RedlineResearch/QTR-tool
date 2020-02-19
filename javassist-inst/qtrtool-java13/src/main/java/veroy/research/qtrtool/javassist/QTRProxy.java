@@ -46,6 +46,9 @@ public class QTRProxy {
     public static final Map<Integer, Integer> threadIdMap = Collections.synchronizedMap(new HashMap<Integer, Integer>());
     private static AtomicInteger nextThreadId = new AtomicInteger(1);
 
+    public static final Map<Integer, Integer> methodIdMap = Collections.synchronizedMap(new HashMap<Integer, Integer>());
+    private static AtomicInteger nextMethodId = new AtomicInteger(1);
+
     private static AtomicInteger ptr = new AtomicInteger();
 
     // TRACING EVENTS
@@ -78,7 +81,7 @@ public class QTRProxy {
                 }
                 int currPtr = ptr.getAndIncrement();
                 firstBuffer[currPtr] = methodId;
-                secondBuffer[currPtr] = (receiver == null) ? 0 : System.identityHashCode(receiver);
+                secondBuffer[currPtr] = (receiver == null) ? 0 : getMethodId(System.identityHashCode(receiver));
                 eventTypeBuffer[currPtr] = METHOD_ENTRY_EVENT;
                 timestampBuffer[currPtr] = timestamp; // TODO: Not really useful
                 threadIDBuffer[currPtr] = getThreadId(System.identityHashCode(Thread.currentThread()));
@@ -456,6 +459,16 @@ public class QTRProxy {
             int currThreadId = nextThreadId.getAndIncrement();
             threadIdMap.put(objHashCode, currThreadId);
             return currThreadId;
+        }
+    }
+
+    protected static int getMethodId(int objHashCode) {
+        if (methodIdMap.containsKey(objHashCode)) {
+            return methodIdMap.get(objHashCode);
+        } else {
+            int currMethodId = nextMethodId.getAndIncrement();
+            methodIdMap.put(objHashCode, currMethodId);
+            return currMethodId;
         }
     }
 }
