@@ -81,7 +81,7 @@ public class QTRProxy {
                 secondBuffer[currPtr] = (receiver == null) ? 0 : System.identityHashCode(receiver);
                 eventTypeBuffer[currPtr] = METHOD_ENTRY_EVENT;
                 timestampBuffer[currPtr] = timestamp; // TODO: Not really useful
-                threadIDBuffer[currPtr] = System.identityHashCode(Thread.currentThread());
+                threadIDBuffer[currPtr] = getThreadId(System.identityHashCode(Thread.currentThread()));
             }
         } finally {
             mx.unlock();
@@ -108,7 +108,7 @@ public class QTRProxy {
                 firstBuffer[currPtr] = methodId;
                 eventTypeBuffer[currPtr] = METHOD_EXIT_EVENT;
                 timestampBuffer[currPtr] = timestamp;
-                threadIDBuffer[currPtr] = System.identityHashCode(Thread.currentThread());
+                threadIDBuffer[currPtr] = getThreadId(System.identityHashCode(Thread.currentThread()));
             }
         } finally {
             mx.unlock();
@@ -137,7 +137,7 @@ public class QTRProxy {
                 thirdBuffer[currPtr] = allocSiteID;
                 fourthBuffer[currPtr] = inst.getObjectSize(obj);
                 timestampBuffer[currPtr] = timestamp;
-                threadIDBuffer[currPtr] = System.identityHashCode(Thread.currentThread());
+                threadIDBuffer[currPtr] = getThreadId(System.identityHashCode(Thread.currentThread()));
             }
         } finally {
             mx.unlock();
@@ -171,7 +171,7 @@ public class QTRProxy {
                 secondBuffer[currPtr] = fieldId;
                 thirdBuffer[currPtr] = System.identityHashCode(object);
                 timestampBuffer[currPtr] = timestamp;
-                threadIDBuffer[currPtr] = System.identityHashCode(Thread.currentThread());
+                threadIDBuffer[currPtr] = getThreadId(System.identityHashCode(Thread.currentThread()));
             }
         } finally {
             mx.unlock();
@@ -217,7 +217,7 @@ public class QTRProxy {
                 fourthBuffer[currPtr] = inst.getObjectSize(arrayObj);
                 fifthBuffer[currPtr] = allocSiteId;
                 timestampBuffer[currPtr] = timestamp;
-                threadIDBuffer[currPtr] = System.identityHashCode(Thread.currentThread());
+                threadIDBuffer[currPtr] = getThreadId(System.identityHashCode(Thread.currentThread()));
                 saveDimsToBuffer(currPtr, dims);
             }
         } finally {
@@ -238,7 +238,7 @@ public class QTRProxy {
         try {
             witnessMap.put(System.identityHashCode(aliveObject), Pair.of(timestamp, classId));
             // eventTypeBuffer[currPtr] = 8;
-            // TODO: threadIDBuffer[currPtr] = System.identityHashCode(Thread.currentThread());
+            // TODO: threadIDBuffer[currPtr] = getThreadId(System.identityHashCode(Thread.currentThread()));
             // TODO: Override 'remoteLRU' method to save the timestamp.
         } finally {
             mx.unlock();
@@ -280,7 +280,7 @@ public class QTRProxy {
                     // TODO: fourthBuffer[currPtr] = allocSiteID;
                     fifthBuffer[currPtr] = getObjectSize(allocdArray);
                     timestampBuffer[currPtr] = timestamp;
-                    threadIDBuffer[currPtr] = System.identityHashCode(Thread.currentThread());
+                    threadIDBuffer[currPtr] = getThreadId(System.identityHashCode(Thread.currentThread()));
 
                     if (dims > 2) {
                         for (int i = 0; i < allocdArray.length; ++i) {
@@ -336,7 +336,7 @@ public class QTRProxy {
                     // System.err.println("Class ID: " + allocdClassID);
                     fourthBuffer[currPtr] = (int) getObjectSize(allocdObject);
                     timestampBuffer[currPtr] = timestamp;
-                    threadIDBuffer[currPtr] = System.identityHashCode(Thread.currentThread());
+                    threadIDBuffer[currPtr] = getThreadId(System.identityHashCode(Thread.currentThread()));
                     break;
                 } else {
                     synchronized(ptr) {
@@ -366,17 +366,17 @@ public class QTRProxy {
                         traceWriter.println( "M " +
                                              firstBuffer[i] + " " +
                                              secondBuffer[i] + " " +
-                                             Long.toUnsignedString(threadIDBuffer[i]) );
+                                             threadIDBuffer[i] );
                         // TODO: qtrtoolLogger.info( "M " +
                         // TODO:                 firstBuffer[i] + " " +
                         // TODO:                 secondBuffer[i] + " " +
-                        // TODO:                 Long.toUnsignedString(threadIDBuffer[i]) );
+                        // TODO:                 threadIDBuffer[i] );
                         break;
                     case METHOD_EXIT_EVENT: // method exit
                         // E <method-id> <thread-id>
                         traceWriter.println( "E " +
                                              firstBuffer[i] + " " +
-                                             Long.toUnsignedString(threadIDBuffer[i]) );
+                                             threadIDBuffer[i] );
                         break;
                     case OBJECT_ALLOCATION_EVENT: // object allocation
                         // N <object-id> <size> <type-id> <site-id> <length (0)> <thread-id>
@@ -389,7 +389,7 @@ public class QTRProxy {
                                              secondBuffer[i] + " " +
                                              thirdBuffer[i] + " "
                                              + 0 + " " // Always zero because this isn't an array.
-                                             + Long.toUnsignedString(threadIDBuffer[i]) );
+                                             + threadIDBuffer[i] );
                         break;
                     case ARRAY_ALLOC_EVENT: // object array allocation
                     case 5: // primitive array allocation
@@ -401,7 +401,7 @@ public class QTRProxy {
                                              secondBuffer[i] + " " + // typedId
                                              fifthBuffer[i] + " " + // siteId
                                              thirdBuffer[i] + " " + // length
-                                             Long.toUnsignedString(threadIDBuffer[i]) + " " + // threadId
+                                             threadIDBuffer[i] + " " + // threadId
                                              dimsBuffer[i] ); // dimensions
                         break;
                     case ARRAY_2D_ALLOC_EVENT: // 2D array allocation
@@ -414,7 +414,7 @@ public class QTRProxy {
                                              secondBuffer[i] + " " +
                                              fourthBuffer[i] + " " +
                                              thirdBuffer[i] + " " +
-                                             Long.toUnsignedString(threadIDBuffer[i]) );
+                                             threadIDBuffer[i] );
                         break;
                     case PUT_FIELD_EVENT: // object update
                         // TODO: Conflicting documention: 2018-1112
@@ -424,21 +424,21 @@ public class QTRProxy {
                                              thirdBuffer[i] + " " + // objId
                                              firstBuffer[i] + " " + // newTgtObjId
                                              secondBuffer[i] + " " + // fieldId
-                                             Long.toUnsignedString(threadIDBuffer[i]) ); // threadId
+                                             threadIDBuffer[i] ); // threadId
                         break;
                     case GET_FIELD_EVENT: // witness with get field
                         // 8, aliveObjectHash, classID, timestamp
                         traceWriter.println( "W" + " " +
                                              firstBuffer[i] + " " +
                                              secondBuffer[i] + " " +
-                                             Long.toUnsignedString(threadIDBuffer[i]) );
+                                             threadIDBuffer[i] );
                         break;
                     default:
                         traceWriter.format( "Unexpected event %d: [%d, %d] thread: %d",
                                             eventTypeBuffer[i],
                                             firstBuffer[i],
                                             secondBuffer[i],
-                                            Long.toUnsignedString(threadIDBuffer[i]) );
+                                            threadIDBuffer[i] );
                         // TODO: throw new IllegalStateException("Unexpected event: " + eventTypeBuffer[i]);
                 }
                 dimsBuffer[i] = "";
@@ -450,7 +450,13 @@ public class QTRProxy {
     }
 
     protected static int getThreadId(Long objHashCode) {
-        return QTRProxy.nextThreadId.get();
+        if (threadIdMap.containsKey(objHashCode)) {
+            return threadIdMap.get(objHashCode);
+        } else {
+            int currThreadId = netxtThreadId.getAndIncrement();
+            threadIdMap.put(objHashCode, currThreadId);
+            return currThreadId;
+        }
     }
 }
 
