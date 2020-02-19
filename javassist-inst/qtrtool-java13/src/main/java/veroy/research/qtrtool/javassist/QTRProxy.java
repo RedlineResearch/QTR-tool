@@ -449,7 +449,7 @@ public class QTRProxy {
         }
     }
 
-    protected static Long getThreadId(Long objHashCode) {
+    protected static int getThreadId(int objHashCode) {
         if (threadIdMap.containsKey(objHashCode)) {
             return threadIdMap.get(objHashCode);
         } else {
