@@ -38,7 +38,7 @@ public class QTRProxy {
     private static final int[] fifthBuffer = new int[BUFMAX+1];
 
     private static final long[] timestampBuffer = new long[BUFMAX+1];
-    private static final long[] threadIDBuffer = new long[BUFMAX+1];
+    private static final int[] threadIDBuffer = new int[BUFMAX+1];
 
     private static final String[] dimsBuffer = new String[BUFMAX+1];
 
@@ -449,7 +449,7 @@ public class QTRProxy {
         }
     }
 
-    protected static int getThreadId(Long objHashCode) {
+    protected static Long getThreadId(Long objHashCode) {
         if (threadIdMap.containsKey(objHashCode)) {
             return threadIdMap.get(objHashCode);
         } else {
