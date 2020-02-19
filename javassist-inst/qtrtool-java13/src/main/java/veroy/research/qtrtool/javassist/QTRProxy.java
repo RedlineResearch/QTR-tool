@@ -449,8 +449,8 @@ public class QTRProxy {
         }
     }
 
-    protected int getThreadId(Long objHashCode) {
-
+    protected static int getThreadId(Long objHashCode) {
+        return QTRProxy.nextThreadId.get();
     }
 }
 
