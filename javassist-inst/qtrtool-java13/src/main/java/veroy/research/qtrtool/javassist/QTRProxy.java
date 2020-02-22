@@ -170,9 +170,9 @@ public class QTRProxy {
                 }
                 int currPtr = ptr.getAndIncrement();
                 eventTypeBuffer[currPtr] = 7;
-                firstBuffer[currPtr] = System.identityHashCode(tgtObject);
+                firstBuffer[currPtr] = Integer.toUnsignedString(System.identityHashCode(tgtObject));
                 secondBuffer[currPtr] = fieldId;
-                thirdBuffer[currPtr] = System.identityHashCode(object);
+                thirdBuffer[currPtr] = Integer.toUnsignedString(System.identityHashCode(object));
                 timestampBuffer[currPtr] = timestamp;
                 threadIDBuffer[currPtr] = getThreadId(System.identityHashCode(Thread.currentThread()));
             }
