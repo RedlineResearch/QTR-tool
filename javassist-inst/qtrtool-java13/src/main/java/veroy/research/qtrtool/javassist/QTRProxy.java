@@ -170,9 +170,9 @@ public class QTRProxy {
                 }
                 int currPtr = ptr.getAndIncrement();
                 eventTypeBuffer[currPtr] = 7;
-                firstBuffer[currPtr] = Integer.toUnsignedString(System.identityHashCode(tgtObject));
+                firstBuffer[currPtr] = System.identityHashCode(tgtObject);
                 secondBuffer[currPtr] = fieldId;
-                thirdBuffer[currPtr] = Integer.toUnsignedString(System.identityHashCode(object));
+                thirdBuffer[currPtr] = System.identityHashCode(object);
                 timestampBuffer[currPtr] = timestamp;
                 threadIDBuffer[currPtr] = getThreadId(System.identityHashCode(Thread.currentThread()));
             }
@@ -424,8 +424,8 @@ public class QTRProxy {
                         // 7, targetObjectHash, fieldID, srcObjectHash, timestamp
                         // U <obj-id> <new-tgt-obj-id> <field-id> <thread-id>
                         traceWriter.println( "U " +
-                                             thirdBuffer[i] + " " + // objId
-                                             firstBuffer[i] + " " + // newTgtObjId
+                                             Long.toUnsignedString(thirdBuffer[i]) + " " + // objId
+                                             Long.toUnsignedString(firstBuffer[i]) + " " + // newTgtObjId
                                              secondBuffer[i] + " " + // fieldId
                                              threadIDBuffer[i] ); // threadId
                         break;
