@@ -43,8 +43,8 @@ public class QTRProxy {
     private static final String[] dimsBuffer = new String[BUFMAX+1];
 
     public static final Map<Integer, Pair<Long, Integer>> witnessMap = Collections.synchronizedMap(new HashMap<Integer, Pair<Long, Integer>>());
-    public static final Map<Integer, Integer> threadIdMap = Collections.synchronizedMap(new HashMap<Integer, Integer>());
-    private static AtomicInteger nextThreadId = new AtomicInteger(1);
+    public static final Map<Integer, Integer> objIdMap = Collections.synchronizedMap(new HashMap<Integer, Integer>());
+    private static AtomicInteger nextObjectId = new AtomicInteger(1);
 
     public static final Map<Integer, Integer> methodIdMap = Collections.synchronizedMap(new HashMap<Integer, Integer>());
     private static AtomicInteger nextMethodId = new AtomicInteger(1);
@@ -84,7 +84,7 @@ public class QTRProxy {
                 secondBuffer[currPtr] = (receiver == null) ? 0 : getMethodId(System.identityHashCode(receiver));
                 eventTypeBuffer[currPtr] = METHOD_ENTRY_EVENT;
                 timestampBuffer[currPtr] = timestamp; // TODO: Not really useful
-                threadIDBuffer[currPtr] = getThreadId(System.identityHashCode(Thread.currentThread()));
+                threadIDBuffer[currPtr] = getObjectId(Thread.currentThread());
             }
         } finally {
             mx.unlock();
@@ -111,7 +111,7 @@ public class QTRProxy {
                 firstBuffer[currPtr] = methodId;
                 eventTypeBuffer[currPtr] = METHOD_EXIT_EVENT;
                 timestampBuffer[currPtr] = timestamp;
-                threadIDBuffer[currPtr] = getThreadId(System.identityHashCode(Thread.currentThread()));
+                threadIDBuffer[currPtr] = getObjectId(Thread.currentThread());
             }
         } finally {
             mx.unlock();
@@ -140,7 +140,7 @@ public class QTRProxy {
                 thirdBuffer[currPtr] = allocSiteID;
                 fourthBuffer[currPtr] = inst.getObjectSize(obj);
                 timestampBuffer[currPtr] = timestamp;
-                threadIDBuffer[currPtr] = getThreadId(System.identityHashCode(Thread.currentThread()));
+                threadIDBuffer[currPtr] = getObjectId(Thread.currentThread());
             }
         } finally {
             mx.unlock();
@@ -174,7 +174,7 @@ public class QTRProxy {
                 secondBuffer[currPtr] = fieldId;
                 thirdBuffer[currPtr] = System.identityHashCode(object);
                 timestampBuffer[currPtr] = timestamp;
-                threadIDBuffer[currPtr] = getThreadId(System.identityHashCode(Thread.currentThread()));
+                threadIDBuffer[currPtr] = getObjectId(Thread.currentThread());
             }
         } finally {
             mx.unlock();
@@ -220,7 +220,7 @@ public class QTRProxy {
                 fourthBuffer[currPtr] = inst.getObjectSize(arrayObj);
                 fifthBuffer[currPtr] = allocSiteId;
                 timestampBuffer[currPtr] = timestamp;
-                threadIDBuffer[currPtr] = getThreadId(System.identityHashCode(Thread.currentThread()));
+                threadIDBuffer[currPtr] = getObjectId(Thread.currentThread());
                 saveDimsToBuffer(currPtr, dims);
             }
         } finally {
@@ -241,7 +241,7 @@ public class QTRProxy {
         try {
             witnessMap.put(System.identityHashCode(aliveObject), Pair.of(timestamp, classId));
             // eventTypeBuffer[currPtr] = 8;
-            // TODO: threadIDBuffer[currPtr] = getThreadId(System.identityHashCode(Thread.currentThread()));
+            // TODO: threadIDBuffer[currPtr] = getObjectId(Thread.currentThread());
             // TODO: Override 'remoteLRU' method to save the timestamp.
         } finally {
             mx.unlock();
@@ -283,7 +283,7 @@ public class QTRProxy {
                     // TODO: fourthBuffer[currPtr] = allocSiteID;
                     fifthBuffer[currPtr] = getObjectSize(allocdArray);
                     timestampBuffer[currPtr] = timestamp;
-                    threadIDBuffer[currPtr] = getThreadId(System.identityHashCode(Thread.currentThread()));
+                    threadIDBuffer[currPtr] = getObjectId(Thread.currentThread());
 
                     if (dims > 2) {
                         for (int i = 0; i < allocdArray.length; ++i) {
@@ -339,7 +339,7 @@ public class QTRProxy {
                     // System.err.println("Class ID: " + allocdClassID);
                     fourthBuffer[currPtr] = (int) getObjectSize(allocdObject);
                     timestampBuffer[currPtr] = timestamp;
-                    threadIDBuffer[currPtr] = getThreadId(System.identityHashCode(Thread.currentThread()));
+                    threadIDBuffer[currPtr] = getObjectId(Thread.currentThread());
                     break;
                 } else {
                     synchronized(ptr) {
@@ -452,13 +452,14 @@ public class QTRProxy {
         }
     }
 
-    protected static int getThreadId(int objHashCode) {
-        if (threadIdMap.containsKey(objHashCode)) {
-            return threadIdMap.get(objHashCode);
+    protected static int getObjectId(Object obj) {
+        int objHashCode = System.identityHashCode(obj);
+        if (objIdMap.containsKey(objHashCode)) {
+            return objIdMap.get(objHashCode);
         } else {
-            int currThreadId = nextThreadId.getAndIncrement();
-            threadIdMap.put(objHashCode, currThreadId);
-            return currThreadId;
+            int currObjId = nextObjectId.getAndIncrement();
+            objIdMap.put(objHashCode, currObjId);
+            return currObjId;
         }
     }
 
