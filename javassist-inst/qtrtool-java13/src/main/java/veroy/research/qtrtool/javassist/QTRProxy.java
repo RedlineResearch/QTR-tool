@@ -46,9 +46,6 @@ public class QTRProxy {
     public static final Map<Integer, Integer> objIdMap = Collections.synchronizedMap(new HashMap<Integer, Integer>());
     private static AtomicInteger nextObjectId = new AtomicInteger(1);
 
-    public static final Map<Integer, Integer> methodIdMap = Collections.synchronizedMap(new HashMap<Integer, Integer>());
-    private static AtomicInteger nextMethodId = new AtomicInteger(1);
-
     private static AtomicInteger ptr = new AtomicInteger();
 
     // TRACING EVENTS
@@ -81,7 +78,7 @@ public class QTRProxy {
                 }
                 int currPtr = ptr.getAndIncrement();
                 firstBuffer[currPtr] = methodId;
-                secondBuffer[currPtr] = (receiver == null) ? 0 : getMethodId(System.identityHashCode(receiver));
+                secondBuffer[currPtr] = (receiver == null) ? 0 : getObjectId(receiver);
                 eventTypeBuffer[currPtr] = METHOD_ENTRY_EVENT;
                 timestampBuffer[currPtr] = timestamp; // TODO: Not really useful
                 threadIDBuffer[currPtr] = getObjectId(Thread.currentThread());
@@ -134,7 +131,7 @@ public class QTRProxy {
                     assert(ptr.get() == 0);
                 }
                 int currPtr = ptr.getAndIncrement();
-                firstBuffer[currPtr] = System.identityHashCode(obj);
+                firstBuffer[currPtr] = getObjectId(obj);
                 eventTypeBuffer[currPtr] = OBJECT_ALLOCATION_EVENT;
                 secondBuffer[currPtr] = allocdClassID;
                 thirdBuffer[currPtr] = allocSiteID;
@@ -170,9 +167,9 @@ public class QTRProxy {
                 }
                 int currPtr = ptr.getAndIncrement();
                 eventTypeBuffer[currPtr] = 7;
-                firstBuffer[currPtr] = System.identityHashCode(tgtObject);
+                firstBuffer[currPtr] = getObjectId(tgtObject);
                 secondBuffer[currPtr] = fieldId;
-                thirdBuffer[currPtr] = System.identityHashCode(object);
+                thirdBuffer[currPtr] = getObjectId(object);
                 timestampBuffer[currPtr] = timestamp;
                 threadIDBuffer[currPtr] = getObjectId(Thread.currentThread());
             }
@@ -210,7 +207,7 @@ public class QTRProxy {
                 }
                 int currPtr = ptr.getAndIncrement();
                 eventTypeBuffer[currPtr] = ARRAY_ALLOC_EVENT;
-                firstBuffer[currPtr] = System.identityHashCode(arrayObj);
+                firstBuffer[currPtr] = getObjectId(arrayObj);
                 secondBuffer[currPtr] = typeId;
                 try {
                     thirdBuffer[currPtr] = Array.getLength(arrayObj);
@@ -239,7 +236,7 @@ public class QTRProxy {
         }
         mx.lock();
         try {
-            witnessMap.put(System.identityHashCode(aliveObject), Pair.of(timestamp, classId));
+            witnessMap.put(getObjectId(aliveObject), Pair.of(timestamp, classId));
             // eventTypeBuffer[currPtr] = 8;
             // TODO: threadIDBuffer[currPtr] = getObjectId(Thread.currentThread());
             // TODO: Override 'remoteLRU' method to save the timestamp.
@@ -276,7 +273,7 @@ public class QTRProxy {
                     synchronized(ptr) {
                         currPtr = ptr.getAndIncrement();
                     }
-                    firstBuffer[currPtr] = System.identityHashCode(allocdArray);
+                    firstBuffer[currPtr] = getObjectId(allocdArray);
                     eventTypeBuffer[currPtr] = ARRAY_2D_ALLOC_EVENT;
                     secondBuffer[currPtr] = allocdClassID;
                     thirdBuffer[currPtr] = allocdArray.length;
@@ -330,7 +327,7 @@ public class QTRProxy {
                     synchronized(ptr) {
                         currPtr = ptr.getAndIncrement();
                     }
-                    firstBuffer[currPtr] = System.identityHashCode(allocdObject);
+                    firstBuffer[currPtr] = getObjectId(allocdObject);
                     eventTypeBuffer[currPtr] = 3;
                     secondBuffer[currPtr] = allocdClassID;
                     thirdBuffer[currPtr] = allocSiteID;
@@ -462,15 +459,4 @@ public class QTRProxy {
             return currObjId;
         }
     }
-
-    protected static int getMethodId(int objHashCode) {
-        if (methodIdMap.containsKey(objHashCode)) {
-            return methodIdMap.get(objHashCode);
-        } else {
-            int currMethodId = nextMethodId.getAndIncrement();
-            methodIdMap.put(objHashCode, currMethodId);
-            return currMethodId;
-        }
-    }
 }
-
