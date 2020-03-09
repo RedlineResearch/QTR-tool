@@ -445,6 +445,96 @@ public class QTRProxy {
         }
     }
 
+    public static void flushBuffer_ver02(PrintWriter writer) {
+        try {
+            mx.lock();
+            int bufSize = Math.min(ptr.get(), BUFMAX);
+            for (int i = 0; i < bufSize; i++) {
+                switch (eventTypeBuffer[i]) {
+                    case METHOD_ENTRY_EVENT: // method entry
+                        // M <method-id> <receiver-object-id> <thread-id>
+                        writer.println( "M " +
+                                        firstBuffer[i] + " " +
+                                        secondBuffer[i] + " " +
+                                        threadIDBuffer[i] );
+                        break;
+                    case METHOD_EXIT_EVENT: // method exit
+                        // E <method-id> <thread-id>
+                        writer.println( "E " +
+                                        firstBuffer[i] + " " +
+                                        threadIDBuffer[i] );
+                        break;
+                    case OBJECT_ALLOCATION_EVENT: // object allocation
+                        // N <object-id> <size> <type-id> <site-id> <length (0)> <thread-id>
+                        // 1st buffer = object ID (hash)
+                        // 2nd buffer = class ID
+                        // 3rd buffer = allocation site (method ID)
+                        writer.println( "N " +
+                                        firstBuffer[i] + " " +
+                                        fourthBuffer[i] + " " +
+                                        secondBuffer[i] + " " +
+                                        thirdBuffer[i] + " "
+                                        + 0 + " " // Always zero because this isn't an array.
+                                        + threadIDBuffer[i] );
+                        break;
+                    case ARRAY_ALLOC_EVENT: // object array allocation
+                    case 5: // primitive array allocation
+                        // 5 now removed so nothing should come out of it
+                        // A <object-id> <size> <type-id> <site-id> <length> <thread-id>
+                        writer.println( "A " +
+                                        firstBuffer[i] + " " + // objectId
+                                        fourthBuffer[i] + " " + // size
+                                        secondBuffer[i] + " " + // typedId
+                                        fifthBuffer[i] + " " + // siteId
+                                        thirdBuffer[i] + " " + // length
+                                        threadIDBuffer[i] + " " + // threadId
+                                        dimsBuffer[i] ); // dimensions
+                        break;
+                    case ARRAY_2D_ALLOC_EVENT: // 2D array allocation
+                        // TODO: Conflicting documention: 2018-1112
+                        // 6, arrayHash, arrayClassID, size1, size2, timestamp
+                        // A <object-id> <size> <type-id> <site-id> <length> <thread-id>
+                        writer.println( "A " +
+                                        firstBuffer[i] + " " +
+                                        fifthBuffer[i] + " " +
+                                        secondBuffer[i] + " " +
+                                        fourthBuffer[i] + " " +
+                                        thirdBuffer[i] + " " +
+                                        threadIDBuffer[i] );
+                        break;
+                    case PUT_FIELD_EVENT: // object update
+                        // TODO: Conflicting documention: 2018-1112
+                        // 7, targetObjectHash, fieldID, srcObjectHash, timestamp
+                        // U <obj-id> <new-tgt-obj-id> <field-id> <thread-id>
+                        writer.println( "U " +
+                                        Long.toUnsignedString(thirdBuffer[i]) + " " + // objId
+                                        Long.toUnsignedString(firstBuffer[i]) + " " + // newTgtObjId
+                                        secondBuffer[i] + " " + // fieldId
+                                        threadIDBuffer[i] ); // threadId
+                        break;
+                    case GET_FIELD_EVENT: // witness with get field
+                        // 8, aliveObjectHash, classID, timestamp
+                        writer.println( "W" + " " +
+                                        firstBuffer[i] + " " +
+                                        secondBuffer[i] + " " +
+                                        threadIDBuffer[i] );
+                        break;
+                    default:
+                        writer.format( "Unexpected event %d: [%d, %d] thread: %d",
+                                       eventTypeBuffer[i],
+                                       firstBuffer[i],
+                                       secondBuffer[i],
+                                       threadIDBuffer[i] );
+                        // TODO: throw new IllegalStateException("Unexpected event: " + eventTypeBuffer[i]);
+                }
+                dimsBuffer[i] = "";
+            }
+            ptr.set(0);
+        } finally {
+            mx.unlock();
+        }
+    }
+
     protected static int getObjectId(Object obj) {
         int objHashCode = System.identityHashCode(obj);
         if (objIdMap.containsKey(objHashCode)) {
