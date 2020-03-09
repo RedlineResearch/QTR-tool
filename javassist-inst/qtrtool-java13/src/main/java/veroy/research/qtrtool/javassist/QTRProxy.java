@@ -26,8 +26,6 @@ public class QTRProxy {
     public static final InstrumentFlag inInstrumentMethod = new InstrumentFlag();
     private static ReentrantLock mx = new ReentrantLock();
 
-    // TODO: private static Logger qtrtoolLogger = Logger.getLogger(QTRProxy.class);
-
     // Buffers:
     private static final int BUFMAX = 10000;
     private static final int[] eventTypeBuffer = new int[BUFMAX+1];
@@ -353,9 +351,11 @@ public class QTRProxy {
     }
     */
 
-    public static void flushBuffer()
-    {
+    public static void flushBuffer() {
+        flushBuffer(QTRProxy.traceWriter);
+    }
 
+    public static void flushBuffer(PrintWriter writer) {
         try {
             mx.lock();
             int bufSize = Math.min(ptr.get(), BUFMAX);
@@ -363,82 +363,78 @@ public class QTRProxy {
                 switch (eventTypeBuffer[i]) {
                     case METHOD_ENTRY_EVENT: // method entry
                         // M <method-id> <receiver-object-id> <thread-id>
-                        traceWriter.println( "M " +
-                                             firstBuffer[i] + " " +
-                                             secondBuffer[i] + " " +
-                                             threadIDBuffer[i] );
-                        // TODO: qtrtoolLogger.info( "M " +
-                        // TODO:                 firstBuffer[i] + " " +
-                        // TODO:                 secondBuffer[i] + " " +
-                        // TODO:                 threadIDBuffer[i] );
+                        writer.println( "M " +
+                                        firstBuffer[i] + " " +
+                                        secondBuffer[i] + " " +
+                                        threadIDBuffer[i] );
                         break;
                     case METHOD_EXIT_EVENT: // method exit
                         // E <method-id> <thread-id>
-                        traceWriter.println( "E " +
-                                             firstBuffer[i] + " " +
-                                             threadIDBuffer[i] );
+                        writer.println( "E " +
+                                        firstBuffer[i] + " " +
+                                        threadIDBuffer[i] );
                         break;
                     case OBJECT_ALLOCATION_EVENT: // object allocation
                         // N <object-id> <size> <type-id> <site-id> <length (0)> <thread-id>
                         // 1st buffer = object ID (hash)
                         // 2nd buffer = class ID
                         // 3rd buffer = allocation site (method ID)
-                        traceWriter.println( "N " +
-                                             firstBuffer[i] + " " +
-                                             fourthBuffer[i] + " " +
-                                             secondBuffer[i] + " " +
-                                             thirdBuffer[i] + " "
-                                             + 0 + " " // Always zero because this isn't an array.
-                                             + threadIDBuffer[i] );
+                        writer.println( "N " +
+                                        firstBuffer[i] + " " +
+                                        fourthBuffer[i] + " " +
+                                        secondBuffer[i] + " " +
+                                        thirdBuffer[i] + " "
+                                        + 0 + " " // Always zero because this isn't an array.
+                                        + threadIDBuffer[i] );
                         break;
                     case ARRAY_ALLOC_EVENT: // object array allocation
                     case 5: // primitive array allocation
                         // 5 now removed so nothing should come out of it
                         // A <object-id> <size> <type-id> <site-id> <length> <thread-id>
-                        traceWriter.println( "A " +
-                                             firstBuffer[i] + " " + // objectId
-                                             fourthBuffer[i] + " " + // size
-                                             secondBuffer[i] + " " + // typedId
-                                             fifthBuffer[i] + " " + // siteId
-                                             thirdBuffer[i] + " " + // length
-                                             threadIDBuffer[i] + " " + // threadId
-                                             dimsBuffer[i] ); // dimensions
+                        writer.println( "A " +
+                                        firstBuffer[i] + " " + // objectId
+                                        fourthBuffer[i] + " " + // size
+                                        secondBuffer[i] + " " + // typedId
+                                        fifthBuffer[i] + " " + // siteId
+                                        thirdBuffer[i] + " " + // length
+                                        threadIDBuffer[i] + " " + // threadId
+                                        dimsBuffer[i] ); // dimensions
                         break;
                     case ARRAY_2D_ALLOC_EVENT: // 2D array allocation
                         // TODO: Conflicting documention: 2018-1112
                         // 6, arrayHash, arrayClassID, size1, size2, timestamp
                         // A <object-id> <size> <type-id> <site-id> <length> <thread-id>
-                        traceWriter.println( "A " +
-                                             firstBuffer[i] + " " +
-                                             fifthBuffer[i] + " " +
-                                             secondBuffer[i] + " " +
-                                             fourthBuffer[i] + " " +
-                                             thirdBuffer[i] + " " +
-                                             threadIDBuffer[i] );
+                        writer.println( "A " +
+                                        firstBuffer[i] + " " +
+                                        fifthBuffer[i] + " " +
+                                        secondBuffer[i] + " " +
+                                        fourthBuffer[i] + " " +
+                                        thirdBuffer[i] + " " +
+                                        threadIDBuffer[i] );
                         break;
                     case PUT_FIELD_EVENT: // object update
                         // TODO: Conflicting documention: 2018-1112
                         // 7, targetObjectHash, fieldID, srcObjectHash, timestamp
                         // U <obj-id> <new-tgt-obj-id> <field-id> <thread-id>
-                        traceWriter.println( "U " +
-                                             Long.toUnsignedString(thirdBuffer[i]) + " " + // objId
-                                             Long.toUnsignedString(firstBuffer[i]) + " " + // newTgtObjId
-                                             secondBuffer[i] + " " + // fieldId
-                                             threadIDBuffer[i] ); // threadId
+                        writer.println( "U " +
+                                        Long.toUnsignedString(thirdBuffer[i]) + " " + // objId
+                                        Long.toUnsignedString(firstBuffer[i]) + " " + // newTgtObjId
+                                        secondBuffer[i] + " " + // fieldId
+                                        threadIDBuffer[i] ); // threadId
                         break;
                     case GET_FIELD_EVENT: // witness with get field
                         // 8, aliveObjectHash, classID, timestamp
-                        traceWriter.println( "W" + " " +
-                                             firstBuffer[i] + " " +
-                                             secondBuffer[i] + " " +
-                                             threadIDBuffer[i] );
+                        writer.println( "W" + " " +
+                                        firstBuffer[i] + " " +
+                                        secondBuffer[i] + " " +
+                                        threadIDBuffer[i] );
                         break;
                     default:
-                        traceWriter.format( "Unexpected event %d: [%d, %d] thread: %d",
-                                            eventTypeBuffer[i],
-                                            firstBuffer[i],
-                                            secondBuffer[i],
-                                            threadIDBuffer[i] );
+                        writer.format( "Unexpected event %d: [%d, %d] thread: %d",
+                                       eventTypeBuffer[i],
+                                       firstBuffer[i],
+                                       secondBuffer[i],
+                                       threadIDBuffer[i] );
                         // TODO: throw new IllegalStateException("Unexpected event: " + eventTypeBuffer[i]);
                 }
                 dimsBuffer[i] = "";
