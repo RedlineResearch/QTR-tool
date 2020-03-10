@@ -454,8 +454,8 @@ public class QTRProxy {
                 switch (eventTypeBuffer[i]) {
                     case METHOD_ENTRY_EVENT: // method entry
                         // M <method-id> <receiver-object-id> <thread-id>
-                        writer.println( "'ev': '%s', 'mid': %d, 'obj': %d, 'tid': %d",
-                                        "M", firstBuffer[i], secondBuffer[i], threadIDBuffer[i] );
+                        writer.printf( "'ev': '%s', 'mid': %d, 'obj': %d, 'tid': %d",
+                                       "M", firstBuffer[i], secondBuffer[i], threadIDBuffer[i] );
                         break;
                     case METHOD_EXIT_EVENT: // method exit
                         // E <method-id> <thread-id>
