@@ -459,22 +459,18 @@ public class QTRProxy {
                         break;
                     case METHOD_EXIT_EVENT: // method exit
                         // E <method-id> <thread-id>
-                        writer.println( "E " +
-                                        firstBuffer[i] + " " +
-                                        threadIDBuffer[i] );
+                        writer.printf( "'ev': '%s', 'mid': %d, 'tid': %d",
+                                       "E ", firstBuffer[i], threadIDBuffer[i] );
                         break;
                     case OBJECT_ALLOCATION_EVENT: // object allocation
                         // N <object-id> <size> <type-id> <site-id> <length (0)> <thread-id>
                         // 1st buffer = object ID (hash)
                         // 2nd buffer = class ID
                         // 3rd buffer = allocation site (method ID)
-                        writer.println( "N " +
-                                        firstBuffer[i] + " " +
-                                        fourthBuffer[i] + " " +
-                                        secondBuffer[i] + " " +
-                                        thirdBuffer[i] + " "
-                                        + 0 + " " // Always zero because this isn't an array.
-                                        + threadIDBuffer[i] );
+                        writer.printf( "'ev': '%s', 'obj': %d, 'sz': %d, 'cid': %d, 'alc': %d, 'len': %d, 'tid': %d",
+                                       "N ", firstBuffer[i], fourthBuffer[i], secondBuffer[i], thirdBuffer[i], 
+                                       0, // Always zero because this isn't an array.
+                                       threadIDBuffer[i] );
                         break;
                     case ARRAY_ALLOC_EVENT: // object array allocation
                     case 5: // primitive array allocation
