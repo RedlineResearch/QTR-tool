@@ -476,14 +476,15 @@ public class QTRProxy {
                     case 5: // primitive array allocation
                         // 5 now removed so nothing should come out of it
                         // A <object-id> <size> <type-id> <site-id> <length> <thread-id>
-                        writer.println( "A " +
-                                        firstBuffer[i] + " " + // objectId
-                                        fourthBuffer[i] + " " + // size
-                                        secondBuffer[i] + " " + // typedId
-                                        fifthBuffer[i] + " " + // siteId
-                                        thirdBuffer[i] + " " + // length
-                                        threadIDBuffer[i] + " " + // threadId
-                                        dimsBuffer[i] ); // dimensions
+                        writer.printf( "'ev': '%s', 'obj': %d, 'sz': %d, 'cid': %d, 'alc': %d, 'len': %d, 'tid': %d, 'dim': %d",
+                                       "A ",
+                                       firstBuffer[i], // objectId
+                                       fourthBuffer[i], // size
+                                       secondBuffer[i], // typedId
+                                       fifthBuffer[i], // siteId
+                                       thirdBuffer[i], // length
+                                       threadIDBuffer[i], // threadId
+                                       dimsBuffer[i] ); // dimensions
                         break;
                     case ARRAY_2D_ALLOC_EVENT: // 2D array allocation
                         // TODO: Conflicting documention: 2018-1112
