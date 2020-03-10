@@ -449,14 +449,13 @@ public class QTRProxy {
         try {
             mx.lock();
             int bufSize = Math.min(ptr.get(), BUFMAX);
+            writer.print("{");
             for (int i = 0; i < bufSize; i++) {
                 switch (eventTypeBuffer[i]) {
                     case METHOD_ENTRY_EVENT: // method entry
                         // M <method-id> <receiver-object-id> <thread-id>
-                        writer.println( "M " +
-                                        firstBuffer[i] + " " +
-                                        secondBuffer[i] + " " +
-                                        threadIDBuffer[i] );
+                        writer.println( "'ev': '%s', 'mid': %d, 'obj': %d, 'tid': %d",
+                                        "M", firstBuffer[i], secondBuffer[i], threadIDBuffer[i] );
                         break;
                     case METHOD_EXIT_EVENT: // method exit
                         // E <method-id> <thread-id>
@@ -529,6 +528,7 @@ public class QTRProxy {
                 }
                 dimsBuffer[i] = "";
             }
+            writer.print("}");
             ptr.set(0);
         } finally {
             mx.unlock();
