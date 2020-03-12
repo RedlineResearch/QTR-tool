@@ -460,7 +460,7 @@ public class QTRProxy {
                     case METHOD_EXIT_EVENT: // method exit
                         // E <method-id> <thread-id>
                         writer.printf( "'ev': '%s', 'mid': %d, 'tid': %d",
-                                       "E ", firstBuffer[i], threadIDBuffer[i] );
+                                       "E", firstBuffer[i], threadIDBuffer[i] );
                         break;
                     case OBJECT_ALLOCATION_EVENT: // object allocation
                         // N <object-id> <size> <type-id> <site-id> <length (0)> <thread-id>
@@ -468,7 +468,7 @@ public class QTRProxy {
                         // 2nd buffer = class ID
                         // 3rd buffer = allocation site (method ID)
                         writer.printf( "'ev': '%s', 'obj': %d, 'sz': %d, 'cid': %d, 'alc': %d, 'len': %d, 'tid': %d",
-                                       "N ", firstBuffer[i], fourthBuffer[i], secondBuffer[i], thirdBuffer[i], 
+                                       "N", firstBuffer[i], fourthBuffer[i], secondBuffer[i], thirdBuffer[i], 
                                        0, // Always zero because this isn't an array.
                                        threadIDBuffer[i] );
                         break;
@@ -477,7 +477,7 @@ public class QTRProxy {
                         // 5 now removed so nothing should come out of it
                         // A <object-id> <size> <type-id> <site-id> <length> <thread-id>
                         writer.printf( "'ev': '%s', 'obj': %d, 'sz': %d, 'cid': %d, 'alc': %d, 'len': %d, 'tid': %d, 'dim': %d",
-                                       "A ",
+                                       "A",
                                        firstBuffer[i], // objectId
                                        fourthBuffer[i], // size
                                        secondBuffer[i], // typedId
@@ -490,23 +490,25 @@ public class QTRProxy {
                         // TODO: Conflicting documention: 2018-1112
                         // 6, arrayHash, arrayClassID, size1, size2, timestamp
                         // A <object-id> <size> <type-id> <site-id> <length> <thread-id>
-                        writer.println( "A " +
-                                        firstBuffer[i] + " " +
-                                        fifthBuffer[i] + " " +
-                                        secondBuffer[i] + " " +
-                                        fourthBuffer[i] + " " +
-                                        thirdBuffer[i] + " " +
-                                        threadIDBuffer[i] );
+                        writer.printf( "'ev': '%s', 'obj': %d, 'sz': %d, 'cid': %d, 'alc': %d, 'len': %d, 'tid': %d",
+                                       "A",
+                                       firstBuffer[i], // objectId
+                                       fifthBuffer[i], // size
+                                       secondBuffer[i], // typeId
+                                       fourthBuffer[i], // siteId
+                                       thirdBuffer[i], // length
+                                       threadIDBuffer[i] ); // threadId
                         break;
                     case PUT_FIELD_EVENT: // object update
                         // TODO: Conflicting documention: 2018-1112
                         // 7, targetObjectHash, fieldID, srcObjectHash, timestamp
                         // U <obj-id> <new-tgt-obj-id> <field-id> <thread-id>
-                        writer.println( "U " +
-                                        Long.toUnsignedString(thirdBuffer[i]) + " " + // objId
-                                        Long.toUnsignedString(firstBuffer[i]) + " " + // newTgtObjId
-                                        secondBuffer[i] + " " + // fieldId
-                                        threadIDBuffer[i] ); // threadId
+                        writer.printf( "'ev': '%s', 'obj': %d, 'tgt': %d, 'fid': %d, 'tid': %d",
+                                       "U",
+                                       Long.toUnsignedString(thirdBuffer[i]), // objId
+                                       Long.toUnsignedString(firstBuffer[i]), // newTgtObjId
+                                       secondBuffer[i], // fieldId
+                                       threadIDBuffer[i] ); // threadId
                         break;
                     case GET_FIELD_EVENT: // witness with get field
                         // 8, aliveObjectHash, classID, timestamp
@@ -516,12 +518,14 @@ public class QTRProxy {
                                         threadIDBuffer[i] );
                         break;
                     default:
-                        writer.format( "Unexpected event %d: [%d, %d] thread: %d",
-                                       eventTypeBuffer[i],
-                                       firstBuffer[i],
-                                       secondBuffer[i],
-                                       threadIDBuffer[i] );
+                        // TODO:
+                        // writer.format( "Unexpected event %d: [%d, %d] thread: %d",
+                        //                eventTypeBuffer[i],
+                        //                firstBuffer[i],
+                        //                secondBuffer[i],
+                        //                threadIDBuffer[i] );
                         // TODO: throw new IllegalStateException("Unexpected event: " + eventTypeBuffer[i]);
+                        break;
                 }
                 dimsBuffer[i] = "";
             }
