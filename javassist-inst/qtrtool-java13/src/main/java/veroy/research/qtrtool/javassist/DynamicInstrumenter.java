@@ -94,7 +94,8 @@ public class DynamicInstrumenter {
         return ( (className == null) ||
                  (className.indexOf("QTRProxy") >= 0) ||
                  (className.indexOf("javassist") == 0) ||
-                 (className.indexOf("veroy.research.qtrtool.javassist") == 0) ||
+                 (className.indexOf("veroy.research.qtrtool.javassist") == 0) ); // ||
+                 /*
                  (className.indexOf("java.lang.invoke.LambdaForm") == 0) ||
                  (className.indexOf("jdk.internal") == 0) ||
                  (className.indexOf("sun.reflect") == 0) ||
@@ -103,6 +104,7 @@ public class DynamicInstrumenter {
                  (className.indexOf("java.util.Locale") == 0) ||
                  (className.indexOf("sun.security.jca") == 0)
                  );
+                 */
     }
 }
 
