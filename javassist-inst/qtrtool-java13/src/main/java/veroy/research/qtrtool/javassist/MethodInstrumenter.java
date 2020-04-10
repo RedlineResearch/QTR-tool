@@ -105,7 +105,7 @@ public class MethodInstrumenter {
             final int classId = getClassId(className);
 
             if (shouldIgnore(modifiers, methodName)) {
-                System.err.println("-- IGNORE - " className + "#" + methodName);
+                System.err.println("-- IGNORE - " + className + "#" + methodName);
                 continue;
             }
             if (method instanceof CtMethod) {
