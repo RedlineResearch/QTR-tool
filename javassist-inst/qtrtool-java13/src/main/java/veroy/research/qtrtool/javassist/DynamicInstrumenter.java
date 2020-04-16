@@ -46,8 +46,8 @@ public class DynamicInstrumenter {
         final PrintWriter traceWriter = new PrintWriter(new FileOutputStream(new File("trace")), true);
         QTRProxy.traceWriter = traceWriter;
         QTRProxy.inst = inst;
-        ClassPool.doPruning = true;
-        ClassPool.releaseUnmodifiedClassFile = true;
+        ClassPool.doPruning = false;
+        ClassPool.releaseUnmodifiedClassFile = false;
         final ClassPool cp = ClassPool.getDefault();
         cp.get("veroy.research.qtrtool.javassist.QTRProxy");
         final QtrToolTransformer optimus = new QtrToolTransformer(traceWriter);
