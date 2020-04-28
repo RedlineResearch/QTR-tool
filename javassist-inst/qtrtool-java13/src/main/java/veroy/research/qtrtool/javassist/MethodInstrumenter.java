@@ -3,6 +3,7 @@ package veroy.research.qtrtool.javassist;
 import java.io.InputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
+import java.lang.instrument.ClassFileTransformer;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
