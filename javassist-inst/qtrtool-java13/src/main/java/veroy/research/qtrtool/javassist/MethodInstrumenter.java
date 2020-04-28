@@ -3,7 +3,6 @@ package veroy.research.qtrtool.javassist;
 import java.io.InputStream;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.lang.instrument.ClassFileTransformer;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -39,7 +38,6 @@ public class MethodInstrumenter {
     private static PrintWriter methodsWriter;
     private static PrintWriter fieldsWriter;
     private static PrintWriter classWriter;
-    private static ClassFileTransformer classFileTransformer;
 
     public MethodInstrumenter(InputStream instream, String newName) {
         this.instream = instream;
@@ -54,10 +52,6 @@ public class MethodInstrumenter {
         MethodInstrumenter.methodsWriter = methodsWriter;
         MethodInstrumenter.fieldsWriter = fieldsWriter;
         MethodInstrumenter.classWriter = classWriter;
-    }
-
-    public static void setClassFileTransformer(ClassFileTransformer cft) {
-        MethodInstrumenter.classFileTransFormer = cft;
     }
 
     protected int getAllocSiteId(String className, Integer byteCodeIndex) {
