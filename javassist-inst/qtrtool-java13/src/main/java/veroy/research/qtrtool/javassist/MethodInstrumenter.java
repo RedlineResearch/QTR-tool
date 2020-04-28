@@ -38,6 +38,7 @@ public class MethodInstrumenter {
     private static PrintWriter methodsWriter;
     private static PrintWriter fieldsWriter;
     private static PrintWriter classWriter;
+    private static ClassFileTransformer classFileTransformer;
 
     public MethodInstrumenter(InputStream instream, String newName) {
         this.instream = instream;
