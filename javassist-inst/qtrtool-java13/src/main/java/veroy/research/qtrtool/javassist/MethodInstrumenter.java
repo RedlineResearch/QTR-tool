@@ -56,6 +56,10 @@ public class MethodInstrumenter {
         MethodInstrumenter.classWriter = classWriter;
     }
 
+    public static void setClassFileTransformer(ClassFileTransformer cft) {
+        MethodInstrumenter.classFileTransFormer = cft;
+    }
+
     protected int getAllocSiteId(String className, Integer byteCodeIndex) {
         String key = className + "#" + byteCodeIndex.toString();
         allocSiteIdMap.computeIfAbsent(key, k -> nextAllocSiteId.getAndAdd(1));
