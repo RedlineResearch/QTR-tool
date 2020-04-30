@@ -29,6 +29,7 @@ import javassist.CtClass;
 import javassist.CtMethod;
 import javassist.Modifier;
 
+import veroy.research.qtrtool.javassist.QtrToolTransformer;
 import veroy.research.qtrtool.javassist.QTRProxy;
 
 public class DynamicInstrumenter {
