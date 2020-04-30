@@ -165,6 +165,8 @@ public class MethodInstrumenter {
                         exc.printStackTrace();
                         throw exc;
                     }
+                } else {
+                    System.err.println("** NATIVE - " + className + "#" + methodName);
                 }
             }
         }
