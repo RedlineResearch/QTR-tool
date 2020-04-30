@@ -109,60 +109,62 @@ public class MethodInstrumenter {
                 continue;
             }
             if (method instanceof CtMethod) {
-                method.instrument(
-                        new ExprEditor() {
-                            // Instrument new expressions:
-                            public void edit(NewExpr expr) throws CannotCompileException {
-                                final int allocSiteId = getAllocSiteId(className, expr.indexOfBytecode());
-                                expr.replace( "{ $_ = $proceed($$); veroy.research.qtrtool.javassist.QTRProxy.onObjectAlloc($_, " +
-                                              classId + ", " + allocSiteId + "); }");
-                            }
-
-                            // Instrument new array expressions:
-                            public void edit(NewArray expr) throws CannotCompileException {
-                                try {
+                if (!Modifier.isNative(modifiers)) {
+                    method.instrument(
+                            new ExprEditor() {
+                                // Instrument new expressions:
+                                public void edit(NewExpr expr) throws CannotCompileException {
                                     final int allocSiteId = getAllocSiteId(className, expr.indexOfBytecode());
-                                    expr.replace( "{ $_ = $proceed($$); veroy.research.qtrtool.javassist.QTRProxy.onArrayAlloc( $_," +
-                                                  classId + ", " + allocSiteId + ", " + generateNewArrayReplacement(expr) + "); }");
-                                } catch (CannotCompileException exc) {
-                                    System.err.println("Unable on to compile call to onArrayAlloc - " + exc.getMessage());
-                                    throw exc;
+                                    expr.replace( "{ $_ = $proceed($$); veroy.research.qtrtool.javassist.QTRProxy.onObjectAlloc($_, " +
+                                                  classId + ", " + allocSiteId + "); }");
                                 }
-                            }
 
-                            // Instrument field updates:
-                            public void edit(FieldAccess expr) throws CannotCompileException {
-                                try {
-                                    final String fieldName = expr.getField().getName();
-                                    if (expr.isWriter()) {
-                                        expr.replace( "{ veroy.research.qtrtool.javassist.QTRProxy.onPutField($1, $0, " + getFieldId(className, fieldName) + "); $_ = $proceed($$); }" );
-                                    } else {
-                                        expr.replace( "{ veroy.research.qtrtool.javassist.QTRProxy.witnessObjectAliveVer2($0, " + classId + "); $_ = $proceed($$); }" );
+                                // Instrument new array expressions:
+                                public void edit(NewArray expr) throws CannotCompileException {
+                                    try {
+                                        final int allocSiteId = getAllocSiteId(className, expr.indexOfBytecode());
+                                        expr.replace( "{ $_ = $proceed($$); veroy.research.qtrtool.javassist.QTRProxy.onArrayAlloc( $_," +
+                                                      classId + ", " + allocSiteId + ", " + generateNewArrayReplacement(expr) + "); }");
+                                    } catch (CannotCompileException exc) {
+                                        System.err.println("Unable on to compile call to onArrayAlloc - " + exc.getMessage());
+                                        throw exc;
                                     }
-                                } catch (NotFoundException exc) {
                                 }
-                            }
 
+                                // Instrument field updates:
+                                public void edit(FieldAccess expr) throws CannotCompileException {
+                                    try {
+                                        final String fieldName = expr.getField().getName();
+                                        if (expr.isWriter()) {
+                                            expr.replace( "{ veroy.research.qtrtool.javassist.QTRProxy.onPutField($1, $0, " + getFieldId(className, fieldName) + "); $_ = $proceed($$); }" );
+                                        } else {
+                                            expr.replace( "{ veroy.research.qtrtool.javassist.QTRProxy.witnessObjectAliveVer2($0, " + classId + "); $_ = $proceed($$); }" );
+                                        }
+                                    } catch (NotFoundException exc) {
+                                    }
+                                }
+
+                            }
+                    );
+                    // Insert ENTRY and EXIT events:
+                    try {
+                        if (Modifier.isStatic(modifiers)) {
+                            method.insertBefore("{ veroy.research.qtrtool.javassist.QTRProxy.onEntry(" + methodId + ", (Object) null); }");
+                        } else {
+                            method.insertBefore("{ veroy.research.qtrtool.javassist.QTRProxy.onEntry(" + methodId + ", (Object) this); }");
                         }
-                );
-                // Insert ENTRY and EXIT events:
-                try {
-                    if (Modifier.isStatic(modifiers)) {
-                        method.insertBefore("{ veroy.research.qtrtool.javassist.QTRProxy.onEntry(" + methodId + ", (Object) null); }");
-                    } else {
-                        method.insertBefore("{ veroy.research.qtrtool.javassist.QTRProxy.onEntry(" + methodId + ", (Object) this); }");
+                    } catch (CannotCompileException exc) {
+                        System.err.println("Error compiling 'insertBefore' code into class/method: " + methodName + " ==? " + methodName.equals("equals"));
+                        exc.printStackTrace();
+                        throw exc;
                     }
-                } catch (CannotCompileException exc) {
-                    System.err.println("Error compiling 'insertBefore' code into class/method: " + methodName + " ==? " + methodName.equals("equals"));
-                    exc.printStackTrace();
-                    throw exc;
-                }
-                try {
-                    method.insertAfter("{ veroy.research.qtrtool.javassist.QTRProxy.onExit(" + methodId + "); }");
-                } catch (CannotCompileException exc) {
-                    System.err.println("Error compiling 'insertAfter' code into class/method: " + methodName);
-                    exc.printStackTrace();
-                    throw exc;
+                    try {
+                        method.insertAfter("{ veroy.research.qtrtool.javassist.QTRProxy.onExit(" + methodId + "); }");
+                    } catch (CannotCompileException exc) {
+                        System.err.println("Error compiling 'insertAfter' code into class/method: " + methodName);
+                        exc.printStackTrace();
+                        throw exc;
+                    }
                 }
             }
         }
