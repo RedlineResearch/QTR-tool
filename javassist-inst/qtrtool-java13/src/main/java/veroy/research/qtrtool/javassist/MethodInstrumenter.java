@@ -183,7 +183,7 @@ public class MethodInstrumenter {
     }
 
     protected boolean shouldIgnore(int modifiers, String methodName) {
-        return (Modifier.isNative(modifiers) ||
+        return (// TODO: Modifier.isNative(modifiers) ||
                 Modifier.isAbstract(modifiers) ||
                 methodName.equals("equals") ||
                 methodName.equals("finalize") ||
