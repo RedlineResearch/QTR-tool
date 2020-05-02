@@ -188,11 +188,11 @@ public class MethodInstrumenter {
 
     protected boolean shouldIgnore(int modifiers, String methodName) {
         return (// TODO: Modifier.isNative(modifiers) ||
-                Modifier.isAbstract(modifiers) ||
-                methodName.equals("equals") ||
-                methodName.equals("finalize") ||
-                methodName.equals("toString") ||
-                methodName.equals("wait"));
+                Modifier.isAbstract(modifiers)); // ||
+                // methodName.equals("equals") ||
+                // methodName.equals("finalize") ||
+                // methodName.equals("toString") ||
+                // methodName.equals("wait"));
     }
 
     public static void writeMapsToFile(PrintWriter witnessWriter) {
