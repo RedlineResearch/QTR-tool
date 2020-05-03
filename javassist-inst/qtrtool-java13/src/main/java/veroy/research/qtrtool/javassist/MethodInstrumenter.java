@@ -115,7 +115,7 @@ public class MethodInstrumenter {
                     // TODO: DEBUG only --
                     System.err.println("** NATIVE - " + className + "#" + methodName);
                     String newMethodName = nativePrefix.concat(methodName);
-                    method.setBody("{ return " + newMethodName + "($$); }");
+                    // TODO: method.setBody("{ return " + newMethodName + "($$); }");
                 }
                 method.instrument(
                         new ExprEditor() {
