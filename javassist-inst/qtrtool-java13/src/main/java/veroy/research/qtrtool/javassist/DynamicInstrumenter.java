@@ -52,6 +52,7 @@ public class DynamicInstrumenter {
         final ClassPool cp = ClassPool.getDefault();
         cp.get("veroy.research.qtrtool.javassist.QTRProxy");
         final QtrToolTransformer optimus = new QtrToolTransformer(traceWriter);
+        inst.setNativeMethodPrefix(optimus, MethodInstrumenter.nativePrefix);
         inst.addTransformer(optimus);
         Runtime.getRuntime().addShutdownHook(new Thread() {
             public void run() {
