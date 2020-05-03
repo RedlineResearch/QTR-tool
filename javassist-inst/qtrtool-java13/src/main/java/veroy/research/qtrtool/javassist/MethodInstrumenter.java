@@ -114,7 +114,7 @@ public class MethodInstrumenter {
                 if (Modifier.isNative(modifiers)) {
                     // TODO: DEBUG only --
                     System.err.println("** NATIVE - " + className + "#" + methodName);
-                    String newMethodNAME = nativePrefix.concat(methodName);
+                    String newMethodName = nativePrefix.concat(methodName);
                     method.setBody("{ return " + newMethodName + "($$); }");
                 }
                 method.instrument(
