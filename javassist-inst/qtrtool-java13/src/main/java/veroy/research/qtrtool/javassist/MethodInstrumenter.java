@@ -107,13 +107,13 @@ public class MethodInstrumenter {
 
             if (shouldIgnore(modifiers, methodName)) {
                 // TODO: DEBUG only --
-                System.err.println("-- IGNORE - " + className + "#" + methodName);
+                // System.err.println("-- IGNORE - " + className + "#" + methodName);
                 continue;
             }
             if (method instanceof CtMethod) {
                 if (Modifier.isNative(modifiers)) {
                     // TODO: DEBUG only --
-                    System.err.println("** NATIVE - " + className + "#" + methodName);
+                    // System.err.println("** NATIVE - " + className + "#" + methodName);
                     String newMethodName = nativePrefix.concat(methodName);
                     method.setBody("{ return " + newMethodName + "($$); }");
                 }
