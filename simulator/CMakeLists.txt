@@ -1,6 +1,8 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 3.9)
 PROJECT(et2-simulator)
 
+set(CMAKE_BUILD_TYPE Debug)
+
 # Where is the Boost library?
 if(NOT DEFINED BOOST_ROOT)
     MESSAGE(FATAL_ERROR "Please supply the boost root path via -DBOOST_ROOT=/path/to/boost")

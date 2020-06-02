@@ -253,8 +253,8 @@ void ClassInfo::impl_read_classes_file_et2( const char *classes_filename )
             break;
         }
 
-        TypeId_t type_id = t_classes.getInt(0);
-        string name = t_classes.getString(1);
+        string name = t_classes.getString(0);
+        TypeId_t type_id = t_classes.getInt(1);
         auto iter = rev_map.find(name);
         if (iter != rev_map.end()) {
             // Duplicate type id
@@ -302,8 +302,8 @@ ClassInfo::impl_read_fields_file_et2( const char *fields_filename )
             break;
         }
 
-        FieldId_t field_id = t_fields.getInt(0);
-        string name = t_fields.getString(1);
+        string name = t_fields.getString(0);
+        FieldId_t field_id = t_fields.getInt(1);
         auto iter = field_map.find(field_id);
         if (iter != field_map.end()) {
             // Duplicate field id

@@ -6,7 +6,10 @@
 //   Reads a file line-by-line, breaking each line into tokens
 //   which can be retrieved by type
 
+#include <fstream>
 #include <iostream>
+#include <memory>
+#include <string>
 
 using namespace std;
 
@@ -17,19 +20,21 @@ using namespace std;
 class Tokenizer
 {
     private:
-        FILE* m_file;
-        char m_line[LINESIZE];
-        string m_line_saved;
-        char* m_tokens[TOKENSIZE];
+        ifstream input;
+        string m_filename;
+        // TODO: char m_line[LINESIZE];
+        unique_ptr<string> m_line_saved;
+        unique_ptr<string> m_tokens[TOKENSIZE];
         unsigned int m_num_tokens;
         bool m_done;
         unsigned int m_cur_line; // 1 based line counting
 
     public:
-        Tokenizer(FILE* f)
-            : m_file(f)
+        Tokenizer(string filename)
+            : m_filename(filename)
             , m_done(false)
             , m_cur_line(0) {
+            input.open(m_filename);
         }
 
         // -- Get the next line, break up into tokens
