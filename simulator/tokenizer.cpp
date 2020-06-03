@@ -8,19 +8,30 @@ void Tokenizer::getLine()
 {
     // -- Read a line
     m_num_tokens = 0;
-    string std::unique_ptr<string> line = 
-    // TODO: char* res = fgets(m_line, LINESIZE, m_file);
-
 
     if (ifstream.eof()) {
         this->m_done = true;
         return;
     } else { 
+        string line;
+        string token;
+        std::getline(input, line);
+        m_line_saved = line; // save to copy
         m_cur_line++;
         // -- Break line up into tokens
         // 1. Split on comma,
         // 2. Then assign to m_tokens as a unique_ptr
-        m_line_saved = std::move(m_line);
+        // 3. Repeat if necessaryj
+        size_t pos = 0;
+        int cur_token = 0;
+        while ((pos = line.find(',')) != std::string::npos) {
+            token = line.substr(0, pos);
+            m_tokens[cur_token] = token;
+            line.erase(0, pos + 1);
+            cur_token += 1;
+        }
+        // Last token
+        token[cur_token] = line;
     }
 
 }
