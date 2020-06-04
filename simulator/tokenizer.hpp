@@ -27,12 +27,14 @@ class Tokenizer
         unsigned int m_num_tokens;
         bool m_done;
         unsigned int m_cur_line; // 1 based line counting
+        char m_delimiter;
 
     public:
-        Tokenizer(FILE* f)
+        Tokenizer(FILE* f, char delimiter)
             : m_file(f)
             , m_done(false)
-            , m_cur_line(0) {
+            , m_cur_line(0)
+            , m_delimiter {
         }
 
         // -- Get the next line, break up into tokens
