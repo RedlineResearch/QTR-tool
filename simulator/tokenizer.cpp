@@ -2,36 +2,38 @@
 
 #include <memory>
 #include <stdio.h>
-#include <string>
+#include <string.h>
 
 void Tokenizer::getLine()
 {
     // -- Read a line
     m_num_tokens = 0;
-
-    if (ifstream.eof()) {
-        this->m_done = true;
-        return;
-    } else { 
-        string line;
-        string token;
-        std::getline(*input, line);
-        m_line_saved = line; // save to copy
+    char* res = fgets(m_line, LINESIZE, m_file);
+    if (res) {
         m_cur_line++;
         // -- Break line up into tokens
-        // 1. Split on comma,
-        // 2. Then assign to m_tokens as a unique_ptr
-        // 3. Repeat if necessaryj
-        size_t pos = 0;
-        int cur_token = 0;
-        while ((pos = line.find(',')) != std::string::npos) {
-            token = line.substr(0, pos);
-            m_tokens[cur_token] = token;
-            line.erase(0, pos + 1);
-            cur_token += 1;
-        }
-        // Last token
-        token[cur_token] = line;
+        ///   Basically, just replace spaces with \0 and remember the start of each token
+
+        // -- Set to true so that the first char is identified as a token
+        int cur = 0;
+        bool prev_was_space = true;
+        while ( (m_line[cur] != '\0') &&
+                (cur < LINESIZE) ) {
+            if (isspace(m_line[cur])) {
+                // -- Replace spaces with \0
+                prev_was_space = true;
+                m_line[cur] = '\0';
+            } else {
+                // -- Not a space (part of a token)
+                if (prev_was_space) {
+                    // -- Found the start of t a token
+                    m_tokens[m_num_tokens] = &(m_line[cur]);
+                    m_num_tokens++;
+                }
+                prev_was_space = false;
+            }
+            cur++;
+        }      
     }
 
 }

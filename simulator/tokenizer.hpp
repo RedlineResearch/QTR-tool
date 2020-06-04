@@ -20,26 +20,19 @@ using namespace std;
 class Tokenizer
 {
     private:
-        istream *input;
-        string m_filename;
-        // TODO: char m_line[LINESIZE];
-        unique_ptr<string> m_line_saved;
-        unique_ptr<string> m_tokens[TOKENSIZE];
+        FILE* m_file;
+        char m_line[LINESIZE];
+        string m_line_saved;
+        char* m_tokens[TOKENSIZE];
         unsigned int m_num_tokens;
         bool m_done;
         unsigned int m_cur_line; // 1 based line counting
 
     public:
-        Tokenizer(string filename)
-            : m_filename(filename)
+        Tokenizer(FILE* f)
+            : m_file(f)
             , m_done(false)
             , m_cur_line(0) {
-            input = new fstream(filename);
-        }
-
-        ~Tokenizer() {
-            input->close();
-            delete input;
         }
 
         // -- Get the next line, break up into tokens
