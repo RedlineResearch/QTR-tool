@@ -20,7 +20,7 @@ using namespace std;
 class Tokenizer
 {
     private:
-        ifstream input;
+        istream *input;
         string m_filename;
         // TODO: char m_line[LINESIZE];
         unique_ptr<string> m_line_saved;
@@ -34,7 +34,19 @@ class Tokenizer
             : m_filename(filename)
             , m_done(false)
             , m_cur_line(0) {
-            input.open(m_filename);
+            input = new fstream(filename);
+        }
+
+        Tokenizer(FILE *file)
+            : m_filename("<NONE>")
+            , m_done(false)
+            , m_cur_line(0) {
+            input = new fstream(file);
+        }
+
+        ~Tokenizer() {
+            input.close();
+            delete input;
         }
 
         // -- Get the next line, break up into tokens

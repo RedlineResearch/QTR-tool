@@ -15,7 +15,7 @@ void Tokenizer::getLine()
     } else { 
         string line;
         string token;
-        std::getline(input, line);
+        std::getline(*input, line);
         m_line_saved = line; // save to copy
         m_cur_line++;
         // -- Break line up into tokens
