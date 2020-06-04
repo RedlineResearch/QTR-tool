@@ -37,13 +37,6 @@ class Tokenizer
             input = new fstream(filename);
         }
 
-        Tokenizer(FILE *file)
-            : m_filename("<NONE>")
-            , m_done(false)
-            , m_cur_line(0) {
-            input = new fstream(file);
-        }
-
         ~Tokenizer() {
             input.close();
             delete input;
