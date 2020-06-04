@@ -38,7 +38,7 @@ class Tokenizer
         }
 
         ~Tokenizer() {
-            input.close();
+            input->close();
             delete input;
         }
 
