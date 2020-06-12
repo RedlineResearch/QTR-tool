@@ -818,9 +818,7 @@ void sim_main(int argc, char* argv[])
     cout << "Start trace..." << endl;
     FILE *f = fdopen(STDIN_FILENO, "r");
     std::deque< Record * > trace; // IN memory trace deque
-    unsigned int total_objects = read_trace_file_part1( f,
-                                                        trace,
-                                                        );
+    unsigned int total_objects = read_trace_file_part1( f, trace, delimiter );
     verify_trace(trace);
     // Do the Merlin algorithm.
     apply_merlin( trace );
