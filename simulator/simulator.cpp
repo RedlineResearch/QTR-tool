@@ -299,9 +299,10 @@ void get_size( std::map< TypeId_t, unsigned int > &size_map )
 // ----------------------------------------------------------------------
 //   Read and process trace events. This implements the Merlin algorithm.
 unsigned int read_trace_file_part1( FILE *f, // source trace file
-                                    std::deque< Record * > &trace )
+                                    std::deque< Record * > &trace,
+                                    char delimiter)
 {
-    Tokenizer tokenizer(f);
+    Tokenizer tokenizer(f, delimiter);
 
     unsigned int total_objects = 0;
     // Map of objects without N/A allocation events:
@@ -722,7 +723,7 @@ void output_all_objects2( string &objectinfo_filename,
 void print_usage(string exec_name)
 {
     cout << "Usage choices: " << endl;
-    cout << "       " << exec_name << " SIM <classesfile> <fieldsfile> <methodsfile> <output base name> <IGNORED> <OBJDEBUG/NOOBJDEBUG> <main.class> <main.function>" << endl;
+    cout << "       " << exec_name << " SIM <classesfile> <fieldsfile> <methodsfile> <output base name> <IGNORED(CYCLE)> <OBJDEBUG/NOOBJDEBUG> <main.class> <main.function> <ET/QTR>" << endl;
     cout << "       " << exec_name << " CLASS <classesfile>" << endl;
     cout << "       " << exec_name << " FIELDS <fieldsfile>" << endl;
     cout << "       " << exec_name << " METHODS <methodsfile>" << endl;
@@ -781,6 +782,19 @@ void sim_main(int argc, char* argv[])
     cout << "Main class: " << main_class << endl;
     cout << "Main function: " << main_function << endl;
 
+    string trace_version(argv[10]);
+    cout << "Trace version: " << trace_version;
+    char delimiter;
+    if (trace_version == "QTR") {
+        delimiter = ',';
+    } else if (trace_version == "ET") {
+        delimiter = ' ';
+    } else {
+        cerr << "Invalid trace type: " << trace_version << endl;
+        cerr << "Valid types (ET, QTR)." << endl;
+        exit(2);
+    }
+
     // Set up 'CYCLE' option.
     // TODO: Document what exactly the CYCLE option is.
     string cycle_switch(argv[6]);
@@ -804,7 +818,9 @@ void sim_main(int argc, char* argv[])
     cout << "Start trace..." << endl;
     FILE *f = fdopen(STDIN_FILENO, "r");
     std::deque< Record * > trace; // IN memory trace deque
-    unsigned int total_objects = read_trace_file_part1(f, trace);
+    unsigned int total_objects = read_trace_file_part1( f,
+                                                        trace,
+                                                        );
     verify_trace(trace);
     // Do the Merlin algorithm.
     apply_merlin( trace );
