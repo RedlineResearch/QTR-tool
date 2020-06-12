@@ -34,7 +34,7 @@ class Tokenizer
             : m_file(f)
             , m_done(false)
             , m_cur_line(0)
-            , m_delimiter {
+            , m_delimiter(delimiter) {
         }
 
         // -- Get the next line, break up into tokens
