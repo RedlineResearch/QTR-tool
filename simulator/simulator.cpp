@@ -824,16 +824,20 @@ void sim_main(int argc, char* argv[])
     apply_merlin( trace );
     // TODO:
     cout << "---------------[ DONE ]------------------------------------------------------------" << endl;
+    print_git_info();
+    exit(0);
+}
+
+void print_git_info()
+{
     cout << "#     git version: " <<  build_git_sha << endl;
     cout << "#     build date : " <<  build_git_time << endl;
-    exit(0);
 }
 
 // Just read in the class file and output it.
 void class_main(int argc, char* argv[])
 {
-    cout << "#     git version: " <<  build_git_sha << endl;
-    cout << "#     build date : " <<  build_git_time << endl;
+    print_git_info();
     cout << "---------------[ START ]-----------------------------------------------------------" << endl;
     //--------------------------------------------------------------------------------
     
