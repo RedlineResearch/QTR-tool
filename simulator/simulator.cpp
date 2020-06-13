@@ -766,6 +766,12 @@ int main(int argc, char* argv[])
     return 0;
 }
 
+void print_git_info()
+{
+    cout << "#     git version: " <<  build_git_sha << endl;
+    cout << "#     build date : " <<  build_git_time << endl;
+}
+
 
 void sim_main(int argc, char* argv[])
 {
@@ -826,12 +832,6 @@ void sim_main(int argc, char* argv[])
     cout << "---------------[ DONE ]------------------------------------------------------------" << endl;
     print_git_info();
     exit(0);
-}
-
-void print_git_info()
-{
-    cout << "#     git version: " <<  build_git_sha << endl;
-    cout << "#     build date : " <<  build_git_time << endl;
 }
 
 // Just read in the class file and output it.
