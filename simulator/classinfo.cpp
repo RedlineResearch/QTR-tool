@@ -72,7 +72,7 @@ void ClassInfo::impl_read_names_file_et1( const char *filename,
     }
 
     unsigned int maxId = 0;
-    Tokenizer t(f);
+    Tokenizer t(f, ' ');
     while ( ! t.isDone() ) {
         t.getLine();
         if (t.isDone()) {
