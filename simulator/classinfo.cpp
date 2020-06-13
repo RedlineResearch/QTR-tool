@@ -246,7 +246,7 @@ void ClassInfo::impl_read_classes_file_et2( const char *classes_filename )
     }
 
     unsigned int maxId = 0;
-    Tokenizer t_classes(f_classes);
+    Tokenizer t_classes(f_classes, ',');
     while ( !t_classes.isDone() ) {
         t_classes.getLine();
         if (t_classes.isDone()) {
