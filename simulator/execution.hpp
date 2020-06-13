@@ -127,7 +127,7 @@ class CCNode
 
         // Has simple trace been saved for this CCNode?
         bool isDone() { return this->m_done; }
-        bool setDone() { this->m_done = true; }
+        bool setDone() { this->m_done = true; return true; }
 
         // Node Ids
         NodeId_t get_node_id() const { return this->m_node_id; }
@@ -426,6 +426,7 @@ class ExecState
 
         inline VTime_t set_main_func_alloctime(VTime_t new_alloctime) {
             this->main_func_alloctime = new_alloctime; // in logical allocation time (bytes)
+            return this->main_func_alloctime;
         }
 
     private:

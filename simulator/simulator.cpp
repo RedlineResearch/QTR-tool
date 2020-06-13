@@ -145,17 +145,18 @@ bool verify_trace( std::deque< Record * > &trace )
         cerr << "prev: " << prev_timestamp << "    rec: " << rec_timestamp << endl;
         if (rec_timestamp < prev_timestamp) {
             cerr << "ERROR at record number: " << recnum << endl;
-            // TODO
-            assert(false);
+            return false;
         }
         recnum++;
     }
+    return true;
 }
 
 // Uses global:
 //     * Heap
-unsigned int insert_death_records_into_trace( std::deque< Record * > &trace )
+std::list< Record * > insert_death_records_into_trace( std::deque< Record * > &trace )
 {
+    std::list< Record * > tlist;
     auto reciter = trace.begin(); 
     VTime_t rec_timestamp = 0;
     VTime_t prev_timestamp = 0;
@@ -172,14 +173,16 @@ unsigned int insert_death_records_into_trace( std::deque< Record * > &trace )
             if (rec_timestamp > ettime) {
                 break;
             }
+            tlist.push_back(*reciter);
             reciter++;
         }
         DeathRecord *drec = new DeathRecord( object_id,
                                              0, // TODO: type_id
                                              prev_timestamp );
 
-        trace.insert(reciter, drec);
+        tlist.push_back(drec);
     }
+    return tlist;
 }
 
 bool verify_garbage_order( std::deque< Object * > &garbage )
@@ -286,7 +289,7 @@ void apply_merlin( std::deque< Record * > &trace )
     }
     cerr << endl;
     // Until the vector is empty
-    insert_death_records_into_trace(trace);
+    std::list< Record * > trace_list = insert_death_records_into_trace(trace);
 }
 
 

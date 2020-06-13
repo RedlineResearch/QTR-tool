@@ -392,7 +392,8 @@ LocalVarSet * Thread::TopLocalVarSet()
         // TODO
         return NULL;
     }
-    else if (this->m_kind == ExecMode::StackOnly) {
+    else {
+        // Assume (this->m_kind == ExecMode::StackOnly)
         return ((!m_deadlocals.empty()) ? m_deadlocals.back() : NULL);
     }
 }

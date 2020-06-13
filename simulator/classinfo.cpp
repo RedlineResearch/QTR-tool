@@ -294,7 +294,7 @@ ClassInfo::impl_read_fields_file_et2( const char *fields_filename )
     }
 
     unsigned int maxId = 0;
-    Tokenizer t_fields(f_fields);
+    Tokenizer t_fields(f_fields, ',');
     std::map< FieldId_t, string> field_map;
     while (!t_fields.isDone()) {
         t_fields.getLine();
@@ -364,7 +364,7 @@ ClassInfo::impl_read_methods_file_et2( const char *methods_filename )
     }
 
     unsigned int maxId = 0;
-    Tokenizer t_methods(f_methods);
+    Tokenizer t_methods(f_methods, ',');
     Et2_MethodMap method_map;
     while ( !t_methods.isDone() ) {
         t_methods.getLine();
