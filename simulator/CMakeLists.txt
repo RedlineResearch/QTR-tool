@@ -35,7 +35,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2 -g -Werror")
+SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O2 -g -Werror -static")
 
 # TODO:
 #   Add dependencies on header files. Otherwise, the simulator might not be
