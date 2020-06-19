@@ -72,7 +72,7 @@ void ClassInfo::impl_read_names_file_et1( const char *filename,
     }
 
     unsigned int maxId = 0;
-    Tokenizer t(f, ' ');
+    Tokenizer t(f, DELIMITER_TYPE::E_SPACE);
     while ( ! t.isDone() ) {
         t.getLine();
         if (t.isDone()) {
@@ -246,7 +246,7 @@ void ClassInfo::impl_read_classes_file_et2( const char *classes_filename )
     }
 
     unsigned int maxId = 0;
-    Tokenizer t_classes(f_classes, ',');
+    Tokenizer t_classes(f_classes, DELIMITER_TYPE::E_COMMA);
     while ( !t_classes.isDone() ) {
         t_classes.getLine();
         if (t_classes.isDone()) {
@@ -294,7 +294,7 @@ ClassInfo::impl_read_fields_file_et2( const char *fields_filename )
     }
 
     unsigned int maxId = 0;
-    Tokenizer t_fields(f_fields, ',');
+    Tokenizer t_fields(f_fields, DELIMITER_TYPE::E_COMMA);
     std::map< FieldId_t, string> field_map;
     while (!t_fields.isDone()) {
         t_fields.getLine();
@@ -364,7 +364,7 @@ ClassInfo::impl_read_methods_file_et2( const char *methods_filename )
     }
 
     unsigned int maxId = 0;
-    Tokenizer t_methods(f_methods, ',');
+    Tokenizer t_methods(f_methods, DELIMITER_TYPE::E_COMMA);
     Et2_MethodMap method_map;
     while ( !t_methods.isDone() ) {
         t_methods.getLine();

@@ -303,7 +303,7 @@ void get_size( std::map< TypeId_t, unsigned int > &size_map )
 //   Read and process trace events. This implements the Merlin algorithm.
 unsigned int read_trace_file_part1( FILE *f, // source trace file
                                     std::deque< Record * > &trace,
-                                    char delimiter)
+                                    DELIMITER_TYPE delimiter)
 {
     Tokenizer tokenizer(f, delimiter);
 
@@ -793,11 +793,11 @@ void sim_main(int argc, char* argv[])
 
     string trace_version(argv[10]);
     cout << "Trace version: " << trace_version;
-    char delimiter;
+    DELIMITER_TYPE delimiter;
     if (trace_version == "QTR") {
-        delimiter = ',';
+        delimiter = DELIMITER_TYPE::E_SPACE;
     } else if (trace_version == "ET") {
-        delimiter = ' ';
+        delimiter = DELIMITER_TYPE::E_COMMA;
     } else {
         cerr << "Invalid trace type: " << trace_version << endl;
         cerr << "Valid types (ET, QTR)." << endl;

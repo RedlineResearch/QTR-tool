@@ -17,6 +17,13 @@ using namespace std;
 #define LINESIZE 2048
 #define TOKENSIZE 50
 
+enum class DELIMITER_TYPE : signed char
+{
+    E_SPACE = 1,
+    E_COMMA = 2,
+    E_INVALID = 127
+};
+
 class Tokenizer
 {
     private:
@@ -27,10 +34,10 @@ class Tokenizer
         unsigned int m_num_tokens;
         bool m_done;
         unsigned int m_cur_line; // 1 based line counting
-        char m_delimiter;
+        DELIMITER_TYPE m_delimiter;
 
     public:
-        Tokenizer(FILE* f, char delimiter)
+        Tokenizer(FILE* f, DELIMITER_TYPE delimiter)
             : m_file(f)
             , m_done(false)
             , m_cur_line(0)
@@ -57,6 +64,17 @@ class Tokenizer
 
         // -- Print out current line and linenumber
         void debugCurrent();
+
+        // -- Is separator?
+        bool isDelimiter(char c) const {
+            if (this->m_delimiter == DELIMITER_TYPE::E_SPACE) {
+                return isspace(c);
+            } else if (this->m_delimiter == DELIMITER_TYPE::E_COMMA) {
+                return (c == ',');
+            } else {
+                return false;
+            }
+        }
 };
 
 #endif
