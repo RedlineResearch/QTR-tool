@@ -747,8 +747,7 @@ void methods_main(int argc, char* argv[]);
 int main(int argc, char* argv[])
 {
     bool print_help = false;
-    std::cerr << "DEBUG: " << argc << std::endl;
-    if ((argc == 10) && (string("SIM") == argv[1])) {
+    if ((argc == 11) && (string("SIM") == argv[1])) {
         sim_main(argc, argv);
     } else if (argc == 3) {
         if (string("CLASS") == argv[1]) {
