@@ -16,21 +16,21 @@ void Tokenizer::getLine()
 
         // -- Set to true so that the first char is identified as a token
         int cur = 0;
-        bool prev_was_space = true;
+        bool prev_was_delimiter = true;
         while ( (m_line[cur] != '\0') &&
                 (cur < LINESIZE) ) {
-            if (isspace(m_line[cur])) {
+            if (this->isDelimiter(m_line[cur])) {
                 // -- Replace spaces with \0
-                prev_was_space = true;
+                prev_was_delimiter = true;
                 m_line[cur] = '\0';
             } else {
                 // -- Not a space (part of a token)
-                if (prev_was_space) {
+                if (prev_was_delimiter) {
                     // -- Found the start of t a token
                     m_tokens[m_num_tokens] = &(m_line[cur]);
                     m_num_tokens++;
                 }
-                prev_was_space = false;
+                prev_was_delimiter = false;
             }
             cur++;
         }      
