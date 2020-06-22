@@ -407,13 +407,20 @@ unsigned int read_trace_file_part1( FILE *f, // source trace file
                 {
                     // A/N <id> <size> <type> <site> <length?> <threadid>
                     //   0   1    2      3      4      5           6
-                    assert(tokenizer.numTokens() == 7);
+                    std::cerr << "XXX: " << tokenizer.numTokens() << std::endl;
+                    if (rec_type == 'A') {
+                        assert(tokenizer.numTokens() == 8);
+                    } else {
+                        assert(tokenizer.numTokens() == 7);
+                    }
                     object_id = tokenizer.getInt(1);
                     unsigned int size = tokenizer.getInt(2);
                     TypeId_t type_id = tokenizer.getInt(3);
                     SiteId_t site_id = tokenizer.getInt(4);
                     unsigned int length = tokenizer.getInt(5);
                     thread_id = tokenizer.getInt(6);
+                    // TODO: What is the 8th (index 7)?
+                    //
                     VTime_t current_time = Exec.NowUp();
                     auto recptr = new AllocRecord( object_id,
                                                    site_id,
@@ -473,6 +480,7 @@ unsigned int read_trace_file_part1( FILE *f, // source trace file
                     ThreadId_t thread_id = tokenizer.getInt(4);
                     Exec.IncUpdateTime();
                     VTime_t current_time = Exec.NowUp();
+                    // TODO: DEBUG HERE
                     auto recptr = new UpdateRecord( target_id,
                                                     field_id,
                                                     object_id,

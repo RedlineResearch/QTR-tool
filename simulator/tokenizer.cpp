@@ -35,7 +35,7 @@ void Tokenizer::getLine()
             cur++;
         }      
     }
-
+    m_done = (m_num_tokens == 0);
 }
 
 unsigned int Tokenizer::getInt(int i)
