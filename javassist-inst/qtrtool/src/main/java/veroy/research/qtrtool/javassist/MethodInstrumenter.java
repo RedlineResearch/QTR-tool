@@ -181,10 +181,11 @@ public class MethodInstrumenter {
 
     protected String generateNewArrayReplacement(NewArray expr) {
         String result = "new int[]{";
-        int numDims = expr.getCreatedDimensions();
+        int numDims = expr.getDimension();
+        int secondDim = expr.getCreatedDimensions();
         result = result + "$1";
-        for (int ind = 1; ind < numDims; ind++) {
-            result = result + ", $" + (ind + 1);
+        if (secondDim > 1) {
+            result = result + ", $" + secondDim;
         }
         result = result + "}";
         return result;
