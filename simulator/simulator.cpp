@@ -803,9 +803,11 @@ void sim_main(int argc, char* argv[])
     cout << "Trace version: " << trace_version;
     DELIMITER_TYPE delimiter;
     if (trace_version == "QTR") {
+        // TODO: This was supposed to be a COMMA, but I'm spending too much time
+        // trying to get this to work. So I'm reverting to SPACE for now.
         delimiter = DELIMITER_TYPE::E_SPACE;
     } else if (trace_version == "ET") {
-        delimiter = DELIMITER_TYPE::E_COMMA;
+        delimiter = DELIMITER_TYPE::E_SPACE;
     } else {
         cerr << "Invalid trace type: " << trace_version << endl;
         cerr << "Valid types (ET, QTR)." << endl;

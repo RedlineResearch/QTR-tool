@@ -5,6 +5,7 @@ debug*txt
 target/
 *TEMP*
 dependency-reduced-pom.xml
+*SNAPSHOT-jar-with-dependencies*
 
 # Prerequisites
 *.d
