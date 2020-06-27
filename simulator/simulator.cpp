@@ -340,6 +340,7 @@ unsigned int read_trace_file_part1( FILE *f, // source trace file
             break;
         }
         char rec_type = tokenizer.getChar(0);
+        std::cerr << "================================================================================" << std::endl;
         switch (rec_type) {
 
             case 'M':
@@ -474,9 +475,9 @@ unsigned int read_trace_file_part1( FILE *f, // source trace file
                     //       0         1           2          3           4
                     // -- Look up objects and perform update
                     assert(tokenizer.numTokens() == 5);
-                    target_id = tokenizer.getInt(1);
-                    field_id = tokenizer.getInt(2);
-                    object_id = tokenizer.getInt(3);
+                    object_id = tokenizer.getInt(1);
+                    target_id = tokenizer.getInt(2);
+                    field_id = tokenizer.getInt(3);
                     ThreadId_t thread_id = tokenizer.getInt(4);
                     Exec.IncUpdateTime();
                     VTime_t current_time = Exec.NowUp();

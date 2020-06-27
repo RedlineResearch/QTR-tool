@@ -138,7 +138,7 @@ class UpdateRecord : public Record
         UpdateRecord( ObjectId_t tgtObjectHash,
                       FieldId_t fieldId,
                       ObjectId_t srcObjectHash,
-                      VTime_t timestamp,
+                      ThreadId_t thread_id,
                       VTime_t et_timestamp )
             : m_tgtObjectHash(tgtObjectHash)
             , m_fieldId(fieldId)
