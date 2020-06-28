@@ -18,27 +18,24 @@ class Record
         char m_record_type;
         VTime_t m_ET_timestamp;
 
+    protected:
+        ThreadId_t m_threadId;
+
     public:
-        Record(char record_type, VTime_t et_timestamp)
+        Record(char record_type, VTime_t et_timestamp, ThreadId_t thread_id)
             : m_record_type(record_type)
             , m_ET_timestamp(et_timestamp)
+            , m_threadId(thread_id)
         {
         }
 
-        inline char getRecordType() const
-        {
-            return this->m_record_type;
-        }
+        inline char getRecordType() const { return this->m_record_type; }
 
-        inline void set_ET_timestamp(VTime_t new_ts)
-        {
-            this->m_ET_timestamp = new_ts;
-        }
+        inline void set_ET_timestamp(VTime_t new_ts) { this->m_ET_timestamp = new_ts; }
 
-        inline VTime_t get_ET_timestamp()
-        {
-            return this->m_ET_timestamp;
-        }
+        inline VTime_t get_ET_timestamp() const { return this->m_ET_timestamp; }
+
+        inline ThreadId_t getThreadId() const { return this->m_threadId; }
 };
 
 // Derived record classes
@@ -47,7 +44,6 @@ class AllocRecord : public Record
     private:
         ObjectId_t m_objectId;
         SiteId_t m_siteId;
-        ThreadId_t m_threadId;
         TypeId_t m_typeId;
         unsigned int m_length;
         unsigned int m_size;
@@ -63,17 +59,15 @@ class AllocRecord : public Record
                      VTime_t et_timestamp )
             : m_objectId(objectId)
             , m_siteId(siteId)
-            , m_threadId(threadId)
             , m_typeId(typeId)
             , m_length(length)
             , m_size(size)
-            , Record('A', et_timestamp)
+            , Record('A', et_timestamp, threadId)
         {
         }
 
         ObjectId_t getObjectId() { return this->m_objectId; }
         SiteId_t getSiteId() { return this->m_siteId; }
-        ThreadId_t getThreadId() { return this->m_threadId; }
         TypeId_t getTypeId() { return this->m_typeId; }
         unsigned int getLength() { return this->m_length; }
         unsigned int getSize() { return this->m_size; }
@@ -83,20 +77,17 @@ class ExitRecord : public Record
 {
     private:
         MethodId_t m_methId;
-        ThreadId_t m_threadId;
 
     public:
         ExitRecord( MethodId_t methId,
                     ThreadId_t threadId,
                     VTime_t et_timestamp )
             : m_methId(methId)
-            , m_threadId(threadId)
-            , Record('E', et_timestamp)
+            , Record('E', et_timestamp, threadId)
         {
         }
 
         MethodId_t getMethId() { return this->m_methId; }
-        ThreadId_t getThreadId() { return this->m_threadId; }
 };
 
 class MethodRecord : public Record
@@ -104,7 +95,6 @@ class MethodRecord : public Record
     private:
         MethodId_t m_methId;
         ObjectId_t m_objectId;
-        ThreadId_t m_threadId;
 
     public:
         MethodRecord( MethodId_t methId,
@@ -113,14 +103,12 @@ class MethodRecord : public Record
                       VTime_t et_timestamp )
             : m_methId(methId)
             , m_objectId(objectId)
-            , m_threadId(threadId)
-            , Record('M', et_timestamp)
+            , Record('M', et_timestamp, threadId)
         {
         }
 
         MethodId_t getMethId() { return this->m_methId; }
         ObjectId_t getObjectId() { return this->m_objectId; }
-        ThreadId_t getThreadId() { return this->m_threadId; }
 };
 
 class UpdateRecord : public Record
@@ -143,8 +131,7 @@ class UpdateRecord : public Record
             : m_tgtObjectHash(tgtObjectHash)
             , m_fieldId(fieldId)
             , m_srcObjectHash(srcObjectHash)
-            , m_timestamp(timestamp)
-            , Record('U', et_timestamp)
+            , Record('U', et_timestamp, thread_id)
         {
         }
 
@@ -171,7 +158,7 @@ class WitnessRecord : public Record
             : m_objectId(objectId)
             , m_typeId(typeId)
             , m_timestamp(timestamp)
-            , Record('U', et_timestamp)
+            , Record('U', et_timestamp, 0) // TODO: What is the thread_id for a witness event?
         {
         }
 
@@ -192,7 +179,7 @@ class DeathRecord : public Record
                      VTime_t et_timestamp )
             : m_objectId(objectId)
             , m_typeId(typeId)
-            , Record('D', et_timestamp)
+            , Record('D', et_timestamp, 0) // TODO: What is the thread_id for a death event?
         {
         }
 

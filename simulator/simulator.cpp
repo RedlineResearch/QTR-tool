@@ -323,7 +323,7 @@ unsigned int read_trace_file_part1( FILE *f, // source trace file
     // TODO: No death times yet
     //      VTime_t latest_death_time = 0;
     VTime_t allocation_time = 0;
-        
+    tokenizer.setDebug(true);
     while (!tokenizer.isDone()) {
         MethodId_t method_id;
         ObjectId_t object_id;

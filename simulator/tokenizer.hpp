@@ -35,13 +35,15 @@ class Tokenizer
         bool m_done;
         unsigned int m_cur_line; // 1 based line counting
         DELIMITER_TYPE m_delimiter;
+        bool m_debug;
 
     public:
         Tokenizer(FILE* f, DELIMITER_TYPE delimiter)
             : m_file(f)
             , m_done(false)
             , m_cur_line(0)
-            , m_delimiter(delimiter) {
+            , m_delimiter(delimiter)
+            , m_debug(false) {
         }
 
         // -- Get the next line, break up into tokens
@@ -75,6 +77,8 @@ class Tokenizer
                 return false;
             }
         }
+
+        void setDebug(bool flag) { this->m_debug = flag; }
 };
 
 #endif
