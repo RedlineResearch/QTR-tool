@@ -30,7 +30,7 @@ class Tokenizer
         FILE* m_file;
         char m_line[LINESIZE];
         string m_line_saved;
-        char* m_tokens[TOKENSIZE];
+        char *m_tokens[TOKENSIZE];
         unsigned int m_num_tokens;
         bool m_done;
         unsigned int m_cur_line; // 1 based line counting
