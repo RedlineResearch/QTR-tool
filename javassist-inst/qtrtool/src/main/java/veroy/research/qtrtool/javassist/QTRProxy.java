@@ -164,10 +164,10 @@ public class QTRProxy {
                     assert(ptr.get() == 0);
                 }
                 int currPtr = ptr.getAndIncrement();
-                eventTypeBuffer[currPtr] = 7;
-                firstBuffer[currPtr] = getObjectId(tgtObject);
-                secondBuffer[currPtr] = fieldId;
-                thirdBuffer[currPtr] = getObjectId(object);
+                eventTypeBuffer[currPtr] = 7; // event type
+                firstBuffer[currPtr] = getObjectId(tgtObject); // newTgtObjId
+                secondBuffer[currPtr] = fieldId; // fieldId
+                thirdBuffer[currPtr] = getObjectId(object); // source objId
                 timestampBuffer[currPtr] = timestamp;
                 threadIDBuffer[currPtr] = getObjectId(Thread.currentThread());
             }
