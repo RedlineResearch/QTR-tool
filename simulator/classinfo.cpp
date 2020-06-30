@@ -281,6 +281,7 @@ void ClassInfo::impl_read_classes_file_et2( const char *classes_filename )
             cout << "CLASS " << cls->getName() << " id = " << cls->getId() << endl;
         }
     }
+    cerr << "[DEBUG classinfo]: # of classes = " << TheClasses.size() << endl;
 }
 
 // -- Read in the fields file

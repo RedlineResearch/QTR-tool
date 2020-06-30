@@ -10,7 +10,8 @@ void Tokenizer::getLine()
     m_num_tokens = 0;
     char *res = fgets(m_line, LINESIZE, m_file);
     if (this->m_debug) {
-        std::cerr << "[DEBUG Tokenizer]: " << res << endl;
+        // res has an endline so no need for std::endl
+        std::cerr << "[DEBUG Tokenizer]: " << res;
     }
     if (res) {
         m_cur_line++;
@@ -45,10 +46,11 @@ void Tokenizer::getLine()
                 std::cerr << "tok" << i << "=\"" << m_tokens[i] << "\", ";
             }
         } else if (m_num_tokens > 0) {
-            std::cerr << "No more tokens." << std::endl;
+            std::cerr << "No more tokens.";
         } else {
-            std::cerr << "NEGATIVE NUMBER OF TOKENS -- ERROR." << std::endl;
+            std::cerr << "NEGATIVE NUMBER OF TOKENS -- ERROR.";
         }
+        std::cerr << std::endl;
     }
     m_done = (m_num_tokens == 0);
 }

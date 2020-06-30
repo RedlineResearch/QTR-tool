@@ -408,7 +408,7 @@ unsigned int read_trace_file_part1( FILE *f, // source trace file
                 {
                     // A/N <id> <size> <type> <site> <length?> <threadid>
                     //   0   1    2      3      4      5           6
-                    std::cerr << "XXX: " << tokenizer.numTokens() << std::endl;
+                    // TODO: std::cerr << "XXX: " << tokenizer.numTokens() << std::endl;
                     if (rec_type == 'A') {
                         assert(tokenizer.numTokens() == 8);
                     } else {
@@ -471,7 +471,7 @@ unsigned int read_trace_file_part1( FILE *f, // source trace file
                     // ET1 looked like this:
                     //       U <old-target> <object> <new-target> <field> <thread>
                     // ET2 is now:
-                    //       U targetObjectHash fieldID srcObjectHash threadId?
+                    //       U srcObjectHash targetObjectHash fieldID threadId?
                     //       0         1           2          3           4
                     // -- Look up objects and perform update
                     assert(tokenizer.numTokens() == 5);
@@ -494,7 +494,7 @@ unsigned int read_trace_file_part1( FILE *f, // source trace file
                     if (obj == NULL) {
                         auto iter = no_alloc_map.find(object_id);
                         if (iter == no_alloc_map.end()) {
-                            cerr << "-- No alloc event: " << object_id << endl;
+                            cerr << "-- No alloc event source object id: " << object_id << endl;
                             thread = Exec.getThread(thread_id);
                             assert(thread);
                             obj = Heap.allocate( object_id,
@@ -521,7 +521,7 @@ unsigned int read_trace_file_part1( FILE *f, // source trace file
                         if (target == NULL) {
                             auto iter = no_alloc_map.find(target_id);
                             if (iter == no_alloc_map.end()) {
-                                cerr << "-- No alloc event: " << target_id << endl;
+                                cerr << "-- No alloc event target object id : " << target_id << endl;
                                 thread = Exec.getThread(thread_id);
                                 target = Heap.allocate( target_id,
                                                         4, // TODO: we don't have the size!
@@ -540,33 +540,36 @@ unsigned int read_trace_file_part1( FILE *f, // source trace file
                                 assert(false);
                             }
                         }
-                        assert(target != NULL);
                         target->setLastTimestamp( current_time );
+                    } else {
+                        cerr << "ERROR: Negative target_id = " << target_id << endl;
                     }
+                    assert(target != NULL);
+
                     obj->setLastTimestamp( current_time );
 
-                    Edge *old_target_edge;
-                    Object *old_target;
+                    Edge *old_target_edge = NULL;
+                    Object *old_target = NULL;
                     ObjectId_t old_target_id = 0;
                     Edge *new_edge;
 
                     old_target_edge = obj->getEdge(field_id);
-                    if (old_target_edge) {
+                    if (old_target_edge != NULL) {
                         old_target = old_target_edge->getTarget();
-                        delete old_target_edge;
-                    }
-                    if (old_target) {
-                        old_target_id = old_target->getId();
-                        if (old_target_id != target_id) {
-                            if (target && target_id > 0) {
-                                Edge *new_edge = Heap.make_edge( obj,
-                                                                 field_id,
-                                                                 target,
-                                                                 Exec.NowUp() );
-                                obj->updateField( new_edge,
-                                                  field_id );
+                        // TODO: delete old_target_edge;
+                        if (old_target != NULL) {
+                            old_target_id = old_target->getId();
+                            if (old_target_id != target_id) {
+                                if (target && target_id > 0) {
+                                    Edge *new_edge = Heap.make_edge( obj,
+                                                                     field_id,
+                                                                     target,
+                                                                     Exec.NowUp() );
+                                    obj->updateField( new_edge,
+                                                      field_id );
+                                 }
                              }
-                         }
+                        }
                     }
                 }
                 break;
