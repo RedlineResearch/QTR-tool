@@ -303,7 +303,8 @@ void get_size( std::map< TypeId_t, unsigned int > &size_map )
 //   Read and process trace events. This implements the Merlin algorithm.
 unsigned int read_trace_file_part1( FILE *f, // source trace file
                                     std::deque< Record * > &trace,
-                                    DELIMITER_TYPE delimiter)
+                                    DELIMITER_TYPE delimiter,
+                                    bool debug_flag )
 {
     Tokenizer tokenizer(f, delimiter);
 
@@ -323,7 +324,7 @@ unsigned int read_trace_file_part1( FILE *f, // source trace file
     // TODO: No death times yet
     //      VTime_t latest_death_time = 0;
     VTime_t allocation_time = 0;
-    tokenizer.setDebug(true);
+    tokenizer.setDebug(debug_flag);
     while (!tokenizer.isDone()) {
         MethodId_t method_id;
         ObjectId_t object_id;
@@ -340,7 +341,9 @@ unsigned int read_trace_file_part1( FILE *f, // source trace file
             break;
         }
         char rec_type = tokenizer.getChar(0);
-        std::cerr << "================================================================================" << std::endl;
+        if (debug_flag) {
+            std::cerr << "================================================================================" << std::endl;
+        }
         switch (rec_type) {
 
             case 'M':
@@ -738,7 +741,7 @@ void output_all_objects2( string &objectinfo_filename,
 void print_usage(string exec_name)
 {
     cout << "Usage choices: " << endl;
-    cout << "       " << exec_name << " SIM <classesfile> <fieldsfile> <methodsfile> <output base name> <IGNORED(CYCLE)> <OBJDEBUG/NOOBJDEBUG> <main.class> <main.function> <ET/QTR>" << endl;
+    cout << "       " << exec_name << " SIM <classesfile> <fieldsfile> <methodsfile> <output base name> <IGNORED(CYCLE)> <OBJDEBUG/NOOBJDEBUG> <main.class> <main.function> <ET/QTR> DEBUG/NODEBUG" << endl;
     cout << "       " << exec_name << " CLASS <classesfile>" << endl;
     cout << "       " << exec_name << " FIELDS <fieldsfile>" << endl;
     cout << "       " << exec_name << " METHODS <methodsfile>" << endl;
@@ -749,25 +752,28 @@ void print_usage(string exec_name)
 }
 
 // Forward declarations
-void sim_main(int argc, char* argv[]);
-void class_main(int argc, char* argv[]);
-void fields_main(int argc, char* argv[]);
-void methods_main(int argc, char* argv[]);
+void sim_main(int argc, char* argv[], bool debug_flag);
+void class_main(int argc, char* argv[], bool debug_flag);
+void fields_main(int argc, char* argv[], bool debug_flag);
+void methods_main(int argc, char* argv[], bool debug_flag);
 
 // ----------------------------------------------------------------------
 
 int main(int argc, char* argv[])
 {
     bool print_help = false;
-    if ((argc == 11) && (string("SIM") == argv[1])) {
-        sim_main(argc, argv);
+    bool debug = false; // TODO make into a command line option
+    if ((argc == 12) && (string("SIM") == argv[1])) {
+        debug = (argv[11] == "OBJDEBUG");
+        sim_main(argc, argv, debug);
     } else if (argc == 3) {
+        // TODO: Parse debug flag from command line args
         if (string("CLASS") == argv[1]) {
-            class_main(argc, argv);
+            class_main(argc, argv, debug);
         } else if (string("FIELDS") == argv[1]) {
-            fields_main(argc, argv);
+            fields_main(argc, argv, debug);
         } else if (string("METHODS") == argv[1]) {
-            methods_main(argc, argv);
+            methods_main(argc, argv, debug);
         } else {
             print_help = true;
         }
@@ -788,7 +794,7 @@ void print_git_info()
 }
 
 
-void sim_main(int argc, char* argv[])
+void sim_main(int argc, char* argv[], bool debug_flag)
 {
     cout << "---------------[ START ]-----------------------------------------------------------" << endl;
     //--------------------------------------------------------------------------------
@@ -836,12 +842,13 @@ void sim_main(int argc, char* argv[])
     cout << "Read names file..." << endl;
     ClassInfo::read_names_file_et2( argv[2],
                                     argv[3], // TODO: fields_filename
-                                    argv[4] ); // TODO: methods_filename 
+                                    argv[4], // TODO: methods_filename 
+                                    debug_flag );
 
     cout << "Start trace..." << endl;
     FILE *f = fdopen(STDIN_FILENO, "r");
     std::deque< Record * > trace; // IN memory trace deque
-    unsigned int total_objects = read_trace_file_part1( f, trace, delimiter );
+    unsigned int total_objects = read_trace_file_part1( f, trace, delimiter, debug_flag );
     verify_trace(trace);
     // Do the Merlin algorithm.
     apply_merlin( trace );
@@ -852,7 +859,7 @@ void sim_main(int argc, char* argv[])
 }
 
 // Just read in the class file and output it.
-void class_main(int argc, char* argv[])
+void class_main(int argc, char* argv[], bool debug_flag)
 {
     print_git_info();
     cout << "---------------[ START ]-----------------------------------------------------------" << endl;
@@ -864,7 +871,7 @@ void class_main(int argc, char* argv[])
     }
 }
 
-void fields_main(int argc, char* argv[])
+void fields_main(int argc, char* argv[], bool debug_flag)
 {
     cout << "#     git version: " <<  build_git_sha << endl;
     cout << "#     build date : " <<  build_git_time << endl;
@@ -881,6 +888,6 @@ void fields_main(int argc, char* argv[])
     cerr << "DONE" << endl;
 }
 
-void methods_main(int argc, char* argv[])
+void methods_main(int argc, char* argv[], bool debug_flag)
 {
 }

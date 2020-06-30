@@ -201,18 +201,21 @@ void ClassInfo::impl_read_names_file_et1( const char *filename,
 
 void ClassInfo::read_names_file_et2( const char *classes_filename,
                                      const char *fields_filename,
-                                     const char *methods_filename )
+                                     const char *methods_filename,
+                                     bool debug_flag )
 {
     // TODO: ClassInfo::set_main_flag();
     ClassInfo::read_names_file_no_mainfunc_et2( classes_filename,
                                                 fields_filename,
-                                                methods_filename );
+                                                methods_filename,
+                                                debug_flag );
 }
 
 // -- Read in the names file with main
 void ClassInfo::read_names_file_no_mainfunc_et2( const char *classes_filename,
                                                  const char *fields_filename,
-                                                 const char *methods_filename )
+                                                 const char *methods_filename,
+                                                 bool debug_flag )
 {
     ClassInfo::unset_main_flag();
     string main_class("--NOMAIN--");
@@ -220,7 +223,8 @@ void ClassInfo::read_names_file_no_mainfunc_et2( const char *classes_filename,
                                          fields_filename,
                                          methods_filename,
                                          main_class,
-                                         main_class ); // reuse the string
+                                         main_class, // reuse the string
+                                         debug_flag );
 }
 
 // -- Read in the names files
@@ -228,7 +232,8 @@ void ClassInfo::impl_read_names_file_et2( const char *classes_filename,
                                           const char *fields_filename,
                                           const char *methods_filename,
                                           string main_class,
-                                          string main_function )
+                                          string main_function,
+                                          bool debug_flag )
 {
     ClassInfo::impl_read_classes_file_et2(classes_filename);
     ClassInfo::impl_read_fields_file_et2(fields_filename);
