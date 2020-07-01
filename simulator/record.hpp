@@ -47,6 +47,8 @@ class AllocRecord : public Record
         TypeId_t m_typeId;
         unsigned int m_length;
         unsigned int m_size;
+        int m_num_dims;
+        deque<int> dims;
     public:
         // As documented in ETProxy.java:
         // <object-id> <size> <type-id> <site-id> <length> <thread-id>
@@ -56,6 +58,7 @@ class AllocRecord : public Record
                      TypeId_t typeId,
                      unsigned int length,
                      unsigned int size,
+                     string dims,
                      VTime_t et_timestamp )
             : m_objectId(objectId)
             , m_siteId(siteId)
@@ -64,6 +67,8 @@ class AllocRecord : public Record
             , m_size(size)
             , Record('A', et_timestamp, threadId)
         {
+            string numdims_str = dims.substr(0, dims.find(','));
+            this->m_num_dims = stoi(numdims_str, NULL, 10);
         }
 
         ObjectId_t getObjectId() { return this->m_objectId; }
@@ -71,6 +76,8 @@ class AllocRecord : public Record
         TypeId_t getTypeId() { return this->m_typeId; }
         unsigned int getLength() { return this->m_length; }
         unsigned int getSize() { return this->m_size; }
+        int getNumDims() { return this->m_num_dims; }
+        deque<int> getDims() { return this->dims; } 
 };
 
 class ExitRecord : public Record

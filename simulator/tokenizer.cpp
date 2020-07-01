@@ -11,7 +11,7 @@ void Tokenizer::getLine()
     char *res = fgets(m_line, LINESIZE, m_file);
     if (this->m_debug) {
         // res has an endline so no need for std::endl
-        std::cerr << "[DEBUG Tokenizer]: " << res;
+        std::cerr << "[DBG Tokenizer]: " << res;
     }
     if (res) {
         m_cur_line++;
@@ -40,7 +40,7 @@ void Tokenizer::getLine()
         }      
     }
     if (this->m_debug) {
-        std::cerr << "[DEBUG Tokenizer]: ";
+        std::cerr << "[DBG Tokenizer]: ";
         if (m_num_tokens > 0) {
             for (int i = 0; i < m_num_tokens; ++i) {
                 std::cerr << "tok" << i << "=\"" << m_tokens[i] << "\", ";
@@ -88,7 +88,7 @@ char Tokenizer::getChar(int i)
 
 void Tokenizer::debugCurrent()
 {
-    cout << "DEBUG: current line = " << m_cur_line << endl;
+    cout << "DBG: current line = " << m_cur_line << endl;
     string tmp(m_line_saved);
     cout << "  ---> " << tmp << endl;
 

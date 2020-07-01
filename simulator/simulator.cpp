@@ -336,14 +336,14 @@ unsigned int read_trace_file_part1( FILE *f, // source trace file
         Method *method = NULL;
         Thread *thread = NULL;
         string tmp_todo_str("TODO"); // To mark whatever TODO
+        if (debug_flag) {
+            std::cerr << "================================================================================" << std::endl;
+        }
         tokenizer.getLine();
         if (tokenizer.isDone()) {
             break;
         }
         char rec_type = tokenizer.getChar(0);
-        if (debug_flag) {
-            std::cerr << "================================================================================" << std::endl;
-        }
         switch (rec_type) {
 
             case 'M':
@@ -412,12 +412,7 @@ unsigned int read_trace_file_part1( FILE *f, // source trace file
                     // A/N <id> <size> <type> <site> <length?> <threadid>
                     //   0   1    2      3      4      5           6
                     if (debug_flag) {
-                        std::cerr << "[DEBUG simulator] event=\"" << rec_type << "\", number of tokens=" << tokenizer.numTokens() << std::endl;
-                    }
-                    if (rec_type == 'A') {
-                        assert(tokenizer.numTokens() == 8);
-                    } else {
-                        assert(tokenizer.numTokens() == 7);
+                        std::cerr << "[DBG simulator] event=\"" << rec_type << "\", number of tokens=" << tokenizer.numTokens() << std::endl;
                     }
                     object_id = tokenizer.getInt(1);
                     unsigned int size = tokenizer.getInt(2);
@@ -425,8 +420,13 @@ unsigned int read_trace_file_part1( FILE *f, // source trace file
                     SiteId_t site_id = tokenizer.getInt(4);
                     unsigned int length = tokenizer.getInt(5);
                     thread_id = tokenizer.getInt(6);
-                    // TODO: What is the 8th (index 7)?
-                    //
+                    string dims = "";
+                    if (rec_type == 'A') {
+                        assert(tokenizer.numTokens() == 8);
+                        dims = tokenizer.getString(7);
+                    } else {
+                        assert(tokenizer.numTokens() == 7);
+                    }
                     VTime_t current_time = Exec.NowUp();
                     auto recptr = new AllocRecord( object_id,
                                                    site_id,
@@ -434,6 +434,7 @@ unsigned int read_trace_file_part1( FILE *f, // source trace file
                                                    type_id,
                                                    length,
                                                    size,
+                                                   dims,
                                                    current_time );
                     trace.push_back(recptr);
                     // Add to heap
