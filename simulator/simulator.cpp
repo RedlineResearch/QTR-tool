@@ -434,6 +434,7 @@ unsigned int read_trace_file_part1( FILE *f, // source trace file
                                                    type_id,
                                                    length,
                                                    size,
+                                                   rec_type,
                                                    dims,
                                                    current_time );
                     trace.push_back(recptr);

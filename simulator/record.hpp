@@ -14,12 +14,10 @@ using namespace std;
 // Base class
 class Record
 {
-    private:
-        char m_record_type;
-        VTime_t m_ET_timestamp;
-
     protected:
         ThreadId_t m_threadId;
+        char m_record_type;
+        VTime_t m_ET_timestamp;
 
     public:
         Record(char record_type, VTime_t et_timestamp, ThreadId_t thread_id)
@@ -58,6 +56,7 @@ class AllocRecord : public Record
                      TypeId_t typeId,
                      unsigned int length,
                      unsigned int size,
+                     char rec_type,
                      string dims,
                      VTime_t et_timestamp )
             : m_objectId(objectId)
@@ -65,10 +64,17 @@ class AllocRecord : public Record
             , m_typeId(typeId)
             , m_length(length)
             , m_size(size)
-            , Record('A', et_timestamp, threadId)
+            , Record(rec_type, et_timestamp, threadId)
         {
-            string numdims_str = dims.substr(0, dims.find(','));
-            this->m_num_dims = stoi(numdims_str, NULL, 10);
+            if (rec_type == 'A') {
+                string numdims_str = dims.substr(0, dims.find(','));
+                cerr << "[DBG record]: token=\"" << numdims_str << "\", " << "fullstr=\"" << dims << "\"" << endl;
+                if (numdims_str != "0") {
+                    this->m_num_dims = stoi(numdims_str, NULL, 10);
+                }
+            } else {
+                this->m_num_dims = 0;
+            }
         }
 
         ObjectId_t getObjectId() { return this->m_objectId; }
