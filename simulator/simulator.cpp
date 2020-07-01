@@ -324,7 +324,7 @@ unsigned int read_trace_file_part1( FILE *f, // source trace file
     // TODO: No death times yet
     //      VTime_t latest_death_time = 0;
     VTime_t allocation_time = 0;
-    tokenizer.setDebug(debug_flag);
+    tokenizer.setDebug(false); // TODO: set different verbosity levels for debugging.
     while (!tokenizer.isDone()) {
         MethodId_t method_id;
         ObjectId_t object_id;
@@ -336,9 +336,6 @@ unsigned int read_trace_file_part1( FILE *f, // source trace file
         Method *method = NULL;
         Thread *thread = NULL;
         string tmp_todo_str("TODO"); // To mark whatever TODO
-        if (debug_flag) {
-            std::cerr << "================================================================================" << std::endl;
-        }
         tokenizer.getLine();
         if (tokenizer.isDone()) {
             break;
@@ -770,6 +767,7 @@ int main(int argc, char* argv[])
     if ((argc == 12) && (string("SIM") == argv[1])) {
         string debug_str = argv[11];
         debug = (debug_str == "DEBUG");
+        Record::setDebug(debug);
         sim_main(argc, argv, debug);
     } else if (argc == 4) {
         // TODO: Parse debug flag from command line args

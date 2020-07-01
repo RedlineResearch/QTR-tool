@@ -34,7 +34,13 @@ class Record
         inline VTime_t get_ET_timestamp() const { return this->m_ET_timestamp; }
 
         inline ThreadId_t getThreadId() const { return this->m_threadId; }
+
+        static bool s_debug_flag;
+        static void setDebug(bool flag) { Record::s_debug_flag = flag; }
+        static bool isDebugOn() { return Record::s_debug_flag; }
 };
+
+bool Record::s_debug_flag = false;
 
 // Derived record classes
 class AllocRecord : public Record
@@ -68,7 +74,11 @@ class AllocRecord : public Record
         {
             if (rec_type == 'A') {
                 string numdims_str = dims.substr(0, dims.find(','));
-                cerr << "[DBG record]: token=\"" << numdims_str << "\", " << "fullstr=\"" << dims << "\"" << endl;
+                if (Record::isDebugOn()) {
+                    cerr << "[DBG " << rec_type << " record]: ojbId=\"" << objectId << "\", typeId=\"" << typeId << "\", ";
+                    cerr << "size=\"" << size << "\", length=\"" << length << "\", ";
+                    cerr << "token=\"" << numdims_str << "\", fullstr=\"" << dims << "\"" << endl;
+                }
                 if (numdims_str != "0") {
                     this->m_num_dims = stoi(numdims_str, NULL, 10);
                 }
@@ -146,6 +156,10 @@ class UpdateRecord : public Record
             , m_srcObjectHash(srcObjectHash)
             , Record('U', et_timestamp, thread_id)
         {
+            if (Record::isDebugOn()) {
+                cerr << "[DBG U record]: srcOjbId=\"" << srcObjectHash << "\", tgtObjId=\"" << tgtObjectHash << "\", ";
+                cerr << "fieldId=\"" << fieldId << "\", threadId=\"" << thread_id << "\"" << endl;
+            }
         }
 
         ObjectId_t getTgtObjectHash() { return this->m_tgtObjectHash; }
