@@ -411,7 +411,9 @@ unsigned int read_trace_file_part1( FILE *f, // source trace file
                 {
                     // A/N <id> <size> <type> <site> <length?> <threadid>
                     //   0   1    2      3      4      5           6
-                    // TODO: std::cerr << "XXX: " << tokenizer.numTokens() << std::endl;
+                    if (debug_flag) {
+                        std::cerr << "[DEBUG simulator] event=\"" << rec_type << "\", number of tokens=" << tokenizer.numTokens() << std::endl;
+                    }
                     if (rec_type == 'A') {
                         assert(tokenizer.numTokens() == 8);
                     } else {
@@ -742,9 +744,9 @@ void print_usage(string exec_name)
 {
     cout << "Usage choices: " << endl;
     cout << "       " << exec_name << " SIM <classesfile> <fieldsfile> <methodsfile> <output base name> <IGNORED(CYCLE)> <OBJDEBUG/NOOBJDEBUG> <main.class> <main.function> <ET/QTR> DEBUG/NODEBUG" << endl;
-    cout << "       " << exec_name << " CLASS <classesfile>" << endl;
-    cout << "       " << exec_name << " FIELDS <fieldsfile>" << endl;
-    cout << "       " << exec_name << " METHODS <methodsfile>" << endl;
+    cout << "       " << exec_name << " CLASS <classesfile> DEBUG/NODEBUG" << endl;
+    cout << "       " << exec_name << " FIELDS <fieldsfile> DEBUG/NODEBUG" << endl;
+    cout << "       " << exec_name << " METHODS <methodsfile> DEBUG/NODEBUG" << endl;
     cout << "      git version: " << build_git_sha << endl;
     cout << "      build date : " << build_git_time << endl;
     cout << "      CC kind    : " << Exec.get_kind() << endl;
@@ -764,10 +766,13 @@ int main(int argc, char* argv[])
     bool print_help = false;
     bool debug = false; // TODO make into a command line option
     if ((argc == 12) && (string("SIM") == argv[1])) {
-        debug = (argv[11] == "OBJDEBUG");
+        string debug_str = argv[11];
+        debug = (debug_str == "DEBUG");
         sim_main(argc, argv, debug);
-    } else if (argc == 3) {
+    } else if (argc == 4) {
         // TODO: Parse debug flag from command line args
+        string debug_str = argv[3];
+        debug = (debug_str == "DEBUG");
         if (string("CLASS") == argv[1]) {
             class_main(argc, argv, debug);
         } else if (string("FIELDS") == argv[1]) {
