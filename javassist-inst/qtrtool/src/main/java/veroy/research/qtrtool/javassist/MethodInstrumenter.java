@@ -147,7 +147,7 @@ public class MethodInstrumenter {
                 continue;
             }
 
-            if (method instanceof CtMethod) {
+            if ((method instanceof CtMethod) || (method instanceof CtConstructor)) {
                 if (Modifier.isNative(modifiers)) {
                     // TODO: DEBUG only --
                     // System.err.println("** NATIVE - " + className + "#" + methodName);
