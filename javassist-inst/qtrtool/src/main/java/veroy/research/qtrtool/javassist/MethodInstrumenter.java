@@ -174,6 +174,7 @@ public class MethodInstrumenter {
                     exc.printStackTrace();
                     throw exc;
                 }
+                System.err.println("DEBUG: Instrumented method: " + className + "#" + methodName);
             }
         }
         ctKlazz.setName(newName);
