@@ -11,6 +11,7 @@ import javassist.CannotCompileException;
 import javassist.NotFoundException;
 import javassist.ClassPool;
 import javassist.CtBehavior;
+import javassist.CtConstructor;
 import javassist.CtClass;
 import javassist.CtMethod;
 import javassist.LoaderClassPath;
