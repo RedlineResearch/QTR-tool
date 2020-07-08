@@ -96,7 +96,8 @@ public class DynamicInstrumenter {
         return ( (className == null) ||
                  (className.indexOf("QTRProxy") >= 0) ||
                  (className.indexOf("javassist") == 0) ||
-                 (className.indexOf("veroy.research.qtrtool.javassist") == 0) ); // ||
+                 (className.indexOf("veroy.research.qtrtool.javassist") == 0) ||
+                 (className.indexOf("java.lang") == 0) );
                  /*
                  (className.indexOf("java.lang.invoke.LambdaForm") == 0) ||
                  (className.indexOf("jdk.internal") == 0) ||
