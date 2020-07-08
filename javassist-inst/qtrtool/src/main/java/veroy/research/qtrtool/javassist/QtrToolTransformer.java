@@ -37,12 +37,13 @@ class QtrToolTransformer implements ClassFileTransformer {
         final MethodInstrumenter instMeth = new MethodInstrumenter(istream, className);
         CtClass klazz = null;
         try {
-            // DEBUG: System.err.println(" -- Instrumenting: " + className);
+            System.err.println(" DEBUG: Instrumenting: " + className);
             klazz = instMeth.instrumentMethods(loader);
         } catch (final CannotCompileException exc) {
             return klassFileBuffer;
         }
         try {
+            System.err.println(" DEBUG: ---> returning: " + className);
             final byte[] barray = klazz.toBytecode();
             return barray;
         } catch (CannotCompileException | IOException exc) {
