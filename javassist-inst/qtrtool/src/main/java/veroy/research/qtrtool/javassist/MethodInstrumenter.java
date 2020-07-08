@@ -134,7 +134,7 @@ public class MethodInstrumenter {
                 }
             }
 
-        }
+        };
         for (int ind = 0 ; ind < methods.length; ind++) {
             final CtBehavior method = methods[ind];
             final String methodName = method.getName();
