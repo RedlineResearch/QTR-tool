@@ -155,7 +155,7 @@ public class MethodInstrumenter {
                     String newMethodName = nativePrefix.concat(methodName);
                     method.setBody("{ return " + newMethodName + "($$); }");
                 }
-                method.instrument(exprEditor);
+                // method.instrument(exprEditor);
                 // Insert ENTRY and EXIT events:
                 try {
                     if (Modifier.isStatic(modifiers)) {
