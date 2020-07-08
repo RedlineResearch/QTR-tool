@@ -69,7 +69,6 @@ public class DynamicInstrumenter {
         int i = 0;
         for (final Class klass : classes) {
             final String klassName = klass.getName();
-            System.err.println("     TESTING " + klassName + ": " + inst.isModifiableClass(klass));
             if (inst.isModifiableClass(klass) && !DynamicInstrumenter.shouldIgnore(klassName)) {
                 // DEBUG: System.err.println("     Adding " + klassName + ": " + inst.isModifiableClass(klass));
                 if (!doneClasses.contains(klassName)) {

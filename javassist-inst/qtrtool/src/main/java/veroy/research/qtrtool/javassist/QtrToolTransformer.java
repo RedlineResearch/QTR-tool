@@ -58,9 +58,9 @@ class QtrToolTransformer implements ClassFileTransformer {
         return ( (className == null) ||
                  (className.indexOf("QTRProxy") >= 0) ||
                  (className.indexOf("javassist") == 0) ||
-                 (className.indexOf("veroy/research/qtrtool/javassist") == 0) ); // ||
+                 (className.indexOf("veroy/research/qtrtool/javassist") == 0) ||
+                 (className.indexOf("java/lang") == 0) );
                  /*
-                 (className.indexOf("java/lang/invoke/LambdaForm") == 0) ||
                  (className.indexOf("jdk/internal") == 0) ||
                  (className.indexOf("sun/reflect") == 0) ||
                  (className.indexOf("java/lang/J9VMInternals") == 0) ||
