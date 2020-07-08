@@ -98,18 +98,55 @@ public class MethodInstrumenter {
 
         // Methods:
         CtBehavior[] methods = ctKlazz.getDeclaredBehaviors();
+        final int classId = getClassId(className);
+        ExprEditor exprEditor = new ExprEditor() {
+            // Instrument new expressions:
+            public void edit(NewExpr expr) throws CannotCompileException {
+                final int allocSiteId = getAllocSiteId(className, expr.indexOfBytecode());
+                expr.replace( "{ $_ = $proceed($$); veroy.research.qtrtool.javassist.QTRProxy.onObjectAlloc($_, " +
+                        classId + ", " + allocSiteId + "); }");
+            }
+
+            // Instrument new array expressions:
+            public void edit(NewArray expr) throws CannotCompileException {
+                try {
+                    final int allocSiteId = getAllocSiteId(className, expr.indexOfBytecode());
+                    expr.replace( "{ $_ = $proceed($$); veroy.research.qtrtool.javassist.QTRProxy.onArrayAlloc( $_," +
+                            classId + ", " + allocSiteId + ", " + generateNewArrayReplacement(expr) + "); }");
+                } catch (CannotCompileException exc) {
+                    System.err.println("Unable on to compile call to onArrayAlloc - " + exc.getMessage());
+                    throw exc;
+                }
+            }
+
+            // Instrument field updates:
+            public void edit(FieldAccess expr) throws CannotCompileException {
+                try {
+                    final String fieldName = expr.getField().getName();
+                    if (expr.isWriter()) {
+                        expr.replace( "{ veroy.research.qtrtool.javassist.QTRProxy.onPutField($1, $0, " + getFieldId(className, fieldName) + "); $_ = $proceed($$); }" );
+                    } else {
+                        expr.replace( "{ veroy.research.qtrtool.javassist.QTRProxy.witnessObjectAliveVer2($0, " + classId + "); $_ = $proceed($$); }" );
+                    }
+                } catch (NotFoundException exc) {
+                    System.err.println("Unable on to compile call to onPutField - " + exc.getMessage());
+                    throw new CannotCompileException(exc);
+                }
+            }
+
+        }
         for (int ind = 0 ; ind < methods.length; ind++) {
             final CtBehavior method = methods[ind];
             final String methodName = method.getName();
             final int modifiers = method.getModifiers();
             final int methodId = getMethodId(className, methodName);
-            final int classId = getClassId(className);
 
             if (shouldIgnore(modifiers, methodName)) {
                 // TODO: DEBUG only --
                 // System.err.println("-- IGNORE - " + className + "#" + methodName);
                 continue;
             }
+
             if (method instanceof CtMethod) {
                 if (Modifier.isNative(modifiers)) {
                     // TODO: DEBUG only --
@@ -117,42 +154,7 @@ public class MethodInstrumenter {
                     String newMethodName = nativePrefix.concat(methodName);
                     method.setBody("{ return " + newMethodName + "($$); }");
                 }
-                method.instrument(
-                        new ExprEditor() {
-                            // Instrument new expressions:
-                            public void edit(NewExpr expr) throws CannotCompileException {
-                                final int allocSiteId = getAllocSiteId(className, expr.indexOfBytecode());
-                                expr.replace( "{ $_ = $proceed($$); veroy.research.qtrtool.javassist.QTRProxy.onObjectAlloc($_, " +
-                                              classId + ", " + allocSiteId + "); }");
-                            }
-
-                            // Instrument new array expressions:
-                            public void edit(NewArray expr) throws CannotCompileException {
-                                try {
-                                    final int allocSiteId = getAllocSiteId(className, expr.indexOfBytecode());
-                                    expr.replace( "{ $_ = $proceed($$); veroy.research.qtrtool.javassist.QTRProxy.onArrayAlloc( $_," +
-                                                  classId + ", " + allocSiteId + ", " + generateNewArrayReplacement(expr) + "); }");
-                                } catch (CannotCompileException exc) {
-                                    System.err.println("Unable on to compile call to onArrayAlloc - " + exc.getMessage());
-                                    throw exc;
-                                }
-                            }
-
-                            // Instrument field updates:
-                            public void edit(FieldAccess expr) throws CannotCompileException {
-                                try {
-                                    final String fieldName = expr.getField().getName();
-                                    if (expr.isWriter()) {
-                                        expr.replace( "{ veroy.research.qtrtool.javassist.QTRProxy.onPutField($1, $0, " + getFieldId(className, fieldName) + "); $_ = $proceed($$); }" );
-                                    } else {
-                                        expr.replace( "{ veroy.research.qtrtool.javassist.QTRProxy.witnessObjectAliveVer2($0, " + classId + "); $_ = $proceed($$); }" );
-                                    }
-                                } catch (NotFoundException exc) {
-                                }
-                            }
-
-                        }
-                );
+                method.instrument(exprEditor);
                 // Insert ENTRY and EXIT events:
                 try {
                     if (Modifier.isStatic(modifiers)) {
